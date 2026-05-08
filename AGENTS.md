@@ -193,6 +193,23 @@ Highlights:
   query params). **TS code:** camelCase. Convert at the boundary.
 - **Map:** MapLibre GL only. No Mapbox tokens.
 - **UI:** Tailwind + shadcn/ui primitives.
+- **Responsive design (REQUIRED):** every page — Founder Navigator,
+  map, company profiles, claim flow, GOEO admin UI, `/agents` —
+  must work on **both desktop and mobile**. Mobile is not a
+  "nice-to-have" or a v2; the demo audience and real founders will
+  open this on phones. Concretely:
+  - Design mobile-first (Tailwind `base` styles target ≤ 375px),
+    then layer `sm:` / `md:` / `lg:` breakpoints up.
+  - Test every shipped page at three widths: **375px** (iPhone
+    SE), **768px** (tablet), **1280px+** (desktop). No horizontal
+    scroll at 375px. Tap targets ≥ 44×44 px.
+  - Map and admin tables need explicit mobile fallbacks: tables
+    collapse to stacked cards or use horizontal scroll inside a
+    bounded container; the map fills the viewport with a
+    bottom-sheet sidebar instead of a side panel.
+  - Use the device toolbar in `agent-browser` (or
+    `mcp__playwright__browser_resize`) during UI testing — don't
+    ship a page you've only viewed at desktop width.
 - `target="_blank"` links must include `rel="noopener noreferrer"`.
 - **Error response shape:**
   `{ error: { code: string, message: string, details?: any } }`.

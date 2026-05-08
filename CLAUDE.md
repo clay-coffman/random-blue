@@ -13,6 +13,15 @@ Polished founder/investor product on top, agent-native API/CLI/MCP
 underneath. Full spec: `docs/hackathon-plan.md`. Distilled requirements:
 `docs/requirements.md`. Architecture: `docs/architecture.md`.
 
+**Every UI must be responsive — desktop AND mobile.** Design
+mobile-first (Tailwind base = ≤375px), then layer up `sm: md: lg:`.
+Test every page you ship at 375 / 768 / 1280px before calling it
+done. No horizontal scroll at 375px; tap targets ≥ 44×44 px. Tables
+collapse to cards on mobile; the map uses a bottom-sheet sidebar at
+narrow widths. Use `mcp__playwright__browser_resize` (or the
+`agent-browser` device toolbar) during UI testing. Full policy in
+`AGENTS.md` § Coding Style.
+
 ## Working in a worktree
 
 If you're a parallel Claude Code session spawned in a worktree, **read

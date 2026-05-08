@@ -79,12 +79,21 @@ startup-state-atlas/
 │   │   ├── route.md/route.ts     # markdown profile endpoint
 │   │   └── route.json/route.ts   # JSON profile endpoint
 │   ├── claim/page.tsx            # claim flow (Agent 5)
-│   ├── admin/page.tsx            # admin tab (Agent 5)
+│   ├── admin/                    # GOEO admin UI (Agent 5)
+│   │   ├── layout.tsx            # token gate + nav shell
+│   │   ├── page.tsx              # pending-edits review
+│   │   ├── resources/page.tsx    # resource list + create
+│   │   ├── resources/[id]/page.tsx
+│   │   ├── companies/page.tsx    # company list + create
+│   │   ├── companies/[slug]/page.tsx  # direct edit (no claim)
+│   │   └── map/page.tsx          # map curation
 │   ├── agents/page.tsx           # /agents docs page (Agent 6)
 │   └── api/v1/
+│       ├── resources/route.ts             # GET (Agent 2), POST (Agent 5)
+│       ├── resources/[id]/route.ts        # GET, PATCH, DELETE (Agent 5)
 │       ├── resources/recommend/route.ts   # POST (Agent 2)
-│       ├── companies/route.ts             # GET list, POST create
-│       ├── companies/[slug]/route.ts      # GET, PATCH (Agent 5)
+│       ├── companies/route.ts             # GET list, POST create (Agent 5)
+│       ├── companies/[slug]/route.ts      # GET, PATCH, DELETE (Agent 5)
 │       ├── companies/claim/route.ts       # POST (Agent 5)
 │       ├── founder-passports/route.ts     # POST
 │       ├── founder-passports/[id]/plan/route.ts # GET

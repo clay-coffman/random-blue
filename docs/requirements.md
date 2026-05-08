@@ -103,6 +103,31 @@ page ("Try Jordan", "Try Maria", etc.).
 - AI-generated draft profile on first open; founder approves/edits.
 - Admin tab shows pending edits + last-updated/verified status.
 
+### Responsive design (desktop + mobile)
+
+Every shipped UI surface — Founder Navigator, ecosystem map,
+company profiles, claim flow, GOEO admin UI, `/agents` docs page —
+must work cleanly at both desktop and mobile widths. Design
+mobile-first; verify at 375 / 768 / 1280px. The demo will show
+phones in the audience, and Utah founders & GOEO staff will open
+this on mobile in the wild. See `AGENTS.md` § Coding Style for the
+breakpoint policy and test checklist.
+
+### GOEO admin UI
+
+Utah Startup State / GOEO staff can keep the data current without
+a developer. Mock auth (single shared `ATLAS_ADMIN_TOKEN`).
+
+- **Pending edits** review for founder-submitted profile changes.
+- **Resources CRUD** — create, edit, delete entries in the
+  resource directory (funding, mentoring, training, etc.) with
+  all join-table fields (locations, industries, communities,
+  topics).
+- **Companies CRUD** — create, edit (no founder field whitelist),
+  delete companies directly without a claim flow.
+- **Map curation** — click a pin to fix coordinates, edit the
+  company, or hide a stale entry.
+
 ### Agent-native layer
 
 - **REST API** under `/api/v1/...` — versioned. OpenAPI spec at
