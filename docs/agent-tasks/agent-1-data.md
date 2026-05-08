@@ -50,7 +50,11 @@ Define every table with Drizzle's SQLite syntax. **Include
 forward-looking columns that other agents will need** so you don't
 have to evolve the schema later under merge pressure.
 
-Tables (12 total):
+You write **two groups** of tables: app-domain tables (you author
+by hand) and **Better Auth** tables (you generate via the
+`@better-auth/cli` against an `auth.ts` stub).
+
+#### 1a. App-domain tables (12 total)
 
 ```ts
 // Resources
@@ -64,7 +68,8 @@ resource_topics              // resource_id, topic     (funding, mentoring, trai
 companies                    // id (co_*), slug, name, website, description, sector, stage,
                              // employee_count, hiring_status, founding_year, linkedin,
                              // logo_url, founder_team_json, address_text, lat, lng,
-                             // verified_at, claimed_at, last_updated_by, last_updated_at,
+                             // verified_at, claimed_at, claimed_by_user_id (fk -> user.id),
+                             // last_updated_by, last_updated_at,
                              // embedding (BLOB nullable, future use)
 company_locations            // company_id, county, city
 company_jobs                 // id, company_id, title, url, posted_at
@@ -79,11 +84,79 @@ founder_passports            // id (fp_*), county, city, stage, industry, commun
 recommendations              // id (rec_*), passport_id, resource_id, score, reasons_json,
                              // action_text, bucket (now/next/ignore), created_at
 
-// Claims + updates
-company_claims               // id (cl_*), company_id, email, email_domain, magic_token,
-                             // verified_at, expires_at, status (pending/verified/rejected)
-profile_updates              // id, company_id, claim_id, patch_json, applied_at, reviewed_by
+// Ownership verification + audit
+business_ownership_submissions  // id (bos_*), user_id (fk -> user.id), company_id (fk),
+                                // r2_key, mime_type, file_size, submitted_at,
+                                // status ('pending' | 'approved' | 'rejected'),
+                                // reviewed_by_user_id (fk -> user.id, nullable),
+                                // reviewed_at (nullable), review_notes (text, nullable)
+profile_updates              // id, company_id, submission_id (fk -> business_ownership_submissions.id, nullable),
+                             // patch_json, applied_at, reviewed_by_user_id
 ```
+
+**Removed:** the `company_claims` table is **deleted** — replaced
+by Better Auth (real accounts) plus `business_ownership_submissions`
+(real verification with admin review). The `cl_*` ID prefix is
+retired; submissions use `bos_*`.
+
+`profile_updates.claim_id` is also gone — use `submission_id` if
+the patch came from an owner edit, or leave null if the patch came
+from a GOEO admin.
+
+#### 1b. Better Auth tables (generated)
+
+Write a minimal `auth.ts` stub in the repo root just to drive the
+Better Auth code generator:
+
+```ts
+// auth.ts (Agent 1 writes this stub; Agent 5 will expand it later)
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { drizzle } from "drizzle-orm/d1";
+
+// Stub adapter — only needed so the CLI can introspect.
+// Agent 5 replaces this with a real env-bound DB at request time.
+const stubDb = drizzle({} as any);
+
+export const auth = betterAuth({
+  database: drizzleAdapter(stubDb, { provider: "sqlite" }),
+  emailAndPassword: { enabled: true },
+  user: {
+    additionalFields: {
+      role: { type: "string", required: true, defaultValue: "owner" },
+    },
+  },
+});
+```
+
+Then run:
+
+```bash
+npx @better-auth/cli generate --output db/schema.auth.ts
+```
+
+This emits Drizzle table definitions for `user`, `session`,
+`account`, and `verification`, including the `role` column on
+`user`. **Re-export those tables from `db/schema.ts`** so
+`drizzle-kit generate` includes them in the migration:
+
+```ts
+// db/schema.ts
+export * from "./schema.auth"; // Better Auth tables
+// ...your hand-written tables...
+```
+
+Then continue with the normal flow:
+
+```bash
+npm run db:generate
+npm run db:migrate:local
+npm run db:migrate:remote
+```
+
+Agent 5 will later expand `auth.ts` with the email-verification
+hook, password-reset hook, and role plugin — **none of those
+changes alter the generated tables**, so the schema stays frozen.
 
 For each column, choose appropriate SQLite types (`text`, `integer`,
 `real`, `blob`). Use `text` for JSON columns and parse on read. Use
@@ -97,11 +170,17 @@ id: text('id').primaryKey().$defaultFn(() => newId('r')),
 
 Add **indexes** for the predictable hot paths:
 - `resources.kind`, `resource_locations.county`, `resource_industries.industry`
-- `companies.slug` (UNIQUE), `companies.sector`, `companies.stage`
+- `companies.slug` (UNIQUE), `companies.sector`, `companies.stage`,
+  `companies.claimed_by_user_id`
 - `recommendations.passport_id`
-- `company_claims.magic_token` (UNIQUE)
+- `business_ownership_submissions.user_id`,
+  `business_ownership_submissions.company_id`,
+  `business_ownership_submissions.status`
 
 ### 2. Generate + apply migration
+
+After §1a (hand-written tables) and §1b (Better Auth-generated
+tables) are both committed to `db/schema.ts`:
 
 ```bash
 npm run db:generate                # produces db/migrations/0000_*.sql
@@ -116,7 +195,9 @@ wrangler d1 execute startup-state-atlas-db --command \
   "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
 ```
 
-Confirm all 12 tables present.
+Confirm all 12 app-domain tables present **plus** the four Better
+Auth tables (`user`, `session`, `account`, `verification`) — 16
+total. Confirm `user.role` defaults to `'owner'`.
 
 ### 3. Persona seed fixtures
 
@@ -203,7 +284,8 @@ EOF
 
 ## DONE when
 
-1. All 12 tables visible via
+1. All 12 app-domain tables + 4 Better Auth tables (`user`,
+   `session`, `account`, `verification`) visible via
    `wrangler d1 execute startup-state-atlas-db --command "SELECT name FROM sqlite_master WHERE type='table'"`.
 2. `npm run seed` succeeds (with the user's CSVs in place).
 3. `wrangler d1 execute startup-state-atlas-db --command "SELECT count(*) FROM founder_passports"`

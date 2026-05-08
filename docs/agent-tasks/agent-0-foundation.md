@@ -74,9 +74,14 @@ You do NOT touch:
 
 3. **Install runtime deps:**
    ```bash
-   npm install drizzle-orm @anthropic-ai/sdk zod maplibre-gl
-   npm install -D drizzle-kit @cloudflare/workers-types tsx dotenv
+   npm install drizzle-orm @anthropic-ai/sdk zod maplibre-gl \
+               better-auth resend
+   npm install -D drizzle-kit @cloudflare/workers-types tsx dotenv \
+               @better-auth/cli
    ```
+   `better-auth` powers human auth (Agent 5 wires `auth.ts`).
+   `resend` is used by Agent 5's `lib/email.ts` for Better Auth
+   verification + password-reset mail.
 
 4. **Set up shadcn/ui:**
    ```bash
@@ -98,6 +103,21 @@ You do NOT touch:
        "migrations_dir": "db/migrations" }
    ]
    ```
+
+5a. **Create the ownership-docs R2 bucket** (verification document
+    storage — required, not optional):
+    ```bash
+    wrangler r2 bucket create atlas-ownership-docs
+    ```
+    Add the binding to `wrangler.jsonc`:
+    ```jsonc
+    "r2_buckets": [
+      { "binding": "OWNERSHIP_DOCS",
+        "bucket_name": "atlas-ownership-docs" }
+    ]
+    ```
+    Agent 5 reads/writes uploads via this binding; admins fetch
+    via short-lived signed URLs.
 
 6. **Enable observability** in `wrangler.jsonc`:
    ```jsonc
@@ -134,7 +154,7 @@ You do NOT touch:
     import { customAlphabet } from 'nanoid';
     const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz';
     const generate = customAlphabet(alphabet, 16);
-    export const newId = (prefix: 'fp' | 'co' | 'r' | 'rec' | 'cl') =>
+    export const newId = (prefix: 'fp' | 'co' | 'r' | 'rec' | 'bos') =>
       `${prefix}_${generate()}`;
     ```
     `npm install nanoid`.
@@ -166,13 +186,24 @@ You do NOT touch:
       "db:generate": "drizzle-kit generate",
       "db:migrate:local": "wrangler d1 migrations apply startup-state-atlas-db --local",
       "db:migrate:remote": "wrangler d1 migrations apply startup-state-atlas-db --remote",
+      "auth:generate": "better-auth generate",
       "seed": "tsx db/seed/index.ts",
+      "bootstrap-superadmin": "tsx scripts/bootstrap-superadmin.ts",
       "cli": "tsx cli/index.ts",
       "mcp": "tsx mcp/server.ts",
       "lint": "next lint",
       "typecheck": "tsc --noEmit",
       "postinstall": "agent-kit sync"
     }
+    ```
+    `auth:generate` invokes `@better-auth/cli` to emit the Drizzle
+    schema for Better Auth's tables — Agent 1 runs this once
+    Agent 5's `auth.ts` stub is in place. `bootstrap-superadmin`
+    is a one-shot ops command (Agent 5 ships the script) that
+    promotes an existing user (by email) to `superadmin`. Run it
+    once after the first GOEO admin signs up:
+    ```bash
+    npm run bootstrap-superadmin -- admin@goeo.utah.gov
     ```
 
 14. **Create `.env.example`:**
@@ -181,9 +212,15 @@ You do NOT touch:
     CLOUDFLARE_API_TOKEN=
     CLOUDFLARE_ACCOUNT_ID=
     ATLAS_ADMIN_TOKEN=dev-only-replace-me
+    BETTER_AUTH_SECRET=dev-only-replace-me-32-chars-min
+    BETTER_AUTH_URL=http://localhost:3000
+    RESEND_API_KEY=
     PORT=3000
     WRANGLER_PORT=8787
     ```
+    `BETTER_AUTH_SECRET` must be ≥32 random bytes in production.
+    `BETTER_AUTH_URL` is the public URL of the deployed Worker (set
+    to the production URL after step 17).
 
 15. **Apply an empty migration to confirm wiring:**
     ```bash
@@ -196,7 +233,13 @@ You do NOT touch:
     ```bash
     wrangler secret put ANTHROPIC_API_KEY      # paste the key
     wrangler secret put ATLAS_ADMIN_TOKEN      # paste any string
+    wrangler secret put BETTER_AUTH_SECRET     # `openssl rand -base64 32`
+    wrangler secret put RESEND_API_KEY         # from Resend dashboard
     ```
+    `BETTER_AUTH_SECRET` rotates Better Auth's session cookies; do
+    not regenerate it casually after launch (rotates everyone out).
+    `RESEND_API_KEY` powers Better Auth's verification +
+    password-reset mail (Agent 5 wires `lib/email.ts`).
 
 17. **Deploy the empty scaffold** to confirm wiring works:
     ```bash
@@ -242,8 +285,14 @@ hackathon's demo URL.
 
 ## Cuts allowed if time-pressed
 
-- **Skip R2 bucket creation** — only Agent 4 needs it, and only if
-  photos are in scope.
+- **Skip the optional `atlas-photos` R2 bucket** — only Agent 4
+  needs it, and only if photos are in scope. **Do not skip
+  `atlas-ownership-docs`** — Agent 5's verification flow depends
+  on it.
+- **Skip `RESEND_API_KEY`** if you're under time pressure: Agent 5
+  can stub `lib/email.ts` to log the verification / password-reset
+  link to `console.log` and the API response. Email verification
+  UX is degraded but the demo still works.
 - **Skip Playwright setup** — agents do manual smoke tests.
 - **Skip a `deploy.yml` GitHub Action** — manual `npm run deploy`
   works for the hackathon.
