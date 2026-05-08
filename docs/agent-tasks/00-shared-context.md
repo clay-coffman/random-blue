@@ -61,6 +61,15 @@ conflicting code. Don't deviate without checking with the user.
 - **API contract.** `app/api/v1/openapi.yaml` is the source of truth
   for endpoint shapes. Agent 6 owns it. If your agent needs a new
   endpoint, define it there and notify Agent 6.
+- **Responsive (desktop + mobile).** Every page you ship must work
+  at 375 / 768 / 1280px. Mobile-first Tailwind (base = mobile,
+  layer up `sm: md: lg:`). No horizontal scroll at 375px; tap
+  targets ≥ 44×44 px. Tables → cards on mobile; the map uses a
+  bottom-sheet sidebar at narrow widths. Verify with
+  `mcp__playwright__browser_resize` (or `agent-browser`'s device
+  toolbar) before marking your brief DONE. This applies to the
+  Founder Navigator, map, profiles, claim flow, GOEO admin UI,
+  and `/agents` docs page.
 
 ## Sequencing
 

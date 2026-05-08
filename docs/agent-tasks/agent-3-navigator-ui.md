@@ -148,7 +148,12 @@ gh pr create --base main --title "Founder Navigator UI"
    recommendations (start-business / student / community resources).
 4. Manual form submission works: fill out → submit → see results.
 5. Share URL copy + paste loads the same plan.
-6. The page renders cleanly on mobile widths (375px).
+6. The page renders cleanly at **375 / 768 / 1280px** — no
+   horizontal scroll at 375px, persona buttons stack to a
+   one-column grid on mobile, results sidebar collapses above the
+   plan instead of next to it. Verified with
+   `mcp__playwright__browser_resize` or `agent-browser` device
+   mode.
 7. PR open.
 
 ## Demo path
@@ -161,7 +166,9 @@ owner). This is the headline of the hackathon presentation.
 - **Skip the "Ignore for now" bucket** — only show top-6.
 - **Skip the field-level "Why we recommended these" modal** — show
   reasons inline only.
-- **Skip mobile polish** — judges will probably demo on a laptop.
+- ~~Skip mobile polish~~ — **NOT a valid cut.** Mobile is a hard
+  requirement (see `00-shared-context.md` and `AGENTS.md`).
+  Judges, founders, and GOEO staff will all open this on phones.
 - **Skip the share URL** — just keep the deep-link working.
 - **Skip skeleton loaders** — simple "Loading…" text is fine.
 

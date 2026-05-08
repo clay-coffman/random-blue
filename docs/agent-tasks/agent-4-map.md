@@ -189,7 +189,14 @@ gh pr create --base main --title "Ecosystem map + company profiles"
 7. `curl /startups/crew.json` returns the JSON agent card.
 8. `curl /api/v1/companies?sector=FinTech` returns at least the
    FinTech companies from the seed.
-9. PR open.
+9. **Mobile (375px):** the map fills the viewport; the
+   pin-detail/InvestorBrief drawer renders as a **bottom sheet**
+   (slides up from the bottom edge), not a side panel. Filter
+   chips wrap and remain tappable (≥ 44×44 px). `/startups/:slug`
+   profile pages stack their sections vertically with no
+   horizontal scroll. Verified with
+   `mcp__playwright__browser_resize`.
+10. PR open.
 
 ## Demo path
 
