@@ -86,19 +86,27 @@ startup-state-atlas/
 │   │   ├── route.md/route.ts     # markdown profile endpoint
 │   │   └── route.json/route.ts   # JSON profile endpoint
 │   ├── sign-in/page.tsx          # Better Auth sign-in (Agent 5)
-│   ├── sign-up/page.tsx          # Better Auth sign-up (Agent 5)
-│   ├── verify-email/page.tsx     # email verification (Agent 5)
+│   ├── sign-up/page.tsx          # role select — step 1 of 3 (Agent 5)
+│   ├── sign-up/account/page.tsx  # email + password — step 2 (Agent 5)
+│   ├── sign-up/verify/page.tsx   # 6-digit OTP — step 3 (Agent 5)
+│   ├── login/sent/page.tsx       # "code/link sent" confirmation (Agent 5)
 │   ├── forgot-password/page.tsx  # password reset request (Agent 5)
 │   ├── reset-password/page.tsx   # password reset (Agent 5)
+│   ├── onboarding/founder/page.tsx     # redirects /founder?onboard=1 (Agent 5)
+│   ├── onboarding/owner/page.tsx       # search-and-claim shortcut (Agent 5)
+│   ├── onboarding/investor/page.tsx    # investor preferences form (Agent 5)
+│   ├── onboarding/done/page.tsx        # role-aware "you're ready" (Agent 5)
+│   ├── settings/page.tsx               # single-page sectioned settings (Agent 5)
 │   ├── companies/[slug]/claim/page.tsx  # ownership submission (Agent 5)
 │   ├── companies/[slug]/edit/page.tsx   # owner edits claimed co (Agent 5)
 │   ├── me/submissions/page.tsx   # owner's submission status (Agent 5)
 │   ├── admin/                    # GOEO admin UI (Agent 5)
-│   │   ├── layout.tsx            # role gate + nav shell
-│   │   ├── page.tsx              # pending-edits review
+│   │   ├── layout.tsx            # role gate + dark sidebar shell
+│   │   ├── page.tsx              # dashboard: stats + claim queue + edit feed
 │   │   ├── submissions/page.tsx  # ownership-submission queue
-│   │   ├── submissions/[id]/page.tsx  # review one submission
-│   │   ├── users/page.tsx        # superadmin user mgmt
+│   │   ├── submissions/[id]/page.tsx  # review one submission (auto + manual)
+│   │   ├── users/page.tsx        # users list, role filters; superadmin role flip
+│   │   ├── admins/page.tsx       # superadmin: list + invite admins
 │   │   ├── resources/page.tsx    # resource list + create
 │   │   ├── resources/[id]/page.tsx
 │   │   ├── companies/page.tsx    # company list + create
@@ -114,6 +122,10 @@ startup-state-atlas/
 │       ├── companies/[slug]/route.ts      # GET, PATCH, DELETE (Agent 5)
 │       ├── ownership-submissions/route.ts # POST + GET own (Agent 5)
 │       ├── ownership-submissions/[id]/route.ts # GET + PATCH approve/reject (Agent 5)
+│       ├── investor-profiles/route.ts       # POST + GET own (Agent 5)
+│       ├── admin/invites/route.ts           # POST invite, GET list (Agent 5)
+│       ├── admin/invites/[token]/route.ts   # GET consume token (Agent 5)
+│       ├── admin/users/[id]/route.ts        # PATCH role flip (Agent 5)
 │       ├── founder-passports/route.ts     # POST
 │       ├── founder-passports/[id]/plan/route.ts # GET
 │       ├── search/route.ts                # GET
@@ -124,6 +136,7 @@ startup-state-atlas/
 │   ├── seed/personas.ts
 │   ├── seed/resources.ts
 │   ├── seed/companies.ts
+│   ├── seed/investor-profiles.ts  # demo investor rows (Agent 5)
 │   ├── seed/data/resources.csv  # user provides (Google Sheets)
 │   └── seed/data/companies.csv  # user provides
 ├── auth.ts                       # Better Auth config (Agent 5)
@@ -287,22 +300,30 @@ Wrap that in `lib/cf.ts` so handlers don't import OpenNext directly.
 - **API contract** lives in `app/api/v1/openapi.yaml` (committed) and
   is also served at `/api/v1/openapi.json`. Agent 6 owns it.
 - **Error shape:** `{ error: { code, message, details? } }`.
-- **ID prefixes:** `fp_*`, `co_*`, `r_*`, `rec_*`, `bos_*`. Use
-  `lib/ids.ts`. (Better Auth's own IDs — `user`, `session`,
-  `account`, `verification` — are managed by Better Auth.)
+- **ID prefixes:** `fp_*`, `co_*`, `r_*`, `rec_*`, `bos_*`,
+  `inv_*` (investor profiles). Use `lib/ids.ts`. (Better Auth's
+  own IDs — `user`, `session`, `account`, `verification` — are
+  managed by Better Auth.)
 - **Casing:** snake_case API ↔ camelCase TS. Convert at the
   Drizzle/zod boundary.
 - **Auth (dual model):**
   - **Web users (humans):** Better Auth (email + password,
     self-hosted in D1). `auth.ts` configures the Drizzle adapter
     and an `additionalFields.role` column on `user` with values
-    `owner` / `goeo_admin` / `superadmin`. Sessions are
-    cookie-based and stored in D1. Next.js middleware enforces
-    role checks on `/admin/*` and ownership-bound write routes.
-    First `superadmin` is bootstrapped via
+    `founder` / `owner` / `investor` / `goeo_admin` / `superadmin`.
+    Default for self-serve sign-up is `founder`; founders, business
+    owners, and investors pick their role on the first signup
+    step and may switch in Settings. `goeo_admin` and `superadmin`
+    are **invite-only** — no self-serve admin sign-up; admins are
+    promoted via the `admin_invites` flow or the bootstrap script.
+    Sessions are cookie-based and stored in D1. Next.js middleware
+    enforces role checks on `/admin/*` and ownership-bound write
+    routes. First `superadmin` is bootstrapped via
     `npm run bootstrap-superadmin <email>` (Agent 5 ships this
-    script). Email-verification and password-reset mail is sent
-    via the `send-email` skill (Resend).
+    script). Email-verification uses Better Auth's `emailOTP`
+    plugin (6-digit code, 10-minute expiry, 30-second resend
+    cooldown). Verification + reset mail goes through the
+    `send-email` skill (Resend).
   - **Machine clients (CLI / MCP / scripts):**
     `X-Atlas-Admin-Token` header, validated against
     `env.ATLAS_ADMIN_TOKEN`. This is a service-account-style

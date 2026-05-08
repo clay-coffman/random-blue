@@ -613,7 +613,7 @@ founder_passports
 recommendations
 profile_updates
 # Better Auth (generated via @better-auth/cli):
-user                               # adds role: owner | goeo_admin | superadmin
+user                               # adds role: founder | owner | investor | goeo_admin | superadmin
 session
 account
 verification

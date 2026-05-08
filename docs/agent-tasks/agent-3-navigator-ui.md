@@ -79,6 +79,28 @@ You do NOT touch:
 - `app/map/...` (Agent 4).
 - `db/schema.ts`.
 
+## Onboarding hook (Agent 5 coordination)
+
+The `/founder` page does double duty as the founder-onboarding
+target for Agent 5's signup flow. When a freshly-signed-up user
+with `role='founder'` finishes verification, Agent 5 redirects
+them to `/onboarding/founder`, which is itself a server-side
+redirect to `/founder?onboard=1`.
+
+When `?onboard=1` is set:
+
+- Render a stepper above the form: `1 role · 2 account · 3 intake`,
+  with step 3 active. Visual reference: `Auth.html#signup` stepper.
+- Submitting the intake redirects to `/onboarding/done` (which
+  reads `session.user.role` to render the founder-flavored
+  copy and CTA `See my 90-day plan →` linking to
+  `/plan/<passport_id>`). Without the param, the page works as it
+  does today and lands directly on `/plan/<id>`.
+
+If Agent 5 hasn't merged yet, ship the param-handling no-op-ily —
+just don't render the stepper if the param is unset and don't
+break the existing redirect-to-plan path.
+
 ## Deliverables
 
 ### 1. `/founder` — intake page
