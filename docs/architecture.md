@@ -10,7 +10,9 @@ disagrees with this file, this file wins.
 | Framework        | **Next.js 15** App Router via **`@opennextjs/cloudflare`**                               |
 | Runtime          | **Cloudflare Workers** (with Static Assets for the Next.js build)                        |
 | DB               | **Cloudflare D1** (SQLite at edge) + **Drizzle ORM**                                     |
-| Object store     | **Cloudflare R2** (only if photos are in scope; Agent 4 decides)                         |
+| Object store     | **Cloudflare R2** — `atlas-ownership-docs` (verification docs, required) + optional `atlas-photos` (Agent 4) |
+| Auth             | **Better Auth** (email + password, self-hosted in D1 via Drizzle adapter; Web Crypto password hashing; CLI migrations) |
+| Email            | **Resend** (via the `send-email` skill) — used for Better Auth verification + password-reset mail |
 | LLM              | **Anthropic Claude `claude-opus-4-7`** (use prompt caching where possible)               |
 | Map              | **MapLibre GL** (open tiles via OpenStreetMap or CARTO basemap; no API token)            |
 | Errors / logs    | **Cloudflare Workers Observability** (built-in, free) — `wrangler tail` + Workers Logs UI |
@@ -45,10 +47,12 @@ disagrees with this file, this file wins.
 │  │  └── public/AGENTS.md, public/llms.txt (end-user agents)    │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 │             │                  │                  │                  │
-│   ┌─────────▼────────┐  ┌──────▼─────┐  ┌─────────▼───────────┐     │
-│   │ D1 binding `DB`  │  │ R2 `ASSETS`│  │ env: ANTHROPIC_API_  │     │
-│   │ (SQLite)         │  │ (optional) │  │ KEY, ATLAS_ADMIN_… │     │
-│   └─────────┬────────┘  └────────────┘  └────────┬────────────┘     │
+│   ┌─────────▼────────┐  ┌──────▼──────────────┐  ┌────────▼─────────┐│
+│   │ D1 binding `DB`  │  │ R2 `OWNERSHIP_DOCS` │  │ env: ANTHROPIC_…, ││
+│   │ (SQLite + auth)  │  │ (verification docs) │  │ BETTER_AUTH_…,    ││
+│   │                  │  │ optional photos R2  │  │ RESEND_…,         ││
+│   │                  │  │                     │  │ ATLAS_ADMIN_…    │ │
+│   └─────────┬────────┘  └─────────────────────┘  └────────┬─────────┘│
 └─────────────┼──────────────────────────────────────┼─────────────────┘
               │                                       │
         ┌─────▼──────┐                       ┌────────▼─────────┐
@@ -78,23 +82,35 @@ startup-state-atlas/
 │   │   ├── page.tsx
 │   │   ├── route.md/route.ts     # markdown profile endpoint
 │   │   └── route.json/route.ts   # JSON profile endpoint
-│   ├── claim/page.tsx            # claim flow (Agent 5)
+│   ├── sign-in/page.tsx          # Better Auth sign-in (Agent 5)
+│   ├── sign-up/page.tsx          # Better Auth sign-up (Agent 5)
+│   ├── verify-email/page.tsx     # email verification (Agent 5)
+│   ├── forgot-password/page.tsx  # password reset request (Agent 5)
+│   ├── reset-password/page.tsx   # password reset (Agent 5)
+│   ├── companies/[slug]/claim/page.tsx  # ownership submission (Agent 5)
+│   ├── companies/[slug]/edit/page.tsx   # owner edits claimed co (Agent 5)
+│   ├── me/submissions/page.tsx   # owner's submission status (Agent 5)
 │   ├── admin/                    # GOEO admin UI (Agent 5)
-│   │   ├── layout.tsx            # token gate + nav shell
+│   │   ├── layout.tsx            # role gate + nav shell
 │   │   ├── page.tsx              # pending-edits review
+│   │   ├── submissions/page.tsx  # ownership-submission queue
+│   │   ├── submissions/[id]/page.tsx  # review one submission
+│   │   ├── users/page.tsx        # superadmin user mgmt
 │   │   ├── resources/page.tsx    # resource list + create
 │   │   ├── resources/[id]/page.tsx
 │   │   ├── companies/page.tsx    # company list + create
 │   │   ├── companies/[slug]/page.tsx  # direct edit (no claim)
 │   │   └── map/page.tsx          # map curation
 │   ├── agents/page.tsx           # /agents docs page (Agent 6)
+│   ├── api/auth/[...all]/route.ts         # Better Auth handler (Agent 5)
 │   └── api/v1/
 │       ├── resources/route.ts             # GET (Agent 2), POST (Agent 5)
 │       ├── resources/[id]/route.ts        # GET, PATCH, DELETE (Agent 5)
 │       ├── resources/recommend/route.ts   # POST (Agent 2)
 │       ├── companies/route.ts             # GET list, POST create (Agent 5)
 │       ├── companies/[slug]/route.ts      # GET, PATCH, DELETE (Agent 5)
-│       ├── companies/claim/route.ts       # POST (Agent 5)
+│       ├── ownership-submissions/route.ts # POST + GET own (Agent 5)
+│       ├── ownership-submissions/[id]/route.ts # GET + PATCH approve/reject (Agent 5)
 │       ├── founder-passports/route.ts     # POST
 │       ├── founder-passports/[id]/plan/route.ts # GET
 │       ├── search/route.ts                # GET
@@ -107,12 +123,18 @@ startup-state-atlas/
 │   ├── seed/companies.ts
 │   ├── seed/data/resources.csv  # user provides (Google Sheets)
 │   └── seed/data/companies.csv  # user provides
+├── auth.ts                       # Better Auth config (Agent 5)
+├── middleware.ts                 # role-gated route protection (Agent 5)
+├── scripts/
+│   └── bootstrap-superadmin.ts   # promote a user to superadmin (Agent 5)
 ├── lib/
 │   ├── db.ts                     # drizzle client wired to D1 binding
+│   ├── auth-client.ts            # Better Auth React client (Agent 5)
 │   ├── anthropic.ts              # Claude client (claude-opus-4-7)
 │   ├── api-error.ts              # ApiError class — frozen error shape
 │   ├── ids.ts                    # newId(prefix) helper
 │   ├── cf.ts                     # getRequestContext().env accessor
+│   ├── email.ts                  # Resend wrapper for Better Auth mail (Agent 5)
 │   └── recommend.ts              # scoring lib (Agent 2)
 ├── schemas/
 │   ├── founder-passport.ts       # zod schema
@@ -174,9 +196,12 @@ Browser /map
 
 ```
 Claude/ChatGPT reads /llms.txt and /AGENTS.md
-  → POST /api/v1/resources/recommend  (with X-Atlas-Admin-Token? no — read endpoints are open)
+  → POST /api/v1/resources/recommend  (no auth — read endpoints are open)
   → cites resource IDs in its response to the user
-  → optionally: PATCH /api/v1/companies/:slug  (with X-Atlas-Admin-Token, mock auth)
+  → optionally: PATCH /api/v1/companies/:slug
+      (with X-Atlas-Admin-Token machine token; the route handler
+       still enforces ownership rules from D1 — owner_user_id match
+       or admin role on the calling user, when known)
 ```
 
 ## Cloudflare bindings
@@ -194,13 +219,17 @@ Claude/ChatGPT reads /llms.txt and /AGENTS.md
     { "binding": "DB", "database_name": "startup-state-atlas-db", "database_id": "<from `wrangler d1 create`>" }
   ],
   "r2_buckets": [
-    { "binding": "ASSETS", "bucket_name": "startup-state-atlas-assets" }
+    { "binding": "OWNERSHIP_DOCS", "bucket_name": "atlas-ownership-docs" }
+    // Optional photo bucket (Agent 4 only):
+    // { "binding": "ASSETS", "bucket_name": "startup-state-atlas-assets" }
   ],
   "observability": { "enabled": true },
   "vars": {}      // public
   // Secrets via `wrangler secret put`:
   //   ANTHROPIC_API_KEY
-  //   ATLAS_ADMIN_TOKEN
+  //   BETTER_AUTH_SECRET
+  //   RESEND_API_KEY
+  //   ATLAS_ADMIN_TOKEN  (machine-only; CLI/MCP write path)
 }
 ```
 
@@ -242,11 +271,33 @@ Wrap that in `lib/cf.ts` so handlers don't import OpenNext directly.
 - **API contract** lives in `app/api/v1/openapi.yaml` (committed) and
   is also served at `/api/v1/openapi.json`. Agent 6 owns it.
 - **Error shape:** `{ error: { code, message, details? } }`.
-- **ID prefixes:** `fp_*`, `co_*`, `r_*`, `rec_*`, `cl_*`. Use
-  `lib/ids.ts`.
+- **ID prefixes:** `fp_*`, `co_*`, `r_*`, `rec_*`, `bos_*`. Use
+  `lib/ids.ts`. (Better Auth's own IDs — `user`, `session`,
+  `account`, `verification` — are managed by Better Auth.)
 - **Casing:** snake_case API ↔ camelCase TS. Convert at the
   Drizzle/zod boundary.
-- **Auth:** `X-Atlas-Admin-Token` Workers secret, no real OAuth.
+- **Auth (dual model):**
+  - **Web users (humans):** Better Auth (email + password,
+    self-hosted in D1). `auth.ts` configures the Drizzle adapter
+    and an `additionalFields.role` column on `user` with values
+    `owner` / `goeo_admin` / `superadmin`. Sessions are
+    cookie-based and stored in D1. Next.js middleware enforces
+    role checks on `/admin/*` and ownership-bound write routes.
+    First `superadmin` is bootstrapped via
+    `npm run bootstrap-superadmin <email>` (Agent 5 ships this
+    script). Email-verification and password-reset mail is sent
+    via the `send-email` skill (Resend).
+  - **Machine clients (CLI / MCP / scripts):**
+    `X-Atlas-Admin-Token` header, validated against
+    `env.ATLAS_ADMIN_TOKEN`. This is a service-account-style
+    token, **not** a human admin login. It bypasses Better Auth
+    and assumes a privileged caller; route handlers must still
+    enforce business rules (e.g. only the user matched to
+    `companies.claimed_by_user_id` can edit a claimed company).
+  - Read endpoints stay unauthenticated.
+- **R2 (ownership docs):** the `OWNERSHIP_DOCS` binding holds
+  uploaded verification documents. They are never served as
+  public URLs — admins fetch via short-lived signed URLs.
 
 ## Open questions to escalate
 

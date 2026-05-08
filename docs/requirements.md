@@ -95,13 +95,45 @@ page ("Try Jordan", "Try Maria", etc.).
   agents should know before recommending them, update timestamp,
   verification status.
 
-### Self-service claim flow
+### Authentication (Better Auth)
 
-- "Claim this company" button on profile → email entry.
-- **Mock verification**: domain of the email matches company
-  website domain → magic link → editor.
-- AI-generated draft profile on first open; founder approves/edits.
-- Admin tab shows pending edits + last-updated/verified status.
+- **Library**: [Better Auth](https://better-auth.com) with the
+  Drizzle adapter against D1. CLI-managed migrations
+  (`npx @better-auth/cli generate` + `migrate`). No external auth
+  dashboard. Sessions stored in D1.
+- **Roles** on `user.role`: `owner` (default for sign-up),
+  `goeo_admin` (Utah Startup State staff), `superadmin`
+  (bootstrapping role; promotes/demotes admins).
+- **Method**: email + password, with email verification and
+  password reset (delivery via the `send-email` skill / Resend).
+  No third-party social providers for the hackathon.
+- **Bootstrapping**: first `superadmin` is set by a one-shot
+  `npm run bootstrap-superadmin <email>` script run by an
+  operator with `wrangler` D1 access. After that, `superadmin`
+  promotes other users to `goeo_admin` from `/admin/users`.
+- **Anonymous founder passports stay anonymous** — sign-up is
+  not required to use the Founder Navigator.
+- **Read endpoints stay open.** Writes from the web app require a
+  Better Auth session; writes from the CLI/MCP layer use the
+  machine-only `X-Atlas-Admin-Token` (see Agent-native layer).
+
+### Self-service claim flow (with ownership verification)
+
+- "Claim this company" button on profile → routes the founder to
+  sign-up / sign-in if not authenticated.
+- **Real verification**: signed-in owner uploads a verification
+  document (Secretary-of-State filing, business license, EIN
+  letter — PDF or image) to the `atlas-ownership-docs` R2 bucket.
+- Submission is recorded in `business_ownership_submissions`
+  (`pending`).
+- GOEO admin reviews the queue at `/admin/submissions`, opens the
+  doc via a signed R2 URL, approves or rejects with notes.
+- On approval: `companies.claimed_by_user_id` is set,
+  `verified_at` and `claimed_at` are stamped, the submission row
+  flips to `approved`. The owner can now edit the company at
+  `/companies/[slug]/edit`.
+- AI-generated draft profile on first edit-page open; founder
+  approves/edits.
 
 ### Responsive design (desktop + mobile)
 
@@ -116,8 +148,15 @@ breakpoint policy and test checklist.
 ### GOEO admin UI
 
 Utah Startup State / GOEO staff can keep the data current without
-a developer. Mock auth (single shared `ATLAS_ADMIN_TOKEN`).
+a developer. Auth is the same Better Auth system the owners use;
+admin pages require a session with role `goeo_admin` or
+`superadmin` (Next.js middleware enforced — no separate token gate).
 
+- **Ownership-submission queue** (`/admin/submissions`) — review
+  pending business-ownership submissions. View the uploaded doc
+  via a signed R2 URL; approve (sets
+  `companies.claimed_by_user_id` + `verified_at` + `claimed_at`)
+  or reject (with notes).
 - **Pending edits** review for founder-submitted profile changes.
 - **Resources CRUD** — create, edit, delete entries in the
   resource directory (funding, mentoring, training, etc.) with
@@ -127,6 +166,8 @@ a developer. Mock auth (single shared `ATLAS_ADMIN_TOKEN`).
   delete companies directly without a claim flow.
 - **Map curation** — click a pin to fix coordinates, edit the
   company, or hide a stale entry.
+- **Users management** (`/admin/users`, `superadmin` only) —
+  promote/demote users between `owner` and `goeo_admin`.
 
 ### Agent-native layer
 
@@ -159,18 +200,22 @@ a developer. Mock auth (single shared `ATLAS_ADMIN_TOKEN`).
 
 ## Out of scope for this hackathon (explicit cuts)
 
-Per `docs/hackathon-plan.md` lines 734–748, do not invest in:
+Per `docs/hackathon-plan.md`, do not invest in:
 
-- Real OAuth with ChatGPT/Claude.
+- Real OAuth with ChatGPT/Claude (Better Auth covers our owner /
+  admin login; agents use `X-Atlas-Admin-Token`).
+- Third-party social login providers (Google, GitHub, etc.) —
+  email + password is enough for the hackathon.
 - Complex CRM workflows.
-- Actual email sending (mock the magic link).
 - Scraped LinkedIn enrichment.
 - Perfect geocoding (use city/county centroids).
-- Multi-tenant permissions beyond simple claim tokens.
 - Complicated vector-only RAG (defer embeddings).
-- Fully automated verification.
 - Calendar integration.
 - Payment/funding application workflows.
+
+In scope but kept simple: Better Auth email + password, file-upload
+ownership verification (admin manually reviews), email verification
++ password reset via the `send-email` skill (Resend).
 
 ## Demo script (5 scenes — condensed from plan lines 449–528)
 

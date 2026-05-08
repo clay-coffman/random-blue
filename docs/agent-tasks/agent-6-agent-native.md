@@ -71,10 +71,25 @@ OpenAPI 3.1 spec covering every public endpoint:
   by another agent, you can stub it)
 - `GET /api/v1/companies`
 - `GET /api/v1/companies/:slug`
-- `POST /api/v1/companies/claim`
-- `PATCH /api/v1/companies/:slug` (with `X-Atlas-Admin-Token`)
+- `POST /api/v1/ownership-submissions` (owner — Better Auth
+  session OR `X-Atlas-Admin-Token`; multipart upload)
+- `PATCH /api/v1/companies/:slug` (Better Auth session whose
+  `user.id` matches `companies.claimed_by_user_id`, OR Better
+  Auth session with role `goeo_admin` / `superadmin`, OR
+  `X-Atlas-Admin-Token`)
 - `GET /api/v1/search`
 - `GET /api/v1/openapi.json`
+
+The OpenAPI spec must reflect the **dual auth model** for write
+endpoints (see "Auth note" at the bottom of this brief). Don't
+omit either path — the security schemes section should list both
+the cookie-based session auth and the `X-Atlas-Admin-Token`
+header auth.
+
+The old `POST /api/v1/companies/claim` endpoint is **gone**. The
+domain-email magic-link flow has been replaced by sign-up +
+ownership submission. If your OpenAPI is already drafted, remove
+that entry.
 
 Reference zod schemas from `schemas/` and `types/api.ts` where
 possible. Keep error responses uniform per the frozen shape:
@@ -96,7 +111,10 @@ Subcommands:
 - `startup-state map search --sector <s> --stage <s>
    --employees <range> [--json]`
 - `startup-state company get <slug> [--json]`
-- `startup-state company claim <slug> --domain <d> --email <e>`
+- `startup-state company patch <slug> --field key=value …`
+   — uses `X-Atlas-Admin-Token` from env. Replaces the old
+   `company claim` subcommand: human ownership goes through the
+   web sign-up + R2 upload flow, not the CLI.
 - `startup-state profile build --company <name>
    --from-url <url> --emit md,json,llms`
 
@@ -132,11 +150,18 @@ Tools (per `docs/hackathon-plan.md` lines 290–301):
 - `search_resources(query, filters)`
 - `search_companies(filters)`
 - `get_company(slug)`
-- `start_company_claim(company_name, domain_email)`
-- `update_company_profile(slug, patch)` — requires admin token in
-  config.
+- `update_company_profile(slug, patch)` — requires
+  `X-Atlas-Admin-Token` (machine token) in the MCP server's env.
 - `generate_founder_plan(profile)`
 - `generate_investor_tour(filters)`
+
+The old `start_company_claim` MCP tool is **removed**. Human
+ownership claims go through the web sign-up + R2 upload flow —
+that requires a logged-in browser session and a file upload, not
+something an LLM should drive on a user's behalf. The MCP server
+is restricted to read tools and the privileged
+`update_company_profile` tool (which assumes the operator has
+already established ownership via the web flow).
 
 Each tool wraps an HTTP call to the deployed Worker.
 
@@ -252,6 +277,27 @@ demo + the `/agents` page are the "hidden superpower" reveal.
 4. **Skip the search endpoint** — fall back to per-entity GETs.
 5. **Stub OpenAPI** — bare-minimum YAML covering only the
    endpoints other agents actually wired. Better than no spec.
+
+## Auth note (read this — it shapes your OpenAPI + tool surface)
+
+The product uses a **dual auth model** for writes:
+
+- **Web users** (humans clicking through Next.js) authenticate
+  via Better Auth (email + password, sessions in D1). Their
+  cookie travels automatically. Roles: `owner`, `goeo_admin`,
+  `superadmin`. Owner edits are gated on
+  `companies.claimed_by_user_id` matching their user id.
+- **Machine clients** (your CLI + your MCP server + any
+  external agent) use the `X-Atlas-Admin-Token` header. This is
+  a service-account-style token validated against
+  `env.ATLAS_ADMIN_TOKEN`. It bypasses Better Auth and assumes
+  a privileged caller — but the route handler still enforces
+  business rules.
+
+Read endpoints are open to both. Your CLI/MCP **always** use
+the machine token path; you don't impersonate human sessions.
+Document this clearly in `public/AGENTS.md` and `public/llms.txt`
+so external agents know how to call write endpoints.
 
 ## Common pitfalls
 

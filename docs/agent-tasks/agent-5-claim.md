@@ -1,297 +1,446 @@
-# Agent 5 — Claim flow + GOEO Admin UI
+# Agent 5 — Auth, ownership verification, GOEO admin
 
-You build two surfaces:
+You build three surfaces:
 
-1. **Founder claim flow** — founders claim their company, edit
-   their profile, admin reviews their pending edits.
-2. **GOEO admin UI** — Utah Startup State / GOEO staff log in (mock
-   auth) and directly maintain resources, companies, and the map
-   without a developer.
+1. **Authentication** — Better Auth (email + password) for two
+   real user types: business **owners** and Utah Startup State /
+   GOEO **admins**. Sign-up, sign-in, email verification, password
+   reset.
+2. **Founder claim flow with real ownership verification** —
+   founders sign up, upload a verification document to R2,
+   admin reviews and approves, owner can edit their company.
+3. **GOEO admin UI** — staff log in (same Better Auth, with role
+   `goeo_admin` or `superadmin`) and maintain the
+   ownership-submission queue, the resource directory, the
+   company list, and the map without a developer.
 
-The claim half is **cosmetic-acceptable** if time runs short — a
-non-functional submit that goes to a "thanks" screen is fine. The
-admin half is required for the demo narrative ("the state can
-maintain this without us"), but its scope can collapse to
-**resources-only CRUD** if needed (see Cuts).
+The admin half is required for the demo narrative ("the state can
+maintain this without us"). The owner-edit half is the headline
+"business owners are the website" demo. The auth UI itself is
+plumbing — it has to work but doesn't need design polish.
 
-Aim for ~120 minutes. If you hit 90 and aren't through the admin
-half, take Cut #1.
+Aim for **~150 minutes** (this brief grew to absorb auth). If you
+hit ~120 minutes and aren't through the admin half, take Cut #1.
 
 ## Branch + worktree
 
 - **Worktree:** `wt[1-3]` (whichever is free in batch 2).
-- **Branch:** `feat/claim`. First action: `git checkout -b feat/claim`.
+- **Branch:** `feat/auth-claim-admin`. First action:
+  `git checkout -b feat/auth-claim-admin`.
 
 ## Reads first
 
-1. `docs/agent-tasks/00-shared-context.md`
-2. `docs/architecture.md`
-3. `docs/requirements.md` — Self-service claim flow.
-4. `docs/hackathon-plan.md` lines 401–444 (claim + profile editor).
-5. `db/schema.ts` — `company_claims`, `profile_updates`,
-   `companies` tables (Agent 1 owns).
-6. `app/startups/[slug]/page.tsx` (Agent 4) — to know the
+1. `docs/agent-tasks/00-shared-context.md` — § "Auth-for-write
+   (dual model)" and "Auth schema ownership".
+2. `docs/architecture.md` — repo layout, dual-auth bindings, and
+   the OWNERSHIP_DOCS R2 binding.
+3. `docs/requirements.md` — Authentication, Self-service claim
+   flow, GOEO admin UI.
+4. `docs/hackathon-plan.md` — § "Authentication & ownership
+   verification".
+5. `db/schema.ts` — `user` (with `role`), `session`, `account`,
+   `verification`, `business_ownership_submissions`,
+   `companies` (now with `claimed_by_user_id`), `profile_updates`
+   (Agent 1 owns).
+6. `auth.ts` — the stub Agent 1 wrote. You expand it.
+7. Better Auth docs (via `context7`):
+   <https://www.better-auth.com/docs>.
+8. `app/startups/[slug]/page.tsx` (Agent 4) — to know the
    "Claim this company" button.
 
 ## Depends on
 
-- **Agent 1 done.** You need `company_claims` and `profile_updates`
-  tables.
-- **Agent 4 in progress or done.** You wire your "Claim" button to
-  Agent 4's profile page.
-- **Agent 0 done** for shadcn primitives.
+- **Agent 0 done.** Need: `better-auth` + `@better-auth/cli` +
+  `resend` installed; `OWNERSHIP_DOCS` R2 binding;
+  `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `RESEND_API_KEY`,
+  `ATLAS_ADMIN_TOKEN` secrets set; `bootstrap-superadmin` script
+  hook in `package.json`.
+- **Agent 1 done.** Need: Better Auth tables, ownership
+  submissions table, `companies.claimed_by_user_id`. The old
+  `company_claims` table must be gone.
+- **Agent 4 in progress or done.** You wire your "Claim" button
+  to Agent 4's profile page and re-use their `MapView`.
 
 ## Owns (write surface)
 
-Claim flow:
+Auth wiring:
 
-- `app/claim/page.tsx` — claim entry (slug + email).
-- `app/claim/[token]/page.tsx` — profile editor (after magic link).
-- `app/claim/_components/EditorForm.tsx`.
-- `app/claim/_components/AiDraftButton.tsx` — generates a draft
-  from existing company fields.
-- `app/api/v1/companies/claim/route.ts` — POST.
-- `app/api/v1/companies/[slug]/route.ts` — PATCH (with
-  `X-Atlas-Admin-Token`). NB: the GET handler is Agent 4's;
-  add the PATCH method to the same file (coordinate with Agent 4).
+- `auth.ts` — full Better Auth config (expanded from Agent 1's
+  stub). Hooks `lib/email.ts` for verification + reset mail.
+  Configures the role plugin / additional fields. Reads the
+  request-bound D1 client from `lib/cf.ts`.
+- `lib/auth-client.ts` — Better Auth React client for the
+  browser.
+- `lib/email.ts` — thin Resend wrapper used by Better Auth's
+  email-verification + password-reset hooks.
+- `middleware.ts` — Next.js middleware that gates `/admin/*` on
+  `goeo_admin | superadmin` roles, gates `/companies/[slug]/edit`
+  on ownership match, and gates `/companies/[slug]/claim` on
+  any signed-in user.
+- `app/api/auth/[...all]/route.ts` — Better Auth's catch-all
+  handler (it serves sign-up, sign-in, etc.).
+- `app/sign-in/page.tsx`, `app/sign-up/page.tsx`,
+  `app/verify-email/page.tsx`, `app/forgot-password/page.tsx`,
+  `app/reset-password/page.tsx` — minimal but functional. Use
+  shadcn primitives.
 
-Admin UI (GOEO-facing):
+Ownership submission + edit:
 
-- `app/admin/layout.tsx` — admin shell with nav (Pending edits •
-  Resources • Companies • Map) + token gate.
+- `app/companies/[slug]/claim/page.tsx` — submission form
+  (signed-in only).
+- `app/companies/[slug]/edit/page.tsx` — profile editor
+  (gated on `companies.claimed_by_user_id === session.user.id`
+  OR admin role).
+- `app/companies/[slug]/_components/EditorForm.tsx`.
+- `app/companies/[slug]/_components/AiDraftButton.tsx` — AI draft
+  helper (same idea as the old claim editor).
+- `app/me/submissions/page.tsx` — owner's view of their own
+  pending/approved/rejected submissions.
+- `app/api/v1/ownership-submissions/route.ts` — `POST` (owner
+  creates submission with R2 upload), `GET` (owner lists their
+  own submissions).
+- `app/api/v1/ownership-submissions/[id]/route.ts` — `GET`
+  (owner views their own; admin views any), `PATCH`
+  (admin approves / rejects with notes; sets
+  `companies.claimed_by_user_id` + `verified_at` + `claimed_at`
+  on approve).
+- `app/api/v1/companies/[slug]/route.ts` — add `PATCH`. Auth
+  branches: (a) Better Auth session whose `user.id` matches
+  `companies.claimed_by_user_id` (owner edit, field whitelist
+  applied); (b) Better Auth session with admin role (no
+  whitelist); (c) `X-Atlas-Admin-Token` machine token (no
+  whitelist; assumes a privileged caller — used by CLI/MCP).
+  Coordinate with Agent 4 — they own the GET.
+
+Admin UI (GOEO-facing, role `goeo_admin` or `superadmin`):
+
+- `app/admin/layout.tsx` — admin shell with nav (Submissions •
+  Pending edits • Resources • Companies • Map • Users) gated by
+  `middleware.ts`. No password input — if your session lacks the
+  role, you're redirected to `/sign-in?next=/admin`.
 - `app/admin/page.tsx` — landing / pending-edits review.
-- `app/admin/_components/AdminGate.tsx` — password input compared
-  to `ATLAS_ADMIN_TOKEN`; sets a session cookie so child pages
-  don't re-prompt.
+- `app/admin/submissions/page.tsx` — ownership-submission queue.
+- `app/admin/submissions/[id]/page.tsx` — review one submission:
+  show metadata, fetch a short-lived signed R2 URL for the
+  document, render in an `<iframe>`/`<img>`, approve/reject
+  buttons + a notes textarea.
 - `app/admin/_components/UpdateReviewer.tsx` — pending
   `profile_updates` reviewer.
-- `app/admin/resources/page.tsx` — resource list + create.
-- `app/admin/resources/[id]/page.tsx` — resource editor.
-- `app/admin/resources/_components/ResourceForm.tsx`.
-- `app/admin/companies/page.tsx` — company list + create.
-- `app/admin/companies/[slug]/page.tsx` — direct company editor
-  (no claim flow required).
-- `app/admin/map/page.tsx` — lightweight map of companies with
-  "fix coordinates" / "hide" actions per pin.
-- `app/api/v1/resources/route.ts` — GET list + POST create. (No
-  one else currently owns this file; Agent 2 owns only the
-  `recommend/` sub-route. The list endpoint is referenced by
-  `/agents` and `llms.txt` so build the GET too — keep it simple:
-  paginate with `?limit=&offset=`, allow `?kind=` filter.)
-- `app/api/v1/resources/[id]/route.ts` — GET, PATCH, DELETE.
-- `app/api/v1/companies/route.ts` — GET list + POST create.
-  (Coordinate with Agent 4 if they need the GET first; otherwise
-  you own this file.)
-- `app/api/v1/companies/[slug]/route.ts` — DELETE (soft-delete via
-  `archived_at` if schema supports it; otherwise hard delete is
-  fine for the hackathon).
+- `app/admin/resources/page.tsx`, `[id]/page.tsx`,
+  `_components/ResourceForm.tsx` — resource CRUD (same as before).
+- `app/admin/companies/page.tsx`, `[slug]/page.tsx` — direct
+  company editor (no ownership requirement; admin role
+  short-circuits the whitelist).
+- `app/admin/map/page.tsx` — map curation (same as before).
+- `app/admin/users/page.tsx` — **`superadmin` only**. Lists
+  every user with current role and a dropdown to switch between
+  `owner` and `goeo_admin`. (You can't demote yourself; you
+  can't promote anyone to `superadmin` from the UI — that's the
+  bootstrap script's job.)
+- `app/api/v1/admin/users/[id]/route.ts` — `PATCH` for role
+  change (superadmin-gated by middleware + a defense-in-depth
+  check in the handler).
+- `app/api/v1/resources/route.ts`, `[id]/route.ts` — CRUD with
+  admin-role check.
+- `app/api/v1/companies/route.ts` — POST create with admin-role
+  check (coordinate with Agent 4 if they need the GET first).
+- `app/api/v1/companies/[slug]/route.ts` — DELETE with
+  admin-role check.
 
-All admin write endpoints require `X-Atlas-Admin-Token`. The admin
-UI fetches with the token attached server-side via a small helper
-that reads the session cookie and re-injects the env token.
+Ops:
+
+- `scripts/bootstrap-superadmin.ts` — one-shot script that takes
+  an email argv and updates `user.role = 'superadmin'` in remote
+  D1 (via wrangler's `d1 execute` or a tiny direct query).
+  Wired through `npm run bootstrap-superadmin <email>`.
 
 You do NOT touch:
 
 - `db/schema.ts`.
-- The map or company list endpoints.
+- The map or company list endpoints (Agent 4).
+- The recommend endpoint (Agent 2).
 
 ## Deliverables
 
-### 1. `POST /api/v1/companies/claim`
+### 1. `auth.ts` — full Better Auth config
 
-Request: `{ slug, email }`. Behavior:
+Expand Agent 1's stub. Wire the Drizzle adapter to the real
+request-bound D1 client (lazy — Better Auth runs inside a request
+context). Enable email + password. Set up email-verification and
+password-reset hooks that call `lib/email.ts` (Resend). Keep the
+`role` `additionalFields` from the stub.
 
-1. Look up the company by slug.
-2. Compare `email`'s domain to the company `website` domain
-   (strip `https://`, `www.`). Match → proceed. Mismatch →
-   return `403` with `{ error: { code: 'domain_mismatch', … } }`.
-3. Insert a `company_claims` row with:
-   - `magic_token`: random 32-char string (use
-     `crypto.randomUUID()` or `lib/ids.ts` style).
-   - `expires_at`: now + 60 minutes.
-   - `status`: `pending`.
-4. Return `{ claim_id, magic_link: '/claim/<token>' }` — for the
-   hackathon, **expose the magic link directly in the response**
-   (no email sending). Show it on the page so the demo works.
+### 2. `lib/email.ts`
 
-### 2. `app/claim/page.tsx`
+A thin Resend wrapper exposing `sendVerificationEmail` and
+`sendPasswordResetEmail`. Reads `RESEND_API_KEY` from env.
+Templates can be plain HTML — no React Email yet.
 
-Form: slug (prefilled from `?slug=` query param) + email. Submits
-to `/api/v1/companies/claim`. On success, displays the magic link
-prominently and explains "in a real product, this would be emailed.
-For demo purposes, click here:". Use shadcn primitives.
+If `RESEND_API_KEY` is unset (dev / time-pressed), fall back to
+`console.log`-ing the link. Do **not** crash the request.
 
-### 3. `app/claim/[token]/page.tsx` — profile editor
+### 3. Auth UI pages
 
-1. Server-side: look up the claim by `magic_token`. If expired or
-   missing, render an "expired" state.
-2. Render a `EditorForm` with all editable fields: description,
-   stage, employee_count, hiring_status, sector, founder/team,
-   address, jobs.
-3. **AI draft** button: calls Anthropic to generate a draft
-   description / who-should-contact-us / what-this-company-sells
-   from existing fields. Displays the diff. Founder approves or
-   edits.
-4. On save, POST to `PATCH /api/v1/companies/:slug`.
+Minimal but real. Each page calls `lib/auth-client.ts`. shadcn
+primitives. Server-side error rendering. After sign-up, redirect
+to `/verify-email`. After successful sign-in, redirect to
+`?next=` (or `/`).
 
-### 4. `PATCH /api/v1/companies/:slug`
+### 4. `middleware.ts`
 
-Auth: requires `X-Atlas-Admin-Token` header matching
-`env.ATLAS_ADMIN_TOKEN`. The editor includes the token in its
-fetch (read from `.env.local` server-side).
+```ts
+// pseudo
+export async function middleware(req: NextRequest) {
+  const session = await auth.getSession(req);
 
-1. Load the company.
-2. Apply the patch (whitelist fields — never let the user change
-   `slug`, `address`, `linkedin`, `verified_at`).
-3. Insert a `profile_updates` row recording the patch and the
-   `claim_id`.
-4. Update `companies.last_updated_at`, `companies.last_updated_by`.
-5. Return the updated company.
+  if (req.nextUrl.pathname.startsWith("/admin")) {
+    if (!session) return redirect("/sign-in?next=" + req.nextUrl.pathname);
+    if (!["goeo_admin", "superadmin"].includes(session.user.role)) {
+      return redirect("/?error=forbidden");
+    }
+    if (req.nextUrl.pathname.startsWith("/admin/users")
+        && session.user.role !== "superadmin") {
+      return redirect("/admin?error=superadmin_only");
+    }
+  }
 
-### 5. `app/admin/*` — GOEO admin UI
+  if (req.nextUrl.pathname.match(/^\/companies\/[^/]+\/(claim|edit)/)) {
+    if (!session) return redirect("/sign-in?next=" + req.nextUrl.pathname);
+    // Ownership check happens in the route/page (DB lookup).
+  }
+}
+```
 
-Persona: Utah GOEO / Startup State staff. They need to keep the
-resource directory, company list, and map current without filing a
-GitHub issue. Mock auth only.
+### 5. `POST /api/v1/ownership-submissions`
 
-**Auth shell (`AdminGate` + `app/admin/layout.tsx`).** Password
-input compared to `ATLAS_ADMIN_TOKEN`. On match, set an HttpOnly
-session cookie (`atlas_admin=1`, 8h expiry). The layout reads the
-cookie server-side and renders the nav; otherwise renders the
-gate. Not real auth — just a bouncer for the demo.
+Owner-only (Better Auth session). Multipart upload. Behavior:
 
-**Nav tabs (in this priority order):**
+1. Validate the file: ≤ 10 MB, mime in
+   `{application/pdf, image/png, image/jpeg, image/webp}`.
+2. PUT the bytes to `OWNERSHIP_DOCS` R2 with key
+   `submissions/${userId}/${submissionId}.${ext}`.
+3. Insert a `business_ownership_submissions` row:
+   `user_id`, `company_id`, `r2_key`, `mime_type`, `file_size`,
+   `submitted_at = now`, `status = 'pending'`.
+4. Return `{ submission_id, status }`.
 
-1. **Pending edits** (`/admin`) — the existing pending
-   `profile_updates` reviewer. For each row: company name + slug,
-   diff preview, "Approve" / "Reject" buttons (demo: both just
-   close the row), last-updated/verified timestamps.
-2. **Resources** (`/admin/resources`) — table of all resources
-   with title, kind, last_updated_at, and Edit/Delete buttons.
-   "+ New resource" button → `/admin/resources/new`. Editor form
-   covers all fields owned by `resources` + the join tables
-   (locations, industries, communities, topics) — render the
-   joins as multi-selects or comma-separated chips. Save calls
-   `POST /api/v1/resources` (create) or
-   `PATCH /api/v1/resources/:id` (edit).
-3. **Companies** (`/admin/companies`) — table of all companies
-   with name, slug, sector, stage, last_updated_at, Edit/Delete.
-   "+ New company" → `/admin/companies/new`. Editor mirrors the
-   founder claim editor but with **no field whitelist** — gov
-   staff can change `slug`, `address`, `linkedin`, `verified_at`,
-   etc. Save calls `PATCH /api/v1/companies/:slug` with the admin
-   token; the PATCH handler must branch on a query flag (e.g.
-   `?as=admin`) or a separate route segment to skip the founder
-   whitelist when the caller is gov.
-4. **Map** (`/admin/map`) — embeds Agent 4's `MapView` in a
-   read-mostly mode with a click handler: clicking a pin opens a
-   side panel with "Edit" (deep-link to
-   `/admin/companies/[slug]`), "Fix coordinates" (lat/lng inputs
-   that PATCH the row), and "Hide" (sets `archived_at` /
-   `hidden=true` if the schema supports it; otherwise no-op
-   button labeled "(coming soon)").
+### 6. `app/companies/[slug]/claim/page.tsx`
 
-**Surface APIs needed for the above** (all require admin token):
+Form: company is preselected from the route. File upload input
+(label: "Verification document — Secretary-of-State filing,
+business license, EIN letter, or similar"). On submit, posts to
+`/api/v1/ownership-submissions`. On success, redirect to
+`/me/submissions` with a "thanks, awaiting review" banner.
 
-- `POST /api/v1/resources` — create.
-- `PATCH /api/v1/resources/:id` — update.
-- `DELETE /api/v1/resources/:id` — delete.
-- `POST /api/v1/companies` — create.
-- `DELETE /api/v1/companies/:slug` — delete (soft if possible).
-- `PATCH /api/v1/companies/:slug?as=admin` — full-field update
-  (no whitelist). Without `as=admin`, behaves as the founder
-  PATCH from §4 above.
+If the user already has a `pending` submission for this company,
+show its status instead of the form.
 
-### 6. PR
+### 7. `PATCH /api/v1/ownership-submissions/:id`
+
+Admin-only (`goeo_admin` or `superadmin`). Body:
+`{ status: 'approved' | 'rejected', review_notes? }`. Behavior:
+
+1. Load the submission. 404 if missing.
+2. Update `status`, `reviewed_by_user_id`, `reviewed_at`,
+   `review_notes`.
+3. **If approved:** in the same DB transaction, set on the
+   referenced company:
+   - `claimed_by_user_id = submission.user_id`
+   - `verified_at = now` (if not already set)
+   - `claimed_at = now` (if not already set)
+   - `last_updated_by = reviewer_user_id`,
+     `last_updated_at = now`
+4. Return the updated submission.
+
+If the company already has a different `claimed_by_user_id`,
+the admin should be warned in the UI before approving — but the
+final decision is theirs (overrides allowed; this is a state
+agency).
+
+### 8. `PATCH /api/v1/companies/:slug` — three auth modes
+
+Auth precedence (in order):
+
+1. **Better Auth session** with `user.id ===
+   companies.claimed_by_user_id` → owner edit. Apply the field
+   whitelist (no changes to `slug`, `linkedin`, `address_text`,
+   `verified_at`, `claimed_at`, `claimed_by_user_id`). Insert
+   a `profile_updates` row (`reviewed_by_user_id = null` —
+   reviewer is the GOEO admin if/when they audit).
+2. **Better Auth session** with role `goeo_admin` or
+   `superadmin` → admin edit. No whitelist. Insert a
+   `profile_updates` row tagged with the admin's user id.
+3. **`X-Atlas-Admin-Token` matches** `env.ATLAS_ADMIN_TOKEN` →
+   machine edit. No whitelist (caller is privileged). Insert a
+   `profile_updates` row with `reviewed_by_user_id = null`.
+
+Anything else → 401.
+
+### 9. Admin verification queue
+
+`/admin/submissions` lists every submission with status
+`pending` first (then approved/rejected, paginated).
+`/admin/submissions/[id]` shows:
+
+- Submission metadata (company name + slug, submitter email,
+  submitted_at, file_size, mime_type).
+- Document preview: server-side, generate a 60-second signed R2
+  URL for `r2_key` and embed it in an `<iframe>` (PDF) or
+  `<img>` (image).
+- "Approve" button → confirmation dialog → PATCH with
+  `status = 'approved'`.
+- "Reject" button → notes textarea → PATCH with
+  `status = 'rejected'` + notes.
+
+### 10. `/admin/users` (superadmin only)
+
+Table of every user with email, current role, and a dropdown
+that PATCHes `/api/v1/admin/users/:id` to flip between `owner`
+and `goeo_admin`. The current logged-in superadmin's row is
+disabled (no self-demotion). No "promote to superadmin" option.
+
+### 11. `scripts/bootstrap-superadmin.ts`
+
+CLI script. Argv: `<email>`. Behavior:
+
+1. Read `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` from
+   `.env.local`.
+2. Issue a `wrangler d1 execute` against the remote DB:
+   `UPDATE user SET role = 'superadmin' WHERE email = ?`.
+3. Print the affected row count.
+4. If 0, exit non-zero.
+
+This is the **only** way to mint a superadmin. Document it in
+your PR description so the user knows to run it after the first
+GOEO staff member signs up.
+
+### 12. Resources / Companies admin pages
+
+Same scope as the previous version of this brief — list, create,
+edit, delete — except the auth gate is "session has admin role,"
+not "knows the shared token." The single shared token is gone
+from the human admin path entirely.
+
+### 13. PR
 
 ```bash
-git add app/claim app/admin app/api/v1/companies/claim app/api/v1/resources app/api/v1/companies
-git commit -m "feat(claim): self-service claim + GOEO admin UI"
-git push -u origin feat/claim
-gh pr create --base main --title "Claim flow + GOEO admin UI"
+git add auth.ts middleware.ts lib/auth-client.ts lib/email.ts \
+        app/sign-in app/sign-up app/verify-email \
+        app/forgot-password app/reset-password \
+        app/companies app/me app/admin \
+        app/api/auth app/api/v1/ownership-submissions \
+        app/api/v1/companies app/api/v1/resources \
+        app/api/v1/admin scripts/bootstrap-superadmin.ts
+git commit -m "feat(auth): Better Auth + ownership verification + GOEO admin"
+git push -u origin feat/auth-claim-admin
+gh pr create --base main --title "Auth, ownership verification, GOEO admin"
 ```
 
 ## DONE when
 
-1. From `/startups/crew`, click "Claim this company" → lands on
-   `/claim?slug=crew`.
-2. Submit with `founder@trycrew.com` (or any email matching the
-   company's website domain) → returns the magic link.
-3. Click the magic link → editor renders with the company's
-   current fields prefilled.
-4. Click "Generate AI draft" → Anthropic returns a polished
-   description.
-5. Save changes → `PATCH /api/v1/companies/crew` succeeds.
-6. Reload `/startups/crew` → shows the updated description.
-7. `/startups/crew.md` and `/startups/crew.json` reflect the
-   update (because Agent 4's `lib/company-card.ts` reads from
-   the live row).
-8. `/admin` shows the pending update.
-9. `/admin/resources` lists all seeded resources; you can create a
-   new one, edit an existing one's title/description, and delete
-   one — all reflected in `GET /api/v1/resources` immediately.
-10. `/admin/companies` lists all seeded companies; you can edit
-    any company directly (no claim flow) and the change shows up
-    on `/startups/:slug` and the map without a redeploy.
-11. `/admin/map` renders the map; clicking a pin opens a side
-    panel with at least an "Edit" link to the admin company
-    editor.
-12. The admin-token gate works: visiting `/admin` without the
-    cookie shows the password screen; submitting the wrong token
-    re-prompts.
-13. **Mobile (375px):** the founder claim editor and every admin
-    page work without horizontal scroll. Admin tables collapse to
-    stacked cards on mobile (each row becomes a card with the same
-    fields and Edit/Delete buttons stacked). Forms use full-width
-    inputs. The admin nav becomes a hamburger or top-of-page
-    horizontal scroll on narrow widths. Verified with
+1. **Sign-up + sign-in:** `/sign-up` creates an `owner` user;
+   `/sign-in` returns a session cookie. Email verification mail
+   arrives (or is logged to console if Resend is unset).
+2. **Bootstrap a superadmin:**
+   `npm run bootstrap-superadmin -- you@example.com` flips that
+   user's role; signing in lands you on `/admin/*` without a
+   redirect.
+3. **Owner submission flow:** sign in as a fresh owner,
+   visit `/companies/crew/claim`, upload a PDF → `/me/submissions`
+   shows a `pending` row.
+4. **Admin approval flow:** sign in as the superadmin, visit
+   `/admin/submissions`, open the new submission, view the
+   document via the signed R2 URL, click Approve. The submission
+   row flips to `approved`; `companies.claimed_by_user_id` is
+   set; `verified_at` + `claimed_at` are stamped.
+5. **Owner edit:** the original owner can now visit
+   `/companies/crew/edit` and `PATCH /api/v1/companies/crew`
+   succeeds with their session cookie. The whitelist blocks
+   changes to `slug`, `linkedin`, `address_text`.
+6. **`/admin` shows the pending update** in the
+   `profile_updates` reviewer.
+7. **`/startups/crew`, `/startups/crew.md`, `/api/v1/companies/crew`**
+   all reflect the owner's edit (Agent 4's reads are unchanged).
+8. **`/admin/resources`** — full CRUD works (role-gated; no
+   token prompt).
+9. **`/admin/companies`** — admin can edit any company directly
+   (no whitelist).
+10. **`/admin/map`** — pin → side panel → "Edit" deep-link
+    works.
+11. **`/admin/users`** (superadmin) — flipping a user from
+    `owner` to `goeo_admin` lets them into `/admin/*` on next
+    sign-in.
+12. **Machine token still works:**
+    `curl -H "X-Atlas-Admin-Token: $ATLAS_ADMIN_TOKEN" -X PATCH
+     https://<worker>/api/v1/companies/crew -d '{...}'`
+    succeeds without a session. (Used by Agent 6's CLI/MCP.)
+13. **Mobile (375px):** sign-up, sign-in, claim/upload, owner
+    edit, `/me/submissions`, `/admin/submissions`,
+    `/admin/submissions/[id]`, `/admin/users`, and every other
+    admin page work without horizontal scroll. Document preview
+    on `/admin/submissions/[id]` scrolls **inside** its container,
+    not the page. Verified with
     `mcp__playwright__browser_resize`.
 14. PR open.
 
 ## Demo path
 
-**Scene 4 (business owner as website)**: claim Crew, update hiring
-status, show the website AND the .md AND the API endpoint all
-updating from the same source of truth.
+**Scene 4 (business owner as website)**: sign up as a founder,
+upload a business license, switch to a logged-in admin tab,
+approve. Switch back, edit the company, show the website AND
+the .md AND the API endpoint all updating from the same source
+of truth. The "approve" click is the punchline of the
+verification story.
 
 ## Cuts allowed if time-pressed (in priority order)
 
-1. **Collapse admin to resources-only CRUD + pending edits.** Drop
-   `/admin/companies` and `/admin/map`. The demo narrative still
-   works: "GOEO maintains the resource directory; founders
-   maintain their own company pages via claim." This is the
-   single biggest budget saver.
-2. **Skip `/admin/map` only.** Keep resources + companies CRUD.
-   The map page is the most expensive piece because it reuses
-   Agent 4's component with custom click handling.
-3. **Skip the AI draft button.** The editor still works without it.
-4. **Skip the magic-link two-step.** Make claim → editor a single
-   page with email entry → immediate edit (no token round-trip).
-5. **Skip company create/delete in admin.** Edit-only is enough
-   to show "gov can fix typos / update stages."
-6. **Skip the pending-edits review tab.** If founders' edits
-   apply directly (no review), `/admin` redirects to
-   `/admin/resources`. Acceptable for demo.
-7. **Cosmetic-only claim:** the "Submit" button on the founder
-   editor goes to a "thanks, your update is pending review" page
-   that doesn't actually persist. Agent 4's profile page still
-   shows the pre-claim data. **The demo says "this WOULD update
-   everywhere" without actually doing it.** Acceptable if
-   time-pressed — but note the GOEO admin UI is now the
-   load-bearing surface, not the claim flow.
-8. **Skip domain verification entirely.** Accept any email.
+1. **Collapse admin to submissions queue + resources CRUD.**
+   Drop `/admin/companies`, `/admin/map`, `/admin/users`. Keep
+   `/admin/submissions` (the new headline) and resources CRUD
+   (the prior demo). Ownership flow is the load-bearing demo
+   surface.
+2. **Skip `/admin/users`.** Bootstrap script + manual
+   `wrangler d1 execute` for role flips is fine for the
+   hackathon.
+3. **Skip the AI draft button** on the edit page. The editor
+   still works without it.
+4. **Skip email verification** as a hard gate. New accounts can
+   submit immediately; the verification link still gets sent
+   (or logged) but isn't required to use the app.
+5. **Skip `/admin/map`.**
+6. **Skip the `profile_updates` review tab** — owner edits
+   apply directly, no admin review.
+7. **Cosmetic-only ownership upload:** the upload form goes to
+   a "thanks, your submission is pending review" page that
+   doesn't actually persist. **The demo says "this WOULD update
+   everywhere" without actually doing it.** Acceptable only as a
+   last resort — note the GOEO admin UI is now the load-bearing
+   surface.
 
 ## Common pitfalls
 
-- **PATCH route handler conflict.** Agent 4 owns the GET route at
+- **PATCH route handler conflict.** Agent 4 owns the GET on
   `app/api/v1/companies/[slug]/route.ts` — add the PATCH method
-  to the **same file** (coordinate with Agent 4 via PR).
-- **Magic-link tokens on Workers** — use `crypto.randomUUID()` or
-  the Web Crypto API. No `node:crypto`.
-- **Admin token in front-end fetch** — only safe because we're
-  treating this as mock auth. Don't expose this token publicly,
-  but don't burn time on real auth either.
-- **`profile_updates` table** — log every patch even if the
-  admin tab is skipped. Useful for demo scripting.
-- **Don't break Agent 4's profile page** — your PATCH must update
-  the same row Agent 4's GET reads from.
+  to the **same file** (coordinate via PR).
+- **Better Auth + Workers** — pass the request-bound D1 client
+  lazily. Don't construct a top-level Drizzle client in
+  `auth.ts`; do it inside a factory that runs per request.
+- **Web Crypto, not Node bcrypt** — Better Auth uses Web Crypto
+  by default on Workers; don't reach for `bcryptjs` or
+  `node:crypto`.
+- **R2 signed URLs from Workers** — use the `OWNERSHIP_DOCS`
+  binding's `createPresignedUrl`-equivalent (or the S3-compat
+  endpoint via aws4fetch). Cap expiry at 60–120 seconds —
+  these documents are sensitive.
+- **Role check defense-in-depth** — middleware-only checks are
+  not enough. Re-check the role inside every admin route
+  handler. Middleware can be bypassed by misconfigured
+  matchers; route handlers must self-defend.
+- **`profile_updates.submission_id`** — only set when the patch
+  came from an owner edit on a claimed company. Admin direct
+  edits leave it `null`.
+- **Don't break Agent 4's profile page** — your PATCH must
+  update the same row Agent 4's GET reads from.
+- **Don't break the machine token path** — the CLI and MCP both
+  rely on `X-Atlas-Admin-Token` continuing to work for writes.
+  Agent 6 will be unhappy if you remove it.

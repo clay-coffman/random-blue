@@ -171,7 +171,9 @@ The Agent Card contains:
 - “who should contact them”
 - “what agents should know before recommending them”
 - update timestamp
-- verification status
+- verification status (derived from an `approved`
+  `business_ownership_submissions` row — see "Authentication &
+  ownership verification" below)
 
 This is the concrete implementation of “business owners are the website.” They
 do not need to hand-code a site. They maintain a verified structured profile
@@ -398,50 +400,103 @@ Rules:
 
 ---
 
-# The self-service company claim flow
+# Authentication & ownership verification
 
-This should be part of the demo because it satisfies the map requirement and
-makes the “agent-native business owner” idea concrete.
+This product has two distinct human user types with real, persistent
+accounts: **business owners** (founders claiming/editing their own
+company profile) and **GOEO state admins** (Utah Startup State staff
+maintaining the directory, approving submissions, curating the map).
+Anonymous founder-passport intake stays anonymous — no account needed
+to use the Founder Navigator. Read endpoints stay open. Only writes
+require auth.
+
+## Library: Better Auth (self-hosted in D1)
+
+We use **[Better Auth](https://better-auth.com)** with the Drizzle
+adapter against our existing D1 database. Reasons:
+
+- Data lives in our D1 — no external auth dashboard or third-party
+  identity service to log into.
+- CLI-managed migrations (`npx @better-auth/cli generate` emits
+  Drizzle schema; `migrate` runs it against D1). Fits the
+  `wrangler` / `stripe projects` CLI-first ops model in
+  `AGENTS.md`.
+- Cloudflare Workers compatible (uses Web Crypto for password
+  hashing — no Node `bcrypt`).
+- Roles via `additionalFields` on the `user` table.
+
+The `BETTER_AUTH_SECRET` is a Workers secret alongside
+`ANTHROPIC_API_KEY`. Email-verification and password-reset flows hook
+into the `send-email` skill (Resend) so we don't roll new email
+plumbing.
+
+## Roles
+
+Three roles on the `user.role` column:
+
+- **`owner`** — default for every new sign-up. Can edit their own
+  founder passport, claim companies (subject to admin verification),
+  and edit companies they've been granted ownership of.
+- **`goeo_admin`** — Utah Startup State / GOEO staff. Can review the
+  ownership-submission queue, edit any company, and CRUD resources.
+- **`superadmin`** — bootstrapping role only. Can promote/demote
+  users to/from `goeo_admin`. Otherwise behaves like `goeo_admin`.
+
+## Bootstrapping
+
+Auth is self-serve: anyone can sign up at `/sign-up` and gets `owner`
+by default. The first `superadmin` is created via a one-shot
+`npm run bootstrap-superadmin <email>` script (run from a developer
+machine with `wrangler` + production D1 access). After that,
+`superadmin` promotes other users to `goeo_admin` from
+`/admin/users`.
+
+# Business-owner ownership verification
+
+The old "domain-email magic-link" mock is replaced by a real
+verification queue. A founder can't unilaterally claim a company by
+having an email at the right domain — domains lie, and the demo can't
+ship as a public product if anyone can grab any profile.
 
 ## Human flow
 
-1. Founder clicks “Claim this company.”
-2. Enters work email.
-3. System checks domain against company website domain.
-4. Sends magic link.
-5. Founder lands in profile editor.
-6. AI generates a draft profile from existing fields.
-7. Founder approves or edits.
-8. Profile publishes.
+1. Founder signs up → email + password → email verification.
+2. Visits `/companies/[slug]/claim` while signed in.
+3. Uploads a verification document (PDF or image) to R2:
+   Secretary-of-State filing, business license, EIN letter, etc.
+4. Submission is recorded in `business_ownership_submissions`
+   (status `pending`).
+5. GOEO admin reviews the queue at `/admin/submissions`, opens the
+   document via a signed R2 URL, approves or rejects with notes.
+6. On approval: `companies.claimed_by_user_id` is set to the founder,
+   `companies.verified_at` and `claimed_at` are stamped, the
+   submission row is marked `approved`.
+7. The founder can now edit their company at
+   `/companies/[slug]/edit`.
 
 ## Agent flow
 
-The profile page has an “Update with Claude/ChatGPT” button that gives the owner
-a prompt:
+External agents (ChatGPT/Claude/Codex) can read every public
+endpoint without auth. Writes go through one of two paths:
 
-```txt
-You are updating my verified Startup State Atlas company profile.
+- **Web app sessions** — humans signed in via Better Auth.
+- **Machine token (`X-Atlas-Admin-Token`)** — for the CLI / MCP /
+  scripting layer. This is a service-account-style token, not a
+  human admin login. Both paths enforce the same business rules
+  (e.g. only the user matched to `companies.claimed_by_user_id` may
+  edit a company).
 
-Use the OpenAPI spec here:
-[openapi link]
+The "Update with Claude/ChatGPT" pattern still works — the agent
+crafts a `PATCH /api/v1/companies/:slug` call with the machine token
+in the header. The owner pastes the token into Claude Desktop's MCP
+config; the agent never sees the user's password.
 
-Company slug:
-crew
+## Storage
 
-Patch request:
-- hiring_status: true
-- job_postings: [ ... ]
-- description: "Crew is a neobank for families..."
-- sectors: ["FinTech"]
-- stage: "Seed"
-
-Do not change address, LinkedIn, or website.
-Return the exact API request before executing.
-```
-
-For the hackathon, you do not need true ChatGPT/Claude OAuth. You need a working
-API, clear agent docs, and a visible demo showing that an external agent could
-update the profile.
+Verification documents are stored in a dedicated R2 bucket
+`atlas-ownership-docs` (separate from the optional photo bucket).
+Submissions reference the R2 object by key; admins fetch via signed
+URLs that expire quickly. No file is ever served as a public URL.
 
 ---
 
@@ -549,14 +604,19 @@ resource_locations
 resource_industries
 resource_communities
 resource_topics
-companies
+companies                          # adds claimed_by_user_id
 company_locations
 company_jobs
 company_photos
-company_claims
+business_ownership_submissions     # replaces company_claims
 founder_passports
 recommendations
 profile_updates
+# Better Auth (generated via @better-auth/cli):
+user                               # adds role: owner | goeo_admin | superadmin
+session
+account
+verification
 ```
 
 ## Agent 2 — Recommendation engine/API
@@ -599,19 +659,26 @@ Build:
 Use Mapbox, MapLibre, or deck.gl. If geocoding becomes annoying, use address
 strings plus city/county centroids for the prototype.
 
-## Agent 5 — Claim/update/admin
+## Agent 5 — Auth, ownership verification, GOEO admin
 
 Build:
 
-- claim button
-- domain email mock verification
-- profile editor
-- update review page
+- Better Auth wiring (`auth.ts`, sign-up / sign-in / sign-out /
+  email-verification / forgot-password / reset-password pages)
+- claim button → `/companies/[slug]/claim` form (signed-in only)
+- R2-backed ownership-document upload
+- profile editor (gated on approved ownership)
+- admin verification queue (`/admin/submissions`) + approve/reject
+- admin user management (`/admin/users`) for `superadmin`
 - admin table for resource/company edits
-- “last updated” and “verified” status
+- "last updated" and "verified" status (derived from approved
+  `business_ownership_submissions`)
+- `scripts/bootstrap-superadmin.ts`
 
-You only need a lightweight verification method; the brief asks for exactly
-that. ([Startup State][1])
+Auth is real (Better Auth + email/password). Verification is real
+(admin reviews the uploaded doc). The mock single-token admin gate is
+gone for human admin auth — `ATLAS_ADMIN_TOKEN` survives only as a
+machine-to-machine token used by the CLI/MCP layer.
 
 ## Agent 6 — Agent-native layer
 
@@ -734,18 +801,23 @@ the Founder Navigator and Map, it becomes a strong technical differentiator.
 
 Cut these unless everything else is done:
 
-- real OAuth with ChatGPT/Claude
+- real OAuth with ChatGPT/Claude (Better Auth covers our owner/
+  admin login; agents call the API with `X-Atlas-Admin-Token`)
+- third-party social login providers (Google, GitHub, etc.) —
+  email + password is enough for the hackathon
 - complex CRM workflows
-- actual email sending
 - scraped LinkedIn enrichment
 - perfect geocoding
-- multi-tenant permissions beyond simple claim tokens
 - complicated vector-only RAG
-- fully automated verification
 - calendar integration
 - payment/funding application workflows
 
 They are seductive time sinks.
+
+In scope but kept simple: real email + password auth via Better
+Auth, file-upload ownership verification (admin reviews the doc
+manually), email verification + password reset (via the
+`send-email` skill / Resend).
 
 ---
 
