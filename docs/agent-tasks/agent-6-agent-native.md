@@ -231,7 +231,11 @@ gh pr create --base main --title "Agent-native layer"
    }
    ```
    The tools list returns 8 tools.
-7. `/agents` page renders cleanly with curl examples.
+7. `/agents` page renders cleanly with curl examples, and is
+   **responsive** at 375 / 768 / 1280px — code blocks scroll
+   horizontally inside their own container (no page-level scroll
+   on mobile), section nav collapses to a top sticky list on
+   narrow widths.
 8. PR open.
 
 ## Demo path

@@ -239,7 +239,14 @@ gh pr create --base main --title "Claim flow + GOEO admin UI"
 12. The admin-token gate works: visiting `/admin` without the
     cookie shows the password screen; submitting the wrong token
     re-prompts.
-13. PR open.
+13. **Mobile (375px):** the founder claim editor and every admin
+    page work without horizontal scroll. Admin tables collapse to
+    stacked cards on mobile (each row becomes a card with the same
+    fields and Edit/Delete buttons stacked). Forms use full-width
+    inputs. The admin nav becomes a hamburger or top-of-page
+    horizontal scroll on narrow widths. Verified with
+    `mcp__playwright__browser_resize`.
+14. PR open.
 
 ## Demo path
 
