@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Startup State Atlas — Auth wireframes</title>
+<template id="__bundler_thumbnail" data-bg-color="#F7F4ED">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#F7F4ED"/>
+    <g transform="translate(600 360)" text-anchor="middle" font-family="Georgia, serif">
+      <text font-size="120" fill="#0F1B2D" letter-spacing="-3">Auth</text>
+      <text y="80" font-size="40" fill="#C2410C" font-style="italic" font-family="cursive">~ sign up · log in · admin ~</text>
+    </g>
+    <circle cx="540" cy="540" r="14" fill="#C2410C"/>
+    <circle cx="600" cy="540" r="14" fill="#2563EB"/>
+    <circle cx="660" cy="540" r="14" fill="#16A34A"/>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Roboto+Serif:opsz,wght@8..144,400;8..144,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F4ED;--paper-2:#FBF9F4;--stone:#ECE7DC;--topo:#C4B89B;--topo-2:#A89A78;
+    --ink:#0F1B2D;--ink-2:#2A3647;--ink-3:#5A6678;
+    --ember:#C2410C;--ember-tint:#FBE7DC;--sage:#4F6F52;--sage-tint:#DDE7DD;
+    --sky:#2563EB;--sky-tint:#DDE6FB;--danger:#B91C1C;--danger-tint:#F4D9D9;
+    --hand:"Kalam","Caveat",cursive;--scribble:"Caveat",cursive;
+    --body:"Hanken Grotesk",system-ui,sans-serif;--serif:"Roboto Serif",Georgia,serif;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--body)}
+  body{background:radial-gradient(1200px 800px at 15% -10%, rgba(196,184,155,.18), transparent 60%),radial-gradient(1000px 700px at 90% 110%, rgba(196,184,155,.14), transparent 60%),var(--paper)}
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(247,244,237,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--topo)}
+  .topbar-inner{max-width:1480px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-size:22px;letter-spacing:-.01em}
+  .brand .mark{width:30px;height:30px;border:1.5px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:600}
+  .brand small{font-family:var(--scribble);font-size:18px;color:var(--ember);margin-left:6px;transform:rotate(-3deg);display:inline-block}
+  .ver{font-family:var(--mono);font-size:10px;background:var(--ink);color:var(--paper);padding:2px 6px;border-radius:3px;letter-spacing:.08em;text-transform:uppercase;margin-left:4px}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+  .tab{font-family:var(--hand);font-size:16px;font-weight:700;padding:8px 12px;border-radius:8px;cursor:pointer;background:transparent;border:1.5px dashed transparent;color:var(--ink-2)}
+  .tab:hover{background:var(--stone)}
+  .tab.is-active{background:var(--paper-2);color:var(--ink);border-color:var(--ink);box-shadow:2px 2px 0 var(--ink)}
+
+  .intro{max-width:1480px;margin:0 auto;padding:32px 28px 8px}
+  .intro h1{font-family:var(--serif);font-weight:400;font-size:44px;line-height:1.05;letter-spacing:-.02em;margin:0 0 8px}
+  .intro .scrib{font-family:var(--scribble);color:var(--ember);font-size:28px;display:inline-block;transform:rotate(-2deg);margin-left:8px}
+  .intro p{max-width:880px;color:var(--ink-2);font-size:16px;line-height:1.55;margin:8px 0 0}
+
+  .panel{display:none;max-width:1480px;margin:0 auto;padding:24px 28px 80px}
+  .panel.is-active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .tab-head{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:18px;margin:24px 0 8px;padding-bottom:14px;border-bottom:1.5px dashed var(--topo)}
+  .tab-head h2{font-family:var(--serif);font-weight:400;font-size:32px;line-height:1.1;margin:0;letter-spacing:-.01em}
+  .tab-head .lede{max-width:620px;font-family:var(--hand);font-size:16px;color:var(--ink-2);line-height:1.4}
+  .tab-head .pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:5px 9px;border-radius:4px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:24px;margin-top:14px}
+  .grid.two{grid-template-columns:repeat(auto-fit,minmax(520px,1fr))}
+  .grid.three{grid-template-columns:repeat(auto-fit,minmax(380px,1fr))}
+  .grid.full{grid-template-columns:1fr}
+
+  .variant{background:var(--paper-2);border:1.5px solid var(--ink);border-radius:14px;padding:16px;box-shadow:5px 5px 0 var(--ink);position:relative}
+  .variant > header{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .variant .label{font-family:var(--hand);font-weight:700;font-size:18px;color:var(--ink)}
+  .variant .label .opt{display:inline-block;background:var(--ember);color:var(--paper);font-family:var(--mono);font-size:11px;font-weight:500;padding:2px 7px;border-radius:4px;margin-right:8px;letter-spacing:.06em;text-transform:uppercase;transform:translateY(-2px)}
+  .variant .note{font-family:var(--hand);font-size:14px;color:var(--ink-3);line-height:1.35;flex:1 1 100%}
+
+  .screen{background:#fff;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;position:relative}
+  .screen.tall{min-height:560px}
+  .screen.short{min-height:340px}
+  .screen .chrome{background:var(--stone);border-bottom:1.5px solid var(--ink);padding:7px 12px;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+  .screen .chrome .dots{display:flex;gap:5px}
+  .screen .chrome .dots i{width:9px;height:9px;border:1.2px solid var(--ink);border-radius:50%;display:block}
+  .screen .chrome .url{flex:1;background:#fff;border:1.2px solid var(--ink);border-radius:4px;padding:2px 8px;font-size:11px}
+  .screen .body{padding:14px}
+
+  .box{border:1.5px solid var(--ink);border-radius:6px;background:#fff}
+  .box.dashed{border-style:dashed;border-color:var(--ink-3)}
+  .box.fill{background:var(--stone)}
+  .box.ink{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .box.ember-tint{background:var(--ember-tint)}
+  .box.sage-tint{background:var(--sage-tint)}
+  .box.sky-tint{background:var(--sky-tint)}
+  .box.danger-tint{background:var(--danger-tint)}
+
+  .sketch-text{font-family:var(--hand);font-size:14px;color:var(--ink);line-height:1.3}
+  .sketch-text.sm{font-size:12.5px}
+  .sketch-text.lg{font-size:17px}
+  .sketch-text.xl{font-size:22px;font-family:var(--serif);font-weight:500}
+  .sketch-text.xxl{font-size:30px;font-family:var(--serif);font-weight:400;letter-spacing:-.01em;line-height:1.05}
+  .sketch-text.muted{color:var(--ink-3)}
+  .sketch-text.mono{font-family:var(--mono);font-size:12px}
+  .sketch-text.mono.sm{font-size:11px}
+
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:6px;border:1.5px solid var(--ink);font-family:var(--hand);font-weight:700;font-size:14px;background:#fff;color:var(--ink);cursor:pointer}
+  .btn.primary{background:var(--ink);color:var(--paper)}
+  .btn.ember{background:var(--ember);color:var(--paper);border-color:var(--ember)}
+  .btn.sage{background:var(--sage);color:var(--paper);border-color:var(--sage)}
+  .btn.danger{background:var(--danger);color:var(--paper);border-color:var(--danger)}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:4px 9px;font-size:13px}
+  .btn.lg{padding:10px 16px;font-size:16px}
+  .btn.full{width:100%;justify-content:center}
+
+  .chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1.2px solid var(--ink-3);border-radius:999px;font-family:var(--hand);font-size:13px;background:var(--paper)}
+  .chip.ink{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .chip.ember-tint{background:var(--ember-tint);border-color:var(--ember);color:var(--ember)}
+  .chip.sage-tint{background:var(--sage-tint);border-color:var(--sage);color:var(--sage)}
+  .chip.danger-tint{background:var(--danger-tint);border-color:var(--danger);color:var(--danger)}
+  .chip.sky-tint{background:var(--sky-tint);border-color:var(--sky);color:var(--sky)}
+
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .row.tight{gap:6px}
+  .row.between{justify-content:space-between}
+  .col{display:flex;flex-direction:column;gap:8px}
+  .stack-2>*+*{margin-top:8px}
+  .stack-3>*+*{margin-top:12px}
+
+  .field{padding:8px 12px;border:1.5px solid var(--ink);border-radius:6px;background:#fff}
+  .field .lab{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase}
+  .field .val{font-family:var(--hand);font-size:16px;color:var(--ink);font-weight:500;margin-top:2px;border-bottom:1.5px solid var(--ink);padding:2px 0}
+  .field .val.empty{color:var(--ink-3);border-bottom-style:dashed}
+  .field .hint{font-family:var(--hand);font-size:12.5px;color:var(--ink-3);margin-top:4px}
+  .field.focus{box-shadow:3px 3px 0 var(--ember);border-color:var(--ember)}
+
+  .ck{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:3px;display:inline-block;flex:none}
+  .ck.on{background:var(--ink);position:relative}
+  .ck.on::after{content:"✓";position:absolute;color:var(--paper);font-family:var(--mono);font-size:11px;left:1.5px;top:-3px}
+  .rd{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:50%;display:inline-block;flex:none}
+  .rd.on{background:radial-gradient(circle,var(--ink) 0 4px, #fff 5px 100%)}
+
+  .role-card{padding:14px;border:1.5px solid var(--ink);border-radius:8px;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:6px;position:relative}
+  .role-card.active{border-color:var(--ember);background:var(--ember-tint);box-shadow:4px 4px 0 var(--ember)}
+  .role-card .ico{width:42px;height:42px;border:1.5px solid var(--ink);border-radius:8px;display:grid;place-items:center;font-family:var(--serif);font-size:22px;background:var(--stone)}
+  .role-card.active .ico{background:#fff;border-color:var(--ember)}
+  .role-card .role-title{font-family:var(--serif);font-size:18px;font-weight:500}
+  .role-card .role-sub{font-family:var(--hand);font-size:13px;color:var(--ink-3);line-height:1.4}
+
+  .otp{display:flex;gap:6px}
+  .otp i{width:34px;height:42px;border:1.5px solid var(--ink);border-radius:6px;display:grid;place-items:center;font-family:var(--mono);font-size:22px;font-weight:600;background:#fff}
+  .otp i.cur{border-color:var(--ember);box-shadow:2px 2px 0 var(--ember)}
+
+  .stepper{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+  .stepper .dot{width:22px;height:22px;border:1.5px solid var(--ink-3);border-radius:50%;display:grid;place-items:center;font-weight:600}
+  .stepper .dot.done{background:var(--sage);color:var(--paper);border-color:var(--sage)}
+  .stepper .dot.cur{background:var(--ember);color:var(--paper);border-color:var(--ember)}
+  .stepper .bar{flex:1;height:1.5px;background:repeating-linear-gradient(90deg,var(--ink-3) 0 6px,transparent 6px 10px)}
+
+  .callout{position:absolute;font-family:var(--scribble);font-size:18px;color:var(--ember);line-height:1.05;text-align:center;pointer-events:none}
+  .callout.tr{top:-12px;right:-10px;transform:rotate(6deg)}
+  .callout.tl{top:-12px;left:-10px;transform:rotate(-6deg)}
+  .callout.br{bottom:-14px;right:10px;transform:rotate(3deg)}
+
+  .table{width:100%;border-collapse:collapse;font-family:var(--body);font-size:13px}
+  .table th{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase;text-align:left;padding:8px 10px;border-bottom:1.5px solid var(--ink);background:var(--stone)}
+  .table td{padding:9px 10px;border-bottom:1px dashed var(--topo)}
+  .table tr:hover td{background:var(--ember-tint)}
+
+  .sidebar{background:var(--ink);color:var(--paper);padding:18px;border-right:1.5px solid var(--ink)}
+  .sidebar .nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;font-family:var(--hand);font-weight:600;font-size:14px;color:var(--topo);cursor:pointer;margin-bottom:2px}
+  .sidebar .nav-item.active{background:rgba(247,244,237,.12);color:var(--paper)}
+  .sidebar .nav-item .pip{width:6px;height:6px;border-radius:50%;background:var(--ember);margin-left:auto}
+  .sidebar .group-label{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--topo);margin:14px 0 6px;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="mark">N</div>
+      Startup State Atlas
+      <span class="ver">auth</span>
+      <small>~ wireframes ~</small>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab is-active" data-tab="signup">Sign up</button>
+      <button class="tab" data-tab="login">Log in</button>
+      <button class="tab" data-tab="onboard">Onboarding</button>
+      <button class="tab" data-tab="settings">Settings</button>
+      <button class="tab" data-tab="admin">Admin</button>
+    </nav>
+  </div>
+</header>
+
+<section class="intro">
+  <h1>Auth, onboarding &amp; admin <span class="scrib">~ wireframes ~</span></h1>
+  <p>Two user types: <strong>normal</strong> (founders, business owners, investors — pick one at signup; capture role-specific info during onboarding) and <strong>admin</strong> (Utah GOEO team; promoted manually, separate dashboard). Auth is email + password with magic-link fallback. Verification by email. Domain-email check still gates company claims, layered on top of the regular account.</p>
+</section>
+
+<main>
+
+<!-- ======================================================== -->
+<!-- SIGN UP                                                  -->
+<!-- ======================================================== -->
+<section class="panel is-active" data-panel="signup">
+  <div class="tab-head">
+    <div>
+      <h2>Sign up &mdash; pick a role, then verify</h2>
+      <div class="lede">Three steps: role select → email + password → email-verify (6-digit code). All three live on one URL with a stepper at top.</div>
+    </div>
+    <div class="pill">3 steps</div>
+  </div>
+
+  <div class="grid three">
+
+    <!-- Step 1: Role -->
+    <div class="variant">
+      <header><div class="label"><span class="opt">1.1</span>"Who are you?"</div>
+      <div class="note">Three roles. Pick one — it changes onboarding, not what you can see. (You can switch later in Settings.)</div></header>
+      <div class="screen tall">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">/signup</div></div>
+        <div class="body" style="padding:20px">
+          <div class="stepper" style="margin-bottom:18px"><span class="dot cur">1</span> role <span class="bar"></span> <span class="dot">2</span> account <span class="bar"></span> <span class="dot">3</span> verify</div>
+
+          <div class="sketch-text mono sm" style="color:var(--ember)">JOIN STARTUP STATE ATLAS</div>
+          <div class="sketch-text xxl" style="margin-top:4px">Who are you building?</div>
+          <div class="sketch-text muted" style="margin-top:4px">Pick the role that matches what you're here to do. We'll tailor the rest from there.</div>
+
+          <div class="stack-3" style="margin-top:18px">
+            <div class="role-card active">
+              <div class="row tight"><div class="ico">⛰</div><div><div class="role-title">Founder</div><div class="role-sub">Building a company in Utah. Wants a 90-day plan, resources, capital, mentors.</div></div><span class="rd on" style="margin-left:auto"></span></div>
+            </div>
+            <div class="role-card">
+              <div class="row tight"><div class="ico">★</div><div><div class="role-title">Business owner</div><div class="role-sub">Already running a Utah company. Wants to claim, update, and verify a profile.</div></div><span class="rd" style="margin-left:auto"></span></div>
+            </div>
+            <div class="role-card">
+              <div class="row tight"><div class="ico">⌖</div><div><div class="role-title">Investor / partner</div><div class="role-sub">Looking at the Utah ecosystem. Wants the map, briefs, deal flow.</div></div><span class="rd" style="margin-left:auto"></span></div>
+            </div>
+          </div>
+
+          <div class="row between" style="margin-top:22px">
+            <span class="sketch-text sm muted">Already have an account? <a href="#" style="color:var(--ember);font-weight:700">Log in</a></span>
+            <span class="btn primary lg">Continue →</span>
+          </div>
+          <div class="sketch-text mono sm" style="color:var(--ink-3);margin-top:14px;line-height:1.6">↑ admin accounts are not self-serve. GOEO staff get an invite link.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Account -->
+    <div class="variant">
+      <header><div class="label"><span class="opt">1.2</span>Email + password (or magic link)</div>
+      <div class="note">Standard credential pair. SSO with Google as primary alternate; passwordless magic link as fallback.</div></header>
+      <div class="screen tall">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">/signup/account</div></div>
+        <div class="body" style="padding:20px">
+          <div class="stepper" style="margin-bottom:18px"><span class="dot done">✓</span> role <span class="bar"></span> <span class="dot cur">2</span> account <span class="bar"></span> <span class="dot">3</span> verify</div>
+          <div class="sketch-text mono sm" style="color:var(--ember)">FOUNDER · STEP 2 OF 3</div>
+          <div class="sketch-text xxl" style="margin-top:4px">Create your account.</div>
+
+          <div class="stack-3" style="margin-top:16px">
+            <div class="field focus"><div class="lab">Full name</div><div class="val">Priya Mehta</div></div>
+            <div class="field"><div class="lab">Email</div><div class="val">priya@trycrew.com</div><div class="hint">we'll send a 6-digit code here.</div></div>
+            <div class="field"><div class="lab">Password</div><div class="val">••••••••••••</div><div class="hint">12+ characters. Bar shows strong.</div>
+              <div style="height:4px;background:var(--stone);border-radius:2px;margin-top:6px;overflow:hidden"><div style="width:78%;height:100%;background:var(--sage)"></div></div>
+            </div>
+            <div class="row tight" style="margin-top:4px"><span class="ck on"></span><span class="sketch-text sm">I agree to the <a href="#" style="color:var(--ember);font-weight:700">Terms</a> and <a href="#" style="color:var(--ember);font-weight:700">Privacy</a></span></div>
+          </div>
+
+          <div class="row" style="margin-top:18px;gap:10px">
+            <span class="btn ghost sm">← back</span>
+            <span class="btn primary lg" style="margin-left:auto">Send verification code →</span>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px;margin:18px 0 12px">
+            <div style="flex:1;height:1px;background:var(--topo)"></div>
+            <span class="sketch-text mono sm muted">or</span>
+            <div style="flex:1;height:1px;background:var(--topo)"></div>
+          </div>
+
+          <div class="stack-2">
+            <span class="btn full"><span style="font-family:var(--mono);font-weight:600">G</span> Continue with Google</span>
+            <span class="btn full ghost">✦ Email me a magic link instead</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Verify -->
+    <div class="variant">
+      <header><div class="label"><span class="opt">1.3</span>Verify your email</div>
+      <div class="note">6-digit code, 10-minute expiry, resend after 30s. Auto-advances on the 6th digit.</div></header>
+      <div class="screen tall">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">/signup/verify</div></div>
+        <div class="body" style="padding:20px">
+          <div class="stepper" style="margin-bottom:18px"><span class="dot done">✓</span> role <span class="bar"></span> <span class="dot done">✓</span> account <span class="bar"></span> <span class="dot cur">3</span> verify</div>
+
+          <div class="sketch-text mono sm" style="color:var(--ember)">CHECK YOUR INBOX</div>
+          <div class="sketch-text xxl" style="margin-top:4px">We sent a code to<br/>priya@trycrew.com</div>
+          <div class="sketch-text muted" style="margin-top:4px">Enter the 6-digit code from the email. <a href="#" style="color:var(--ember);font-weight:700">Wrong email?</a></div>
+
+          <div class="otp" style="margin-top:24px"><i>4</i><i>2</i><i>9</i><i>1</i><i class="cur">_</i><i></i></div>
+
+          <div class="row tight" style="margin-top:14px"><span class="chip ember-tint">code expires in 9:24</span><span class="chip">resend in 23s</span></div>
+
+          <div class="box dashed" style="margin-top:22px;padding:12px;background:var(--paper)">
+            <div class="sketch-text mono sm" style="color:var(--ink-3)">CAN'T FIND IT?</div>
+            <div class="sketch-text sm muted" style="margin-top:4px">Check spam, or search "Startup State Atlas". Still nothing? <a href="#" style="color:var(--ember);font-weight:700">Try a different email</a> or <a href="#" style="color:var(--ember);font-weight:700">switch to magic link</a>.</div>
+          </div>
+
+          <div class="row between" style="margin-top:22px">
+            <span class="btn ghost sm">← back to email</span>
+            <span class="btn primary">Verify & continue →</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================== -->
+<!-- LOG IN                                                   -->
+<!-- ======================================================== -->
+<section class="panel" data-panel="login">
+  <div class="tab-head">
+    <div>
+      <h2>Log in &mdash; password, magic link, password reset</h2>
+      <div class="lede">One log-in URL with three paths: password, magic link, or "I forgot." Reset uses the same 6-digit-code flow as signup.</div>
+    </div>
+    <div class="pill">3 screens</div>
+  </div>
+
+  <div class="grid three">
+    <!-- log in -->
+    <div class="variant">
+      <header><div class="label"><span class="opt">2.1</span>Log in</div>
+      <div class="note">One field at a time. Email first; password OR "send me a magic link" appears after.</div></header>
+      <div class="screen short">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">/login</div></div>
+        <div class="body" style="padding:20px">
+          <div class="sketch-text mono sm" style="color:var(--ember)">WELCOME BACK</div>
+          <div class="sketch-text xxl" style="margin-top:4px">Log in to Atlas.</div>
+
+          <div class="stack-3" style="margin-top:16px">
+            <div class="field"><div class="lab">Email</div><div class="val">priya@trycrew.com</div></div>
+            <div class="field focus"><div class="lab">Password</div><div class="val">••••••••••••</div>
+              <div class="row between" style="margin-top:6px"><span class="sketch-text sm muted"><span class="ck on"></span> Remember me</span><a href="#" style="color:var(--ember);font-weight:700;font-family:var(--hand);font-size:13px">Forgot?</a></div>
+            </div>
+          </div>
+
+          <div class="stack-2" style="margin-top:18px">
+            <span class="btn primary full lg">Log in →</span>
+            <span class="btn full ghost">✦ Email me a magic link</span>
+            <span class="btn full ghost"><span style="font-family:var(--mono);font-weight:600">G</span> Continue with Google</span>
+          </div>
+
+          <div class="sketch-text sm muted" style="margin-top:14px;text-align:center">No account yet? <a href="#" style="color:var(--ember);font-weight:700">Sign up</a></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- forgot -->
+    <div class="variant">
+      <header><div class="label"><span class="opt">2.2</span>Forgot password</div>
+      <div class="note">Single field, generic confirmation (don't leak whether the email exists).</div></header>
+      <div class="screen short">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">/login/forgot</div></div>
+        <div class="body" style="padding:20px">
+          <div class="sketch-text mono sm" style="color:var(--ember)">RESET PASSWORD</div>
+          <div class="sketch-text xxl" style="margin-top:4px">Forgot your password?</div>
+          <div class="sketch-text muted" style="margin-top:4px">Enter your email. If we have an account, we'll send a 6-digit code.</div>
+
+          <div class="field focus" style="margin-top:18px"><div class="lab">Email</div><div class="val">priya@trycrew.com</div></div>
+
+          <span class="btn primary full lg" style="margin-top:18px">Send reset code →</span>
+          <span class="btn full ghost" style="margin-top:8px">← back to log in</span>
+
+          <div class="box dashed" style="margin-top:22px;padding:12px;background:var(--paper)">
+            <div class="sketch-text sm" style="line-height:1.5"><strong>Note:</strong> we'll show the same confirmation screen whether or not your email is on file. Check spam if nothing arrives in 5 minutes.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- magic link sent -->
+    <div class="variant">
+      <header><div class="label"><span class="opt">2.3</span>Magic link sent</div>
+      <div class="note">Same screen used by both magic-link and reset flows. Big "open inbox" CTA, small "wrong email?" escape.</div></header>
+      <div class="screen short">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">/login/sent</div></div>
+        <div class="body" style="padding:24px;text-align:center">
+          <div class="sketch-text" style="font-family:var(--serif);font-size:48px;line-height:1;color:var(--sage);margin-top:14px">✉</div>
+          <div class="sketch-text" style="font-family:var(--serif);font-size:24px;line-height:1.15;margin-top:10px">Check your inbox.</div>
+          <div class="sketch-text muted" style="margin-top:6px;max-width:340px;margin-left:auto;margin-right:auto">If priya@trycrew.com is on file, a sign-in link is on its way. Tap it to log in — it expires in 15 minutes.</div>
+
+          <div class="row tight" style="justify-content:center;margin-top:18px">
+            <span class="chip">link valid 15 min</span>
+            <span class="chip">opens once</span>
+          </div>
+
+          <div class="row" style="justify-content:center;margin-top:22px;gap:10px">
+            <span class="btn ghost sm">← wrong email</span>
+            <span class="btn primary">Open Gmail ↗</span>
+          </div>
+
+          <div class="sketch-text mono sm" style="color:var(--ink-3);margin-top:18px;line-height:1.6">↑ same screen handles signup verify, magic link, and password reset.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================== -->
+<!-- ONBOARDING                                               -->
+<!-- ======================================================== -->
+<section class="panel" data-panel="onboard">
+  <div class="tab-head">
+    <div>
+      <h2>Onboarding &mdash; one variant per role</h2>
+      <div class="lede">Each role gets a tailored 3–4 step intake. Founder is the existing Founder Passport; Business Owner is claim-driven; Investor is preferences. All three end on the same "you're ready" screen with the role-specific next step.</div>
+    </div>
+    <div class="pill">3 roles</div>
+  </div>
+
+  <!-- FOUNDER -->
+  <div class="grid full">
+    <div class="variant" style="padding:0;overflow:hidden">
+      <div class="screen tall" style="border:0;min-height:620px">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">/onboarding/founder</div><span style="font-family:var(--mono);font-size:10px;color:var(--ink-3)">role: founder</span></div>
+        <div class="body" style="padding:0;display:grid;grid-template-columns:1fr 1fr;min-height:580px">
+          <!-- left: form -->
+          <div style="padding:24px 28px;border-right:1.5px solid var(--ink)">
+            <div class="row between"><div class="sketch-text mono sm" style="color:var(--ember)">FOUNDER ONBOARDING</div><span class="chip">step 2 of 4</span></div>
+            <div class="sketch-text xxl" style="margin-top:4px">Tell us where you're building.</div>
+            <div class="sketch-text muted" style="margin-top:2px">This becomes your Founder Passport — the structured profile that powers your matches.</div>
+
+            <div class="stack-3" style="margin-top:18px">
+              <div class="field"><div class="lab">County</div><div class="val">Salt Lake</div><div class="hint">29 counties · used to filter local resources.</div></div>
+              <div class="field focus"><div class="lab">Stage</div>
+                <div class="row tight" style="margin-top:6px">
+                  <span class="chip">idea</span><span class="chip">building</span><span class="chip ink">paying customers</span><span class="chip">growth</span>
+                </div>
+              </div>
+              <div class="field"><div class="lab">Industry</div><div class="val">B2B SaaS</div></div>
+              <div class="field"><div class="lab">Founder &amp; community tags</div>
+                <div class="row tight" style="margin-top:6px">
+                  <span class="chip ink">first-time founder</span><span class="chip">+ veteran</span><span class="chip">+ rural</span><span class="chip">+ student</span><span class="chip">+ women-owned</span><span class="chip">+ U researcher</span>
+                </div>
+              </div>
+              <div class="field"><div class="lab">What do you need most right now?</div>
+                <div class="row tight" style="margin-top:6px">
+                  <span class="chip ink">capital</span><span class="chip ink">customers</span><span class="chip">talent</span><span class="chip">regulatory</span><span class="chip">space</span><span class="chip">mentors</span>
+                </div>
+                <div class="hint">pick up to 3 — drives your "Do this now" list.</div>
+              </div>
+            </div>
+
+            <div class="row between" style="margin-top:22px"><span class="btn ghost sm">← back</span><span class="btn primary lg">Continue →</span></div>
+          </div>
+
+          <!-- right: live passport -->
+          <div style="padding:24px 28px;background:var(--paper-2);position:relative">
+            <div class="callout tr">live as you type</div>
+            <div class="sketch-text mono sm" style="color:var(--sage)">↓ LIVE PASSPORT</div>
+
+            <div class="box ink" style="padding:14px;margin-top:8px;font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--paper)">
+{<br/>
+&nbsp;&nbsp;<span style="color:var(--ember-tint)">"name"</span>: <span>"Priya Mehta"</span>,<br/>
+&nbsp;&nbsp;<span style="color:var(--ember-tint)">"county"</span>: <span>"Salt Lake"</span>,<br/>
+&nbsp;&nbsp;<span style="color:var(--ember-tint)">"stage"</span>: <span>"paying_customers"</span>,<br/>
+&nbsp;&nbsp;<span style="color:var(--ember-tint)">"industry"</span>: <span>"b2b_saas"</span>,<br/>
+&nbsp;&nbsp;<span style="color:var(--ember-tint)">"tags"</span>: [<span>"first_time"</span>],<br/>
+&nbsp;&nbsp;<span style="color:var(--ember-tint)">"needs"</span>: [<span>"capital"</span>, <span>"customers"</span>]<br/>
+}
+            </div>
+
+            <div class="sketch-text mono sm" style="color:var(--sage);margin-top:18px">↓ EARLY MATCHES (preview)</div>
+            <div class="stack-2" style="margin-top:6px">
+              <div class="box" style="padding:10px"><div class="row between"><div><div class="sketch-text" style="font-weight:700">Pelion Ventures</div><div class="sketch-text sm muted">capital · seed · Lehi</div></div><span class="chip ember-tint">92</span></div></div>
+              <div class="box" style="padding:10px"><div class="row between"><div><div class="sketch-text" style="font-weight:700">Salt Lake Angels</div><div class="sketch-text sm muted">capital · syndicate</div></div><span class="chip ember-tint">88</span></div></div>
+              <div class="box" style="padding:10px"><div class="row between"><div><div class="sketch-text" style="font-weight:700">Kickstart Fund</div><div class="sketch-text sm muted">capital · seed</div></div><span class="chip ember-tint">85</span></div></div>
+            </div>
+
+            <div class="sketch-text mono sm" style="color:var(--ink-3);margin-top:14px;line-height:1.6">↑ next: confirm urgency &amp; constraints → generate full 90-day plan.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUSINESS OWNER + INVESTOR side by side -->
+  <div class="grid two" style="margin-top:28px">
+
+    <!-- BUSINESS OWNER -->
+    <div class="variant" style="padding:0;overflow:hidden">
+      <div class="screen tall" style="border:0;min-height:560px">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">/onboarding/owner</div><span style="font-family:var(--mono);font-size:10px;color:var(--ink-3)">role: business owner</span></div>
+        <div class="body" style="padding:22px 26px">
+          <div class="row between"><div class="sketch-text mono sm" style="color:var(--ember)">BUSINESS OWNER ONBOARDING</div><span class="chip">step 2 of 3</span></div>
+          <div class="sketch-text xxl" style="margin-top:4px">Find your company.</div>
+          <div class="sketch-text muted" style="margin-top:2px">We'll match against the Atlas index. If your company isn't there, you can add it.</div>
+
+          <div class="field focus" style="margin-top:16px">
+            <div class="lab">Search by name, website, or domain</div>
+            <div class="val">crew</div>
+          </div>
+
+          <div class="sketch-text mono sm" style="color:var(--ink-3);margin-top:14px">3 MATCHES</div>
+          <div class="stack-2" style="margin-top:6px">
+            <div class="box" style="padding:10px;border-color:var(--ember);box-shadow:3px 3px 0 var(--ember)">
+              <div class="row between"><div class="row tight"><div style="width:32px;height:32px;border:1.5px solid var(--ink);border-radius:6px;background:var(--stone);display:grid;place-items:center;font-family:var(--serif)">C</div><div><div class="sketch-text" style="font-weight:700">Crew</div><div class="sketch-text sm muted">crew.com · Lehi · FinTech · 14 emp</div></div></div><span class="chip sage-tint">unclaimed</span></div>
+            </div>
+            <div class="box" style="padding:10px"><div class="row between"><div class="row tight"><div style="width:32px;height:32px;border:1.5px solid var(--ink);border-radius:6px;background:var(--stone);display:grid;place-items:center;font-family:var(--serif)">C</div><div><div class="sketch-text" style="font-weight:700">Crewforce</div><div class="sketch-text sm muted">crewforce.io · Provo · SaaS</div></div></div><span class="chip">claimed</span></div></div>
+            <div class="box" style="padding:10px"><div class="row between"><div class="row tight"><div style="width:32px;height:32px;border:1.5px solid var(--ink);border-radius:6px;background:var(--stone);display:grid;place-items:center;font-family:var(--serif)">C</div><div><div class="sketch-text" style="font-weight:700">Crew Cabin Rentals</div><div class="sketch-text sm muted">crewcabins.com · Park City</div></div></div><span class="chip">claimed</span></div></div>
+          </div>
+
+          <div class="box dashed" style="padding:10px;margin-top:14px;background:var(--paper)">
+            <div class="row between"><div class="sketch-text sm">Don't see your company?</div><span class="btn sm">+ Add a new company</span></div>
+          </div>
+
+          <div class="row between" style="margin-top:18px"><span class="btn ghost sm">← back</span><span class="btn primary lg">Claim Crew →</span></div>
+          <div class="sketch-text mono sm" style="color:var(--ink-3);margin-top:8px;line-height:1.6">↑ next: domain-email verification (use a @crew.com address).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INVESTOR -->
+    <div class="variant" style="padding:0;overflow:hidden">
+      <div class="screen tall" style="border:0;min-height:560px">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">/onboarding/investor</div><span style="font-family:var(--mono);font-size:10px;color:var(--ink-3)">role: investor</span></div>
+        <div class="body" style="padding:22px 26px">
+          <div class="row between"><div class="sketch-text mono sm" style="color:var(--ember)">INVESTOR ONBOARDING</div><span class="chip">step 2 of 3</span></div>
+          <div class="sketch-text xxl" style="margin-top:4px">What kind of deal flow?</div>
+          <div class="sketch-text muted" style="margin-top:2px">Used to personalize map briefs, weekly digests, and saved filters. You can still see everything.</div>
+
+          <div class="stack-3" style="margin-top:16px">
+            <div class="field"><div class="lab">Firm / affiliation</div><div class="val">Pelion Ventures</div></div>
+            <div class="field"><div class="lab">Type</div>
+              <div class="row tight" style="margin-top:6px">
+                <span class="chip ink">VC</span><span class="chip">angel</span><span class="chip">family office</span><span class="chip">corp dev</span><span class="chip">scout</span><span class="chip">LP</span>
+              </div>
+            </div>
+            <div class="field"><div class="lab">Stages of interest</div>
+              <div class="row tight" style="margin-top:6px">
+                <span class="chip">pre-seed</span><span class="chip ink">seed</span><span class="chip ink">series A</span><span class="chip">growth</span>
+              </div>
+            </div>
+            <div class="field"><div class="lab">Sectors of interest</div>
+              <div class="row tight" style="margin-top:6px">
+                <span class="chip ink">B2B SaaS</span><span class="chip ink">FinTech</span><span class="chip">AI</span><span class="chip">+ aerospace</span><span class="chip">+ life sciences</span><span class="chip">+ energy</span>
+              </div>
+            </div>
+            <div class="field"><div class="lab">Check size</div><div class="val">$500K – $3M</div></div>
+            <div class="field"><div class="lab">Geographic focus</div>
+              <div class="row tight" style="margin-top:6px"><span class="chip ink">Wasatch Front</span><span class="chip">statewide</span><span class="chip">national</span></div>
+            </div>
+          </div>
+
+          <div class="row between" style="margin-top:18px"><span class="btn ghost sm">← back</span><span class="btn primary lg">Save preferences →</span></div>
+          <div class="sketch-text mono sm" style="color:var(--ink-3);margin-top:8px;line-height:1.6">↑ next: opt-in to weekly cluster brief email.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DONE SCREEN -->
+  <div class="grid full" style="margin-top:28px">
+    <div class="variant">
+      <header><div class="label"><span class="opt">final</span>"You're ready" — same screen, role-specific next step</div>
+      <div class="note">Single confirmation template. Copy &amp; primary CTA swap based on role.</div></header>
+      <div class="screen short" style="min-height:280px">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">/onboarding/done</div></div>
+        <div class="body" style="padding:24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px">
+          <div class="box" style="padding:16px;text-align:center">
+            <div class="sketch-text" style="font-family:var(--serif);font-size:38px;color:var(--sage);line-height:1">✓</div>
+            <div class="sketch-text xl" style="margin-top:6px">Welcome, founder.</div>
+            <div class="sketch-text sm muted" style="margin-top:4px">Your passport is saved.</div>
+            <span class="btn primary full" style="margin-top:10px">See my 90-day plan →</span>
+          </div>
+          <div class="box" style="padding:16px;text-align:center">
+            <div class="sketch-text" style="font-family:var(--serif);font-size:38px;color:var(--sage);line-height:1">✓</div>
+            <div class="sketch-text xl" style="margin-top:6px">Welcome, owner.</div>
+            <div class="sketch-text sm muted" style="margin-top:4px">Verify your domain to publish.</div>
+            <span class="btn ember full" style="margin-top:10px">Verify @crew.com →</span>
+          </div>
+          <div class="box" style="padding:16px;text-align:center">
+            <div class="sketch-text" style="font-family:var(--serif);font-size:38px;color:var(--sage);line-height:1">✓</div>
+            <div class="sketch-text xl" style="margin-top:6px">Welcome, investor.</div>
+            <div class="sketch-text sm muted" style="margin-top:4px">Your map is filtered.</div>
+            <span class="btn primary full" style="margin-top:10px">Open the map →</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================== -->
+<!-- SETTINGS                                                 -->
+<!-- ======================================================== -->
+<section class="panel" data-panel="settings">
+  <div class="tab-head">
+    <div>
+      <h2>Account settings &mdash; normal user</h2>
+      <div class="lede">Single page, sectioned. Profile, security, role-specific preferences, claimed companies, agent tokens, danger zone. No tabs to navigate — just scroll-snap section headers.</div>
+    </div>
+    <div class="pill">1 page · 6 sections</div>
+  </div>
+
+  <div class="grid full">
+    <div class="variant" style="padding:0;overflow:hidden">
+      <div class="screen tall" style="border:0;min-height:740px">
+        <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="url">/settings</div></div>
+        <div class="body" style="padding:0;display:grid;grid-template-columns:200px 1fr;min-height:700px">
+          <!-- left rail -->
+          <div style="background:var(--paper);border-right:1.5px solid var(--ink);padding:18px 14px">
+            <div class="sketch-text mono sm" style="color:var(--ink-3);letter-spacing:.1em">SETTINGS</div>
+            <div class="stack-2" style="margin-top:10px">
+              <div class="row tight" style="padding:6px 8px;background:var(--ember-tint);border-left:3px solid var(--ember);border-radius:0 4px 4px 0"><span class="sketch-text" style="font-weight:700">Profile</span></div>
+              <div class="row tight" style="padding:6px 8px"><span class="sketch-text muted">Security</span></div>
+              <div class="row tight" style="padding:6px 8px"><span class="sketch-text muted">Founder passport</span></div>
+              <div class="row tight" style="padding:6px 8px"><span class="sketch-text muted">Claimed companies</span><span class="chip" style="font-size:11px;padding:0 5px;margin-left:auto">2</span></div>
+              <div class="row tight" style="padding:6px 8px"><span class="sketch-text muted">Notifications</span></div>
+              <div class="row tight" style="padding:6px 8px"><span class="sketch-text muted">Agent tokens</span></div>
+              <div class="row tight" style="padding:6px 8px;color:var(--danger)"><span class="sketch-text" style="color:var(--danger)">Danger zone</span></div>
+            </div>
+            <div class="box dashed" style="padding:10px;margin-top:18px;background:var(--paper-2)">
+              <div class="sketch-text mono sm" style="color:var(--ink-3)">CURRENT ROLE</div>
+              <div class="sketch-text" style="font-weight:700">Founder</div>
+              <a href="#" style="font-family:var(--hand);font-size:13px;color:var(--ember);font-weight:700">Switch role →</a>
+            </div>
+          </div>
+
+          <!-- main -->
+          <div style="padding:24px 32px;overflow:hidden">
+
+            <!-- profile -->
+            <div class="row between" style="margin-bottom:6px"><div class="sketch-text mono sm" style="color:var(--ember)">↓ PROFILE</div><span class="chip sage-tint">verified</span></div>
+            <div class="sketch-text xxl">Priya Mehta</div>
+            <div class="sketch-text muted">priya@trycrew.com · joined Apr 2026</div>
+
+            <div class="grid two" style="margin-top:14px;gap:12px">
+              <div class="field"><div class="lab">Display name</div><div class="val">Priya Mehta</div></div>
+              <div class="field"><div class="lab">Email</div><div class="val">priya@trycrew.com</div><div class="hint">change requires re-verification</div></div>
+              <div class="field"><div class="lab">Phone (optional)</div><div class="val empty">add a number</div></div>
+              <div class="field"><div class="lab">Time zone</div><div class="val">America/Denver (auto)</div></div>
+            </div>
+            <span class="btn primary sm" style="margin-top:10px">Save profile</span>
+
+            <!-- security -->
+            <div style="height:1.5px;background:var(--topo);margin:24px 0"></div>
+            <div class="sketch-text mono sm" style="color:var(--ember)">↓ SECURITY</div>
+            <div class="sketch-text xl" style="margin-top:2px">Sign-in &amp; sessions</div>
+
+            <div class="stack-2" style="margin-top:10px">
+              <div class="box" style="padding:10px 14px"><div class="row between"><div><div class="sketch-text" style="font-weight:700">Password</div><div class="sketch-text sm muted">last changed 21 days ago</div></div><span class="btn sm">Change →</span></div></div>
+              <div class="box" style="padding:10px 14px"><div class="row between"><div><div class="sketch-text" style="font-weight:700">Two-factor authentication <span class="chip ember-tint" style="margin-left:6px">recommended</span></div><div class="sketch-text sm muted">authenticator app or SMS</div></div><span class="btn primary sm">Enable</span></div></div>
+              <div class="box" style="padding:10px 14px"><div class="row between"><div><div class="sketch-text" style="font-weight:700">Active sessions <span class="chip" style="margin-left:6px">3</span></div><div class="sketch-text sm muted">macOS Chrome · iPhone Safari · 1 other</div></div><span class="btn ghost sm">Manage →</span></div></div>
+              <div class="box" style="padding:10px 14px"><div class="row between"><div><div class="sketch-text" style="font-weight:700">Connected accounts</div><div class="sketch-text sm muted">Google · linked</div></div><span class="btn ghost sm">Manage →</span></div></div>
+            </div>
+
+            <!-- claimed companies -->
+            <div style="height:1.5px;background:var(--topo);margin:24px 0"></div>
+            <div class="sketch-text mono sm" style="color:var(--ember)">↓ CLAIMED COMPANIES (2)</div>
+            <div class="sketch-text xl" style="margin-top:2px">Profiles you can edit</div>
+
+            <div class="stack-2" style="margin-top:10px">
+              <div class="box" style="padding:12px"><div class="row between"><div class="row tight"><div style="width:36px;height:36px;border:1.5px solid var(--ink);border-radius:6px;background:var(--stone);display:grid;place-items:center;font-family:var(--serif)">C</div><div><div class="sketch-text" style="font-weight:700">Crew</div><div class="sketch-text sm muted">verified · Apr 2026 · domain match</div></div></div><div class="row tight"><span class="chip sage-tint">owner</span><span class="btn sm">Edit →</span></div></div></div>
+              <div class="box" style="padding:12px"><div class="row between"><div class="row tight"><div style="width:36px;height:36px;border:1.5px solid var(--ink);border-radius:6px;background:var(--stone);display:grid;place-items:center;font-family:var(--serif)">B</div><div><div class="sketch-text" style="font-weight:700">Bracket Labs</div><div class="sketch-text sm muted">pending verification · invited as editor</div></div></div><span class="chip ember-tint">pending</span></div></div>
+              <div class="box dashed" style="padding:12px;text-align:center"><span class="sketch-text muted">+ Claim another company</span></div>
+            </div>
+
+            <!-- agent tokens -->
+            <div style="height:1.5px;background:var(--topo);margin:24px 0"></div>
+            <div class="row between"><div class="sketch-text mono sm" style="color:var(--ember)">↓ AGENT TOKENS</div><span class="chip">scoped · revocable</span></div>
+            <div class="sketch-text xl" style="margin-top:2px">Let Claude / ChatGPT update your profile</div>
+
+            <div class="stack-2" style="margin-top:10px">
+              <div class="box" style="padding:10px 14px"><div class="row between"><div><div class="sketch-text mono sm">cl_8f2a••••••••</div><div class="sketch-text sm muted">Crew · scopes: hiring, jobs, description · last used 2h ago</div></div><div class="row tight"><span class="btn ghost sm">Copy</span><span class="btn ghost sm" style="color:var(--danger)">Revoke</span></div></div></div>
+              <div class="box dashed" style="padding:10px 14px;text-align:center"><span class="sketch-text muted">+ Generate a new token</span></div>
+            </div>
+
+            <!-- danger -->
+            <div style="height:1.5px;background:var(--topo);margin:24px 0"></div>
+            <div class="box danger-tint" style="padding:14px;border-color:var(--danger)">
+              <div class="sketch-text mono sm" style="color:var(--danger)">↓ DANGER ZONE</div>
+              <div class="row between" style="margin-top:8px"><div><div class="sketch-text" style="font-weight:700">Delete my account</div><div class="sketch-text sm muted">Companies you've claimed will be released back to GOEO review.</div></div><span class="btn danger sm">Delete →</span></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================== -->
+<!-- ADMIN                                                    -->
+<!-- ======================================================== -->
+<section class="panel" data-panel="admin">
+  <div class="tab-head">
+    <div>
+      <h2>Admin &mdash; GOEO team console</h2>
+      <div class="lede">Separate UI shell (dark sidebar, denser tables, action bars). Admins are promoted manually — no signup. Pages: dashboard, users, companies, resources, claim queue, edit log.</div>
+    </div>
+    <div class="pill">internal · GOEO only</div>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div class="grid full">
+    <div class="variant" style="padding:0;overflow:hidden">
+      <div class="screen tall" style="border:0;min-height:680px">
+        <div class="chrome" style="background:#0A1320;color:var(--paper);border-bottom-color:var(--topo-2)"><div class="dots"><i></i><i></i><i></i></div><div class="url" style="background:rgba(247,244,237,.06);color:var(--paper);border-color:var(--topo-2)">/admin</div><span style="font-family:var(--mono);font-size:10px;color:var(--topo)">GOEO admin · m.vanhorn@goeo.utah.gov</span></div>
+        <div class="body" style="padding:0;display:grid;grid-template-columns:220px 1fr;min-height:640px">
+          <!-- sidebar -->
+          <div class="sidebar">
+            <div class="sketch-text mono sm" style="color:var(--ember-tint);letter-spacing:.1em">ATLAS · ADMIN</div>
+            <div class="group-label">overview</div>
+            <div class="nav-item active">◆ Dashboard</div>
+            <div class="group-label">moderation</div>
+            <div class="nav-item">◇ Claim queue<span class="pip"></span></div>
+            <div class="nav-item">◇ Edit log</div>
+            <div class="nav-item">◇ Reports<span class="pip"></span></div>
+            <div class="group-label">content</div>
+            <div class="nav-item">◇ Resources</div>
+            <div class="nav-item">◇ Companies</div>
+            <div class="nav-item">◇ Imports</div>
+            <div class="group-label">people</div>
+            <div class="nav-item">◇ Users</div>
+            <div class="nav-item">◇ Admins</div>
+            <div class="group-label">system</div>
+            <div class="nav-item">◇ Audit log</div>
+            <div class="nav-item">◇ Feature flags</div>
+            <div class="nav-item">◇ API health</div>
+
+            <div style="margin-top:24px;padding:10px;border:1px dashed var(--topo-2);border-radius:6px;background:rgba(247,244,237,.04)">
+              <div class="sketch-text mono sm" style="color:var(--topo)">SIGNED IN AS</div>
+              <div class="sketch-text" style="color:var(--paper);font-weight:700">Mara V.</div>
+              <div class="sketch-text sm" style="color:var(--topo)">super-admin</div>
+            </div>
+          </div>
+
+          <!-- main -->
+          <div style="padding:24px 28px;background:var(--paper);overflow:hidden">
+            <div class="row between" style="align-items:flex-end">
+              <div>
+                <div class="sketch-text mono sm" style="color:var(--ink-3)">DASHBOARD · LAST 7 DAYS</div>
+                <div class="sketch-text xxl">Good morning, Mara.</div>
+              </div>
+              <div class="row tight">
+                <span class="btn sm">+ Invite admin</span>
+                <span class="btn sm">Import data</span>
+                <span class="btn primary sm">Run a report</span>
+              </div>
+            </div>
+
+            <!-- stats row -->
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:18px">
+              <div class="box" style="padding:12px"><div class="sketch-text mono sm" style="color:var(--ink-3)">USERS</div><div class="sketch-text" style="font-family:var(--serif);font-size:26px;font-weight:500;line-height:1">1,418</div><div class="sketch-text sm" style="color:var(--sage);font-weight:700">+82 this week</div></div>
+              <div class="box" style="padding:12px"><div class="sketch-text mono sm" style="color:var(--ink-3)">COMPANIES</div><div class="sketch-text" style="font-family:var(--serif);font-size:26px;font-weight:500;line-height:1">1,247</div><div class="sketch-text sm" style="color:var(--sage);font-weight:700">+11 claimed</div></div>
+              <div class="box" style="padding:12px"><div class="sketch-text mono sm" style="color:var(--ink-3)">RESOURCES</div><div class="sketch-text" style="font-family:var(--serif);font-size:26px;font-weight:500;line-height:1">312</div><div class="sketch-text sm muted">no change</div></div>
+              <div class="box" style="padding:12px;border-color:var(--ember);box-shadow:3px 3px 0 var(--ember)"><div class="sketch-text mono sm" style="color:var(--ember)">CLAIM QUEUE</div><div class="sketch-text" style="font-family:var(--serif);font-size:26px;font-weight:500;line-height:1">7</div><div class="sketch-text sm" style="color:var(--ember);font-weight:700">2 need review</div></div>
+              <div class="box" style="padding:12px"><div class="sketch-text mono sm" style="color:var(--ink-3)">REPORTS</div><div class="sketch-text" style="font-family:var(--serif);font-size:26px;font-weight:500;line-height:1">3</div><div class="sketch-text sm" style="color:var(--danger);font-weight:700">1 unresolved</div></div>
+            </div>
+
+            <!-- two columns: queue + edits -->
+            <div class="grid two" style="margin-top:22px;gap:18px">
+              <div>
+                <div class="row between"><div class="sketch-text mono sm" style="color:var(--ember)">↓ CLAIM QUEUE · NEEDS REVIEW</div><a href="#" style="color:var(--ember);font-weight:700;font-family:var(--hand);font-size:13px">View all 7 →</a></div>
+                <table class="table" style="margin-top:8px">
+                  <thead><tr><th>Company</th><th>Claimant</th><th>Method</th><th></th></tr></thead>
+                  <tbody>
+                    <tr><td><strong>Bracket Labs</strong><br/><span class="sketch-text sm muted">bracket-labs.io</span></td><td>jordan@bracketlabs.io</td><td><span class="chip">domain mismatch</span></td><td><span class="btn sm">Review →</span></td></tr>
+                    <tr><td><strong>Vault Identity</strong></td><td>founder@vaultid.co</td><td><span class="chip ember-tint">manual</span></td><td><span class="btn sm">Review →</span></td></tr>
+                    <tr><td><strong>Anchor Pay</strong></td><td>amir@anchorpay.com</td><td><span class="chip sage-tint">domain ✓</span></td><td><span class="btn primary sm">Approve</span></td></tr>
+                    <tr><td><strong>Helm Estate</strong></td><td>priya@helm.co</td><td><span class="chip sage-tint">domain ✓</span></td><td><span class="btn primary sm">Approve</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div>
+                <div class="row between"><div class="sketch-text mono sm" style="color:var(--ember)">↓ RECENT AGENT EDITS</div><a href="#" style="color:var(--ember);font-weight:700;font-family:var(--hand);font-size:13px">Audit log →</a></div>
+                <div class="stack-2" style="margin-top:8px">
+                  <div class="box" style="padding:10px"><div class="row between"><div><div class="sketch-text" style="font-weight:700">Crew · added 2 jobs</div><div class="sketch-text sm muted">via claude.ai · priya@trycrew.com</div></div><span class="sketch-text mono sm muted">12:14</span></div></div>
+                  <div class="box" style="padding:10px"><div class="row between"><div><div class="sketch-text" style="font-weight:700">Routable · description updated</div><div class="sketch-text sm muted">via chatgpt.com</div></div><span class="sketch-text mono sm muted">11:02</span></div></div>
+                  <div class="box danger-tint" style="padding:10px;border-color:var(--danger)"><div class="row between"><div><div class="sketch-text" style="font-weight:700;color:var(--danger)">Crew · tried to change website ✗</div><div class="sketch-text sm muted">blocked · field locked</div></div><span class="sketch-text mono sm muted">10:48</span></div></div>
+                  <div class="box" style="padding:10px"><div class="row between"><div><div class="sketch-text" style="font-weight:700">Pelion · funding pref added</div><div class="sketch-text sm muted">manual edit · staff</div></div><span class="sketch-text mono sm muted">09:12</span></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- coverage gaps -->
+            <div style="margin-top:22px">
+              <div class="row between"><div class="sketch-text mono sm" style="color:var(--ember)">↓ COVERAGE GAPS</div><span class="sketch-text sm muted">surface what's missing — by county, sector, stage.</span></div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px">
+                <div class="box" style="padding:10px"><div class="sketch-text" style="font-weight:700">Washington Co.</div><div class="sketch-text sm muted">2 ag resources · low</div></div>
+                <div class="box" style="padding:10px"><div class="sketch-text" style="font-weight:700">Veteran tag</div><div class="sketch-text sm muted">4 resources · stale</div></div>
+                <div class="box" style="padding:10px"><div class="sketch-text" style="font-weight:700">Energy sector</div><div class="sketch-text sm muted">7 cos · 0 hiring</div></div>
+                <div class="box" style="padding:10px"><div class="sketch-text" style="font-weight:700">Rural &amp; women</div><div class="sketch-text sm muted">↑ submission ready</div></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN: USERS + RESOURCES -->
+  <div class="grid two" style="margin-top:28px">
+
+    <!-- USERS -->
+    <div class="variant" style="padding:0;overflow:hidden">
+      <div class="screen tall" style="border:0;min-height:480px">
+        <div class="chrome" style="background:#0A1320;color:var(--paper);border-bottom-color:var(--topo-2)"><div class="dots"><i></i><i></i><i></i></div><div class="url" style="background:rgba(247,244,237,.06);color:var(--paper);border-color:var(--topo-2)">/admin/users</div></div>
+        <div class="body" style="padding:18px 22px">
+          <div class="row between"><div><div class="sketch-text mono sm" style="color:var(--ink-3)">USERS · 1,418</div><div class="sketch-text xl">All users</div></div>
+            <div class="row tight">
+              <span class="chip ink">all</span><span class="chip">founder · 612</span><span class="chip">owner · 184</span><span class="chip">investor · 91</span><span class="chip">admin · 12</span>
+            </div>
+          </div>
+          <div class="row tight" style="margin-top:10px">
+            <div class="field" style="flex:1;padding:6px 10px"><div class="val" style="border-bottom:0;color:var(--ink-3);font-weight:400">⌕ search by name, email, company…</div></div>
+            <span class="btn sm">Export CSV</span><span class="btn primary sm">+ Invite admin</span>
+          </div>
+          <table class="table" style="margin-top:10px">
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>Priya Mehta</strong></td><td>priya@trycrew.com</td><td><span class="chip">founder</span></td><td><span class="chip sage-tint">verified</span></td><td>Apr 12</td><td>⋯</td></tr>
+              <tr><td><strong>Marcus Bell</strong></td><td>marcus@bell-fab.com</td><td><span class="chip">founder</span></td><td><span class="chip sage-tint">verified</span></td><td>Apr 09</td><td>⋯</td></tr>
+              <tr><td><strong>Jordan Peters</strong></td><td>jordan@bracketlabs.io</td><td><span class="chip">owner</span></td><td><span class="chip ember-tint">pending</span></td><td>today</td><td>⋯</td></tr>
+              <tr><td><strong>D. Ortiz</strong></td><td>d@pelion.io</td><td><span class="chip">investor</span></td><td><span class="chip sage-tint">verified</span></td><td>Mar 30</td><td>⋯</td></tr>
+              <tr><td><strong>Mara V.</strong></td><td>m.vanhorn@goeo.utah.gov</td><td><span class="chip ink">super-admin</span></td><td><span class="chip sage-tint">verified</span></td><td>Jan 11</td><td>⋯</td></tr>
+              <tr><td><strong>Dr. Amir Reza</strong></td><td>amir.r@utah.edu</td><td><span class="chip">founder</span></td><td><span class="chip danger-tint">flagged</span></td><td>Apr 22</td><td>⋯</td></tr>
+            </tbody>
+          </table>
+          <div class="row between" style="margin-top:10px"><span class="sketch-text sm muted">showing 1–6 of 1,418</span><div class="row tight"><span class="btn ghost sm">←</span><span class="btn sm">1</span><span class="btn ghost sm">2</span><span class="btn ghost sm">3</span><span class="btn ghost sm">→</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESOURCES -->
+    <div class="variant" style="padding:0;overflow:hidden">
+      <div class="screen tall" style="border:0;min-height:480px">
+        <div class="chrome" style="background:#0A1320;color:var(--paper);border-bottom-color:var(--topo-2)"><div class="dots"><i></i><i></i><i></i></div><div class="url" style="background:rgba(247,244,237,.06);color:var(--paper);border-color:var(--topo-2)">/admin/resources</div></div>
+        <div class="body" style="padding:18px 22px">
+          <div class="row between"><div><div class="sketch-text mono sm" style="color:var(--ink-3)">RESOURCES · 312</div><div class="sketch-text xl">Manage the resource library</div></div>
+            <div class="row tight"><span class="btn sm">Re-import sheet</span><span class="btn primary sm">+ New resource</span></div>
+          </div>
+
+          <div class="row tight" style="margin-top:10px">
+            <span class="chip ink">all · 312</span>
+            <span class="chip">capital · 84</span>
+            <span class="chip">mentors · 41</span>
+            <span class="chip">grants · 56</span>
+            <span class="chip ember-tint">stale links · 9</span>
+            <span class="chip danger-tint">draft · 4</span>
+          </div>
+
+          <table class="table" style="margin-top:10px">
+            <thead><tr><th>Title</th><th>Topic</th><th>Counties</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>USU Remote Online Initiative</strong><br/><span class="sketch-text sm muted">id 2547</span></td><td>training</td><td>statewide</td><td><span class="chip sage-tint">live</span></td><td>2d ago</td><td>Edit</td></tr>
+              <tr><td><strong>Pelion Ventures</strong></td><td>capital</td><td>Salt Lake +1</td><td><span class="chip sage-tint">live</span></td><td>5d ago</td><td>Edit</td></tr>
+              <tr><td><strong>USDA Rural Microloan</strong></td><td>grant</td><td>statewide</td><td><span class="chip ember-tint">link broken</span></td><td>43d</td><td>Fix</td></tr>
+              <tr><td><strong>Veterans Business Outreach</strong></td><td>community</td><td>statewide</td><td><span class="chip ember-tint">stale</span></td><td>180d</td><td>Edit</td></tr>
+              <tr><td><strong>GOEO export grant '26</strong></td><td>grant</td><td>statewide</td><td><span class="chip danger-tint">draft</span></td><td>—</td><td>Publish</td></tr>
+              <tr><td><strong>Park City Angels</strong></td><td>capital</td><td>Summit</td><td><span class="chip sage-tint">live</span></td><td>9d</td><td>Edit</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN: CLAIM REVIEW MODAL  + COMPANIES TABLE -->
+  <div class="grid two" style="margin-top:28px">
+    <!-- claim review -->
+    <div class="variant" style="padding:0;overflow:hidden">
+      <div class="screen tall" style="border:0;min-height:520px">
+        <div class="chrome" style="background:#0A1320;color:var(--paper);border-bottom-color:var(--topo-2)"><div class="dots"><i></i><i></i><i></i></div><div class="url" style="background:rgba(247,244,237,.06);color:var(--paper);border-color:var(--topo-2)">/admin/claims/bracket-labs</div></div>
+        <div class="body" style="padding:22px 24px">
+          <div class="row between"><div><div class="sketch-text mono sm" style="color:var(--ember)">CLAIM REVIEW · MANUAL</div><div class="sketch-text xxl">Bracket Labs</div><div class="sketch-text muted">submitted by jordan@bracketlabs.io · 2h ago</div></div>
+            <div class="row tight"><span class="btn danger sm">Reject</span><span class="btn sm">Need more info</span><span class="btn sage sm">Approve →</span></div>
+          </div>
+
+          <div class="grid two" style="margin-top:18px;gap:14px">
+            <div class="box" style="padding:12px"><div class="sketch-text mono sm" style="color:var(--ink-3)">CLAIMANT</div>
+              <div class="stack-2" style="margin-top:6px">
+                <div class="row between"><span class="sketch-text sm">Email</span><span class="sketch-text mono sm">jordan@bracketlabs.io</span></div>
+                <div class="row between"><span class="sketch-text sm">Domain match</span><span class="chip danger-tint">no · site is bracket-labs.io</span></div>
+                <div class="row between"><span class="sketch-text sm">LinkedIn</span><span class="chip sage-tint">listed as CTO</span></div>
+                <div class="row between"><span class="sketch-text sm">GOEO contact</span><span class="chip">none on file</span></div>
+              </div>
+            </div>
+            <div class="box" style="padding:12px"><div class="sketch-text mono sm" style="color:var(--ink-3)">COMPANY</div>
+              <div class="stack-2" style="margin-top:6px">
+                <div class="row between"><span class="sketch-text sm">Website</span><span class="sketch-text mono sm">bracket-labs.io</span></div>
+                <div class="row between"><span class="sketch-text sm">Indexed since</span><span class="sketch-text sm">Mar 2025</span></div>
+                <div class="row between"><span class="sketch-text sm">Source</span><span class="chip">GOEO directory</span></div>
+                <div class="row between"><span class="sketch-text sm">Existing claim</span><span class="chip">none</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="box dashed" style="padding:12px;margin-top:14px">
+            <div class="sketch-text mono sm" style="color:var(--ink-3)">CLAIMANT NOTE</div>
+            <div class="sketch-text sm muted" style="margin-top:4px;line-height:1.5">"My personal email is jordan@bracketlabs.io because we use a hyphenated domain. Happy to send a screenshot from our HRIS or jump on a 5-min call."</div>
+          </div>
+
+          <div class="sketch-text mono sm" style="color:var(--ink-3);margin-top:14px;line-height:1.6">↑ approving grants ownership of <strong>bracket-labs</strong> profile and adds jordan@ as primary editor. Action is logged in audit log.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPANIES table -->
+    <div class="variant" style="padding:0;overflow:hidden">
+      <div class="screen tall" style="border:0;min-height:520px">
+        <div class="chrome" style="background:#0A1320;color:var(--paper);border-bottom-color:var(--topo-2)"><div class="dots"><i></i><i></i><i></i></div><div class="url" style="background:rgba(247,244,237,.06);color:var(--paper);border-color:var(--topo-2)">/admin/companies</div></div>
+        <div class="body" style="padding:18px 22px">
+          <div class="row between"><div><div class="sketch-text mono sm" style="color:var(--ink-3)">COMPANIES · 1,247</div><div class="sketch-text xl">Manage the map index</div></div>
+            <div class="row tight"><span class="btn sm">Re-import sheet</span><span class="btn primary sm">+ New company</span></div>
+          </div>
+          <div class="row tight" style="margin-top:10px">
+            <span class="chip ink">all</span>
+            <span class="chip sage-tint">claimed · 84</span>
+            <span class="chip">unclaimed · 1163</span>
+            <span class="chip ember-tint">flagged · 3</span>
+            <span class="chip danger-tint">duplicate · 6</span>
+          </div>
+          <table class="table" style="margin-top:10px">
+            <thead><tr><th>Company</th><th>Sector</th><th>Stage</th><th>Status</th><th>Owner</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>Crew</strong></td><td>FinTech</td><td>Seed</td><td><span class="chip sage-tint">claimed</span></td><td>priya@trycrew.com</td><td>Edit</td></tr>
+              <tr><td><strong>Bracket Labs</strong></td><td>FinTech</td><td>Seed</td><td><span class="chip ember-tint">pending</span></td><td>jordan@…</td><td>Review</td></tr>
+              <tr><td><strong>Vault Identity</strong></td><td>FinTech</td><td>Seed</td><td><span class="chip">unclaimed</span></td><td>—</td><td>Edit</td></tr>
+              <tr><td><strong>Routable</strong></td><td>FinTech</td><td>Growth</td><td><span class="chip sage-tint">claimed</span></td><td>ops@routable.com</td><td>Edit</td></tr>
+              <tr><td><strong>NewCo · NewCo</strong></td><td>—</td><td>—</td><td><span class="chip danger-tint">dup of "newco"</span></td><td>—</td><td>Merge</td></tr>
+              <tr><td><strong>Anchor Pay</strong></td><td>FinTech</td><td>Seed</td><td><span class="chip ember-tint">flagged</span></td><td>amir@…</td><td>Review</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+</main>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('is-active'));
+    panels.forEach(x => x.classList.remove('is-active'));
+    t.classList.add('is-active');
+    document.querySelector(`[data-panel="${t.dataset.tab}"]`).classList.add('is-active');
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }));
+</script>
+
+</body>
+</html>

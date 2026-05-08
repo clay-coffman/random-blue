@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Startup State Atlas — Wireframes v2</title>
+<template id="__bundler_thumbnail" data-bg-color="#F7F4ED">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#F7F4ED"/>
+    <g stroke="#C4B89B" stroke-width="1" fill="none" opacity="0.55">
+      <path d="M0 400 Q 150 320, 300 400 T 600 400 T 900 400 T 1200 400"/>
+      <path d="M0 460 Q 150 380, 300 460 T 600 460 T 900 460 T 1200 460"/>
+      <path d="M0 520 Q 150 450, 300 520 T 600 520 T 900 520 T 1200 520"/>
+      <path d="M0 340 Q 150 270, 300 340 T 600 340 T 900 340 T 1200 340"/>
+    </g>
+    <g transform="translate(600 400)" text-anchor="middle" font-family="Georgia, serif">
+      <text y="-30" font-size="92" fill="#0F1B2D" letter-spacing="-2">Atlas</text>
+      <text y="40" font-size="46" fill="#C2410C" font-style="italic" font-family="cursive">~ wireframes v2 ~</text>
+    </g>
+    <circle cx="600" cy="600" r="14" fill="#C2410C" stroke="#F7F4ED" stroke-width="4"/>
+    <circle cx="540" cy="620" r="10" fill="#2563EB" stroke="#F7F4ED" stroke-width="3"/>
+    <circle cx="660" cy="620" r="10" fill="#16A34A" stroke="#F7F4ED" stroke-width="3"/>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Roboto+Serif:opsz,wght@8..144,400;8..144,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F4ED;--paper-2:#FBF9F4;--stone:#ECE7DC;--topo:#C4B89B;--topo-2:#A89A78;
+    --ink:#0F1B2D;--ink-2:#2A3647;--ink-3:#5A6678;
+    --ember:#C2410C;--ember-tint:#FBE7DC;--sage:#4F6F52;--sage-tint:#DDE7DD;
+    --sky:#2563EB;--sky-tint:#DDE6FB;
+    --hand:"Kalam","Caveat",cursive;--scribble:"Caveat",cursive;
+    --body:"Hanken Grotesk",system-ui,sans-serif;--serif:"Roboto Serif",Georgia,serif;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--body)}
+  body{background:radial-gradient(1200px 800px at 15% -10%, rgba(196,184,155,.18), transparent 60%),radial-gradient(1000px 700px at 90% 110%, rgba(196,184,155,.14), transparent 60%),var(--paper)}
+
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(247,244,237,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--topo)}
+  .topbar-inner{max-width:1480px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-size:22px;letter-spacing:-.01em}
+  .brand .mark{width:30px;height:30px;border:1.5px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:600}
+  .brand small{font-family:var(--scribble);font-size:18px;color:var(--ember);margin-left:6px;transform:rotate(-3deg);display:inline-block}
+  .ver{font-family:var(--mono);font-size:10px;background:var(--ink);color:var(--paper);padding:2px 6px;border-radius:3px;letter-spacing:.08em;text-transform:uppercase;margin-left:4px}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+  .tab{font-family:var(--hand);font-size:17px;font-weight:700;padding:8px 14px;border-radius:8px;cursor:pointer;background:transparent;border:1.5px dashed transparent;color:var(--ink-2);transition:.15s}
+  .tab:hover{background:var(--stone)}
+  .tab.is-active{background:var(--paper-2);color:var(--ink);border-color:var(--ink);box-shadow:2px 2px 0 var(--ink)}
+
+  .intro{max-width:1480px;margin:0 auto;padding:36px 28px 8px}
+  .intro h1{font-family:var(--serif);font-weight:400;font-size:48px;line-height:1.05;letter-spacing:-.02em;margin:0 0 8px}
+  .intro .scrib{font-family:var(--scribble);color:var(--ember);font-size:30px;display:inline-block;transform:rotate(-2deg);margin-left:8px}
+  .intro p{max-width:880px;color:var(--ink-2);font-size:17px;line-height:1.55;margin:8px 0 0}
+  .intro .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;font-family:var(--hand);font-size:15px;color:var(--ink-3)}
+  .legend .chip{display:inline-flex;align-items:center;gap:6px}
+  .legend .swatch{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:3px}
+
+  .panel{display:none;max-width:1480px;margin:0 auto;padding:24px 28px 80px}
+  .panel.is-active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .tab-head{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:18px;margin:24px 0 8px;padding-bottom:14px;border-bottom:1.5px dashed var(--topo)}
+  .tab-head h2{font-family:var(--serif);font-weight:400;font-size:34px;line-height:1.1;margin:0;letter-spacing:-.01em}
+  .tab-head .lede{max-width:620px;font-family:var(--hand);font-size:17px;color:var(--ink-2);line-height:1.4}
+  .tab-head .pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:5px 9px;border-radius:4px}
+
+  /* Section labels within a tab */
+  .section-label{display:flex;align-items:center;gap:14px;margin:36px 0 14px}
+  .section-label .badge{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:4px;border:1.5px solid var(--ink)}
+  .section-label .badge.primary{background:var(--ember);color:var(--paper);border-color:var(--ember)}
+  .section-label .badge.complement{background:var(--paper);color:var(--ink)}
+  .section-label .badge.cut{background:var(--stone);color:var(--ink-3);border-style:dashed;border-color:var(--ink-3)}
+  .section-label h3{font-family:var(--serif);font-weight:400;font-size:24px;margin:0;letter-spacing:-.01em}
+  .section-label .sub{font-family:var(--hand);color:var(--ink-3);font-size:15px;margin-left:6px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:28px;margin-top:8px}
+  .grid.wide{grid-template-columns:repeat(auto-fill,minmax(560px,1fr))}
+  .grid.full{grid-template-columns:1fr}
+  .grid.two{grid-template-columns:repeat(auto-fit,minmax(540px,1fr))}
+  .grid.cuts{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+
+  .variant{background:var(--paper-2);border:1.5px solid var(--ink);border-radius:14px;padding:18px;box-shadow:5px 5px 0 var(--ink);position:relative;transition:.2s}
+  .variant.cut{box-shadow:3px 3px 0 var(--ink-3);opacity:.78;border-style:dashed;border-color:var(--ink-3);background:var(--stone)}
+  .variant.cut:hover{opacity:1}
+  .variant:hover{transform:translate(-1px,-1px);box-shadow:7px 7px 0 var(--ink)}
+  .variant.cut:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink-3)}
+  .variant > header{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .variant .label{font-family:var(--hand);font-weight:700;font-size:20px;color:var(--ink)}
+  .variant .label .opt{display:inline-block;background:var(--ember);color:var(--paper);font-family:var(--mono);font-size:11px;font-weight:500;padding:2px 7px;border-radius:4px;margin-right:8px;letter-spacing:.06em;text-transform:uppercase;transform:translateY(-2px)}
+  .variant.cut .label .opt{background:var(--ink-3)}
+  .variant .note{font-family:var(--hand);font-size:15px;color:var(--ink-3);line-height:1.35;flex:1 1 100%}
+  .variant.cut .note{color:var(--ink-2)}
+  .variant .why-cut{font-family:var(--hand);font-size:14px;color:var(--ember);line-height:1.3;margin-top:10px;display:flex;gap:6px;align-items:flex-start}
+  .variant .why-cut::before{content:"✕";font-family:var(--mono);font-weight:700;flex:none}
+
+  .screen{background:#fff;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;position:relative}
+  .screen.tall{min-height:560px}
+  .screen.short{min-height:320px}
+  .screen.mini{min-height:200px}
+  .screen .chrome{background:var(--stone);border-bottom:1.5px solid var(--ink);padding:7px 12px;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+  .screen .chrome .dots{display:flex;gap:5px}
+  .screen .chrome .dots i{width:9px;height:9px;border:1.2px solid var(--ink);border-radius:50%;display:block}
+  .screen .chrome .url{flex:1;background:#fff;border:1.2px solid var(--ink);border-radius:4px;padding:2px 8px;font-size:11px}
+  .screen .body{padding:14px}
+  .screen.compact .body{padding:10px}
+
+  .box{border:1.5px solid var(--ink);border-radius:6px;background:#fff}
+  .box.dashed{border-style:dashed;border-color:var(--ink-3)}
+  .box.fill{background:var(--stone)}
+  .box.ink{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .box.ember{background:var(--ember);color:var(--paper);border-color:var(--ember)}
+  .box.sage{background:var(--sage);color:var(--paper);border-color:var(--sage)}
+  .box.sky{background:var(--sky);color:var(--paper);border-color:var(--sky)}
+  .box.ember-tint{background:var(--ember-tint)}
+  .box.sage-tint{background:var(--sage-tint)}
+  .box.sky-tint{background:var(--sky-tint)}
+  .box.tint{background:var(--paper)}
+
+  .h-line{height:1.5px;background:repeating-linear-gradient(90deg,var(--ink-2) 0 6px,transparent 6px 10px);margin:6px 0}
+  .h-solid{height:1.5px;background:var(--ink);margin:8px 0}
+
+  .sketch-text{font-family:var(--hand);font-size:14px;color:var(--ink);line-height:1.3}
+  .sketch-text.sm{font-size:12.5px}
+  .sketch-text.lg{font-size:17px}
+  .sketch-text.xl{font-size:22px;font-family:var(--serif);font-weight:500}
+  .sketch-text.xxl{font-size:32px;font-family:var(--serif);font-weight:400;letter-spacing:-.01em;line-height:1.05}
+  .sketch-text.muted{color:var(--ink-3)}
+  .sketch-text.mono{font-family:var(--mono);font-size:12px}
+  .sketch-text.mono.sm{font-size:11px}
+
+  .scribble{height:8px;background:repeating-linear-gradient(90deg,var(--ink-3) 0 8px,transparent 8px 12px);border-radius:2px}
+  .scribble.short{width:55%}.scribble.med{width:75%}.scribble.full{width:100%}
+  .scribble.dark{background:repeating-linear-gradient(90deg,var(--ink) 0 10px,transparent 10px 14px)}
+
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:6px;border:1.5px solid var(--ink);font-family:var(--hand);font-weight:700;font-size:14px;background:#fff;color:var(--ink)}
+  .btn.primary{background:var(--ink);color:var(--paper)}
+  .btn.ember{background:var(--ember);color:var(--paper);border-color:var(--ember)}
+  .btn.sage{background:var(--sage);color:var(--paper);border-color:var(--sage)}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:4px 9px;font-size:13px}
+  .btn.lg{padding:10px 16px;font-size:16px}
+
+  .chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1.2px solid var(--ink-3);border-radius:999px;font-family:var(--hand);font-size:13px;background:var(--paper)}
+  .chip.dot::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ink-3)}
+  .chip.fintech::before{background:#16A34A}
+  .chip.bio::before{background:#DC2626}
+  .chip.aero::before{background:#7C3AED}
+  .chip.sw::before{background:#2563EB}
+  .chip.ai::before{background:#0891B2}
+  .chip.energy::before{background:#EA580C}
+  .chip.consumer::before{background:#DB2777}
+  .chip.security::before{background:#475569}
+  .chip.ember-tint{background:#FBE7DC;border-color:var(--ember);color:var(--ember)}
+  .chip.sage-tint{background:#DDE7DD;border-color:var(--sage);color:var(--sage)}
+  .chip.sky-tint{background:#DDE6FB;border-color:var(--sky);color:var(--sky)}
+  .chip.ink{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .row.tight{gap:6px}
+  .row.between{justify-content:space-between}
+  .col{display:flex;flex-direction:column;gap:8px}
+  .stack-2>*+*{margin-top:8px}
+  .stack-3>*+*{margin-top:12px}
+  .stack-4>*+*{margin-top:16px}
+
+  .callout{position:absolute;font-family:var(--scribble);font-size:18px;color:var(--ember);line-height:1.05;text-align:center;pointer-events:none}
+  .callout.tr{top:-12px;right:-10px;transform:rotate(6deg)}
+  .callout.tl{top:-12px;left:-10px;transform:rotate(-6deg)}
+  .callout.bl{bottom:-14px;left:10px;transform:rotate(-3deg)}
+  .callout.br{bottom:-14px;right:10px;transform:rotate(3deg)}
+
+  .anno{font-family:var(--scribble);color:var(--ember);font-size:16px;line-height:1.1;display:inline-flex;align-items:center;gap:4px}
+  .anno svg{flex:none}
+
+  .mapbg{position:absolute;inset:0;background:radial-gradient(circle at 35% 50%, rgba(196,184,155,.4), transparent 35%),radial-gradient(circle at 65% 35%, rgba(196,184,155,.35), transparent 30%),repeating-radial-gradient(circle at 50% 50%, transparent 0 28px, rgba(168,154,120,.18) 28px 30px),linear-gradient(180deg, #F0EBDB, #E8E1CF)}
+  .mapbg.dim::after{content:"";position:absolute;inset:0;background:rgba(247,244,237,.25)}
+  .pin{position:absolute;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 0 var(--ink),0 2px 4px rgba(15,27,45,.25)}
+  .pin.sel{width:18px;height:18px;outline:6px solid rgba(196,184,155,.55)}
+  .pin.sel::after{content:"";position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;background:var(--ember);border:1.5px solid #fff}
+
+  .kbd{font-family:var(--mono);font-size:11px;border:1.2px solid var(--ink);background:var(--paper);border-radius:4px;padding:1px 5px;box-shadow:0 1px 0 var(--ink)}
+  .ck{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:3px;display:inline-block;flex:none}
+  .ck.on{background:var(--ink);position:relative}
+  .ck.on::after{content:"✓";position:absolute;color:var(--paper);font-family:var(--mono);font-size:11px;left:1.5px;top:-3px}
+  .rd{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:50%;display:inline-block;flex:none}
+  .rd.on{background:radial-gradient(circle,var(--ink) 0 4px, #fff 5px 100%)}
+
+  /* live ticker */
+  .ticker{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;letter-spacing:.04em}
+  .ticker .live{display:inline-flex;align-items:center;gap:5px;color:var(--ember);font-weight:600}
+  .ticker .live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ember);box-shadow:0 0 0 0 rgba(194,65,12,.6);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(194,65,12,.6)}70%{box-shadow:0 0 0 8px rgba(194,65,12,0)}100%{box-shadow:0 0 0 0 rgba(194,65,12,0)}}
+
+  .stat{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 14px;border-right:1.5px dashed var(--topo)}
+  .stat:last-child{border-right:0}
+  .stat .num{font-family:var(--serif);font-size:22px;font-weight:500;line-height:1}
+  .stat .lab{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+
+  .persona{display:flex;align-items:center;gap:6px;padding:5px 10px 5px 5px;border:1.5px solid var(--ink);border-radius:999px;background:#fff;font-family:var(--hand);font-size:13px;font-weight:700;cursor:pointer}
+  .persona .face{width:22px;height:22px;border-radius:50%;background:var(--stone);border:1.5px solid var(--ink);display:grid;place-items:center;font-family:var(--mono);font-size:10px;font-weight:600}
+  .persona.active{background:var(--ink);color:var(--paper)}
+  .persona.active .face{background:var(--ember);border-color:var(--paper);color:var(--paper)}
+
+  /* arrow connector */
+  .flow-arrow{display:flex;align-items:center;justify-content:center;font-family:var(--scribble);color:var(--ember);font-size:22px;padding:0 4px}
+
+  @media (max-width:900px){
+    .tabs{order:3;margin-left:0;width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
+    .tab{white-space:nowrap}
+    .intro h1{font-size:34px}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="mark">N</div>
+      Startup State Atlas
+      <span class="ver">v2</span>
+      <small>~ wireframes ~</small>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab is-active" data-tab="hero">Front door</button>
+      <button class="tab" data-tab="intake">Founder intake</button>
+      <button class="tab" data-tab="plan">90-day plan</button>
+      <button class="tab" data-tab="map">Investor map</button>
+      <button class="tab" data-tab="profile">Company profile</button>
+      <button class="tab" data-tab="claim">Claim flow</button>
+      <button class="tab" data-tab="agents">Agent docs</button>
+    </nav>
+  </div>
+</header>
+
+<section class="intro">
+  <h1>Wireframes <span class="scrib">— v2, hybrid direction</span></h1>
+  <p>Round two. Each tab now leads with the <strong>chosen primary direction</strong> from the v1 review, supported by a <strong>complement</strong> mode where one exists, with the rejected variants demoted to a <em>Considered &amp; cut</em> appendix at the bottom. The thesis: <em>understandable in 5 seconds, impressive in 30, differentiated by 90.</em></p>
+  <div class="legend">
+    <span class="chip"><span class="swatch" style="background:var(--ember)"></span>primary &mdash; chosen direction</span>
+    <span class="chip"><span class="swatch" style="background:#fff"></span>complement &mdash; secondary mode</span>
+    <span class="chip"><span class="swatch" style="background:var(--stone);border-style:dashed"></span>cut &mdash; with reason</span>
+    <span class="anno">handwriting = annotation</span>
+  </div>
+</section>
+
+<main>
+  <section class="panel is-active" data-panel="hero">
+    <div class="tab-head">
+      <div>
+        <h2>Front door &mdash; B founder-first + G live signal strip</h2>
+        <div class="lede">"A guide for Utah founders. Six questions. One 90-day plan." Lead with the founder, reveal the agent layer later.</div>
+      </div>
+      <div class="pill">primary + 5 cut</div>
+    </div>
+    <div id="panel-hero"></div>
+  </section>
+
+  <section class="panel" data-panel="intake">
+    <div class="tab-head">
+      <div><h2>Founder intake &mdash; D two-pane form + live passport</h2>
+      <div class="lede">Structured chips on the left, a live JSON-shaped Founder Passport on the right with early matches updating as you type.</div></div>
+      <div class="pill">primary + 4 cut</div>
+    </div>
+    <div id="panel-intake"></div>
+  </section>
+
+  <section class="panel" data-panel="plan">
+    <div class="tab-head">
+      <div><h2>90-day plan &mdash; A Now / Next / Later, D printable memo</h2>
+      <div class="lede">Operational by default; one-page memo as the export mode that judges + cofounders can read in 30 seconds.</div></div>
+      <div class="pill">primary + complement + 3 cut</div>
+    </div>
+    <div id="panel-plan"></div>
+  </section>
+
+  <section class="panel" data-panel="map">
+    <div class="tab-head">
+      <div><h2>Investor map &mdash; B map-first, D cluster gazetteer toggle</h2>
+      <div class="lede">Floating filters over a clean basemap is the working interface. Cluster gazetteer is the projection-screen / opening state.</div></div>
+      <div class="pill">primary + complement + 3 cut</div>
+    </div>
+    <div id="panel-map"></div>
+  </section>
+
+  <section class="panel" data-panel="profile">
+    <div class="tab-head">
+      <div><h2>Company profile &mdash; A classic + B agent reveal</h2>
+      <div class="lede">Familiar, useful human profile by default. Agent Card is one click away &mdash; the source of <code>.md</code> / <code>.json</code> / API.</div></div>
+      <div class="pill">primary + complement + 2 cut</div>
+    </div>
+    <div id="panel-profile"></div>
+  </section>
+
+  <section class="panel" data-panel="claim">
+    <div class="tab-head">
+      <div><h2>Claim flow &mdash; A &rarr; B &rarr; C three-act story</h2>
+      <div class="lede">Magic link → live profile editor → "update via Claude/ChatGPT" handoff. The third act is the strongest hackathon moment.</div></div>
+      <div class="pill">3-act flow</div>
+    </div>
+    <div id="panel-claim"></div>
+  </section>
+
+  <section class="panel" data-panel="agents">
+    <div class="tab-head">
+      <div><h2>Agent docs &mdash; C install hero, B tabs, A reference</h2>
+      <div class="lede">"Plug Utah's ecosystem into your AI." Install cards up top, tabbed surfaces below, full man-page reference at the bottom.</div></div>
+      <div class="pill">layered docs</div>
+    </div>
+    <div id="panel-agents"></div>
+  </section>
+</main>
+
+<script src="wireframes/v2/hero.js"></script>
+<script src="wireframes/v2/intake.js"></script>
+<script src="wireframes/v2/plan.js"></script>
+<script src="wireframes/v2/map.js"></script>
+<script src="wireframes/v2/profile.js"></script>
+<script src="wireframes/v2/claim.js"></script>
+<script src="wireframes/v2/agents.js"></script>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('is-active'));
+    panels.forEach(p => p.classList.remove('is-active'));
+    t.classList.add('is-active');
+    document.querySelector('.panel[data-panel="'+t.dataset.tab+'"]').classList.add('is-active');
+    window.scrollTo({top:0, behavior:'instant'});
+  }));
+</script>
+
+</body>
+</html>
