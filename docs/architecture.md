@@ -22,7 +22,7 @@ disagrees with this file, this file wins.
 | Test runners     | **Vitest** (unit), **Playwright** (E2E, scope-permitting)                                |
 | UI               | **Tailwind CSS** + **shadcn/ui** primitives                                              |
 | Lint / format    | ESLint (Next.js defaults) + Prettier (`~/.prettierrc.yaml`, printWidth 80)               |
-| Repo agent infra | **`agent-kit`** (skills, hooks, GitHub workflows, templates) — see `AGENTS.md`           |
+| Repo agent infra | Vendored Claude/Codex skills, hooks, and GitHub workflows under `.agents/`, `.claude/`, `.github/` — see `AGENTS.md` |
 
 ## System diagram
 
@@ -115,8 +115,8 @@ startup-state-atlas/
 │       ├── founder-passports/[id]/plan/route.ts # GET
 │       ├── search/route.ts                # GET
 │       └── openapi.json/route.ts          # spec endpoint (Agent 6)
-├── db/                           # Drizzle (Agent 1 owns)
-│   ├── schema.ts                 # FROZEN after Agent 1 finishes
+├── db/                           # Drizzle (Agent 1 lays initial)
+│   ├── schema.ts                 # any agent may extend post-Agent-1
 │   ├── migrations/0000_*.sql
 │   ├── seed/personas.ts
 │   ├── seed/resources.ts
@@ -216,7 +216,10 @@ Claude/ChatGPT reads /llms.txt and /AGENTS.md
   "compatibility_flags": ["nodejs_compat"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS_BUCKET" },
   "d1_databases": [
-    { "binding": "DB", "database_name": "startup-state-atlas-db", "database_id": "<from `wrangler d1 create`>" }
+    // database_id is only required for `--remote` and `wrangler deploy`.
+    // Local dev uses .wrangler/state/v3/d1/ keyed by database_name —
+    // each worktree has its own SQLite file.
+    { "binding": "DB", "database_name": "startup-state-atlas-db", "database_id": "<from `wrangler d1 create` at deploy time>" }
   ],
   "r2_buckets": [
     { "binding": "OWNERSHIP_DOCS", "bucket_name": "atlas-ownership-docs" }
@@ -266,8 +269,11 @@ Wrap that in `lib/cf.ts` so handlers don't import OpenNext directly.
 
 ## Contracts (FROZEN before agents fork)
 
-- **Schema** lives in `db/schema.ts`. Only Agent 1 touches it. New
-  columns: ask Agent 1.
+- **Schema** lives in `db/schema.ts`. Agent 1 lays the initial
+  version; later agents may extend it from their own worktrees
+  against per-worktree local D1. Rebase against `main` before
+  running `npm run db:generate` to avoid migration-number
+  collisions (`0003_*.sql` clashes).
 - **API contract** lives in `app/api/v1/openapi.yaml` (committed) and
   is also served at `/api/v1/openapi.json`. Agent 6 owns it.
 - **Error shape:** `{ error: { code, message, details? } }`.

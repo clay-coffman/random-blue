@@ -1,19 +1,17 @@
-# >>> agent-kit gitignore (managed) >>>
-# --- agent-kit additions ---
 # Per-session agent transient state
 .claude/scheduled_tasks.lock
+
 # MCP config — keep local or symlinked from a trusted local source
 .mcp.json
+
 # Codex local marker
 .codex
+
 # Per-worktree env (collision-avoidance ports + derived connection strings)
 .env.local
-# Per-worktree Doppler scope binding (if you use Doppler)
-.doppler.yaml
+
 # Playwright MCP transient state
 .playwright-mcp/
-# --- end agent-kit additions ---
-# <<< agent-kit gitignore (managed) <<<
 
 # Node
 node_modules/
@@ -25,3 +23,6 @@ node_modules/
 .env
 .env.*.local
 !.env.example
+
+# Wrangler local state — per-worktree D1 SQLite, KV cache, etc.
+.wrangler/

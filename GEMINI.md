@@ -4,8 +4,11 @@ This file gives Gemini (and any other agent that reads it) the standalone
 context needed to work in this repo. It overlaps with `AGENTS.md`
 intentionally — `AGENTS.md` is policy; this file is orientation.
 
-> This project uses **`agent-kit`** for shared agent infrastructure.
-> See `.agents/skills/agent-kit/SKILL.md` for the symlink model.
+> Agent infrastructure (skills, hooks, workflows) lives as real
+> files under `.agents/skills/`, `.claude/hooks/`,
+> `.github/workflows/`. Originally vendored from
+> [`clay-coffman/agent-kit`](https://github.com/clay-coffman/agent-kit);
+> now repo-local — edit in place.
 
 ## Tech Stack
 
@@ -79,12 +82,15 @@ This repo uses sibling worktrees with per-worktree port offsets. The
 worktree index `N` comes from the directory name (`startup-state-atlas-wt<N>`;
 main repo = N=0).
 
-TODO: fill in your port table.
+| Variable                          | Formula  | main | wt1  | wt2  | wt3  |
+| --------------------------------- | -------- | ---- | ---- | ---- | ---- |
+| `PORT` (`next dev`)               | 3000 + N | 3000 | 3001 | 3002 | 3003 |
+| `WRANGLER_PORT` (`wrangler dev`)  | 8787 + N | 8787 | 8788 | 8789 | 8790 |
 
-| Variable  | Formula  |
-| --------- | -------- |
-| `PORT`    | 3000 + N |
-| `DB_PORT` | 5434 + N |
+D1 is **per-worktree local** — each worktree has its own SQLite at
+`<worktree>/.wrangler/state/v3/d1/`. No Docker, no shared dev DB.
+After pulling new migrations from `main`, run `npm run db:migrate:local`
+in each worktree. Production D1 is created at deploy time, not now.
 
 ## Testing Philosophy
 

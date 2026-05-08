@@ -1,8 +1,11 @@
 # Agent 1 — Data layer
 
-You define the schema, generate the initial migration, write the
-seeders, and **freeze the schema for everyone else**. Aim for ~60–90
-minutes.
+You define the **initial** schema, generate the first migration, and
+write the seeders. Schema is no longer frozen after this brief — any
+later agent may extend it in their own worktree (`db/schema.ts` lives
+on a per-worktree local D1; rebase before regenerating to avoid
+migration-number collisions; see `00-shared-context.md`). Aim for
+~60–90 minutes.
 
 ## Branch + worktree
 
@@ -35,8 +38,9 @@ it.
 
 ## Owns (write surface)
 
-- `db/schema.ts` — **FROZEN at end of this brief**. No other agent
-  may modify this file.
+- `db/schema.ts` — you write the initial version. Other agents may
+  extend it in their own worktree later; rebase against `main`
+  before regenerating migrations to avoid `0003_*.sql` collisions.
 - `db/migrations/0000_*.sql` — generated.
 - `db/seed/index.ts`, `db/seed/personas.ts`, `db/seed/resources.ts`,
   `db/seed/companies.ts`.
@@ -156,7 +160,8 @@ npm run db:migrate:remote
 
 Agent 5 will later expand `auth.ts` with the email-verification
 hook, password-reset hook, and role plugin — **none of those
-changes alter the generated tables**, so the schema stays frozen.
+changes alter the generated tables**, so the Better Auth schema
+stays stable even though general schema is no longer frozen.
 
 For each column, choose appropriate SQLite types (`text`, `integer`,
 `real`, `blob`). Use `text` for JSON columns and parse on read. Use
@@ -254,31 +259,20 @@ await seedResources('db/seed/data/resources.csv');
 await seedCompanies('db/seed/data/companies.csv');
 ```
 
-### 5. Note Schema FREEZE
-
-When you're done, **add a note to the top of `db/schema.ts`**:
-
-```ts
-// SCHEMA FROZEN as of <date> by Agent 1.
-// Other agents: do not edit. New columns go through Agent 1 via
-// docs/agent-tasks/schema-requests.md.
-```
-
-Open `docs/agent-tasks/schema-requests.md` (empty) so other agents
-have a known place to file requests.
-
-### 6. PR
+### 5. PR
 
 ```bash
-git add db/ docs/agent-tasks/schema-requests.md
-git commit -m "feat(data): freeze schema, write personas + CSV loaders"
+git add db/
+git commit -m "feat(data): initial schema + personas + CSV loaders"
 git push -u origin feat/data
-gh pr create --base main --title "Data layer + schema freeze" \
+gh pr create --base main --title "Data layer: initial schema + seed" \
   --body-file - <<'EOF'
-Defines all 12 tables in db/schema.ts, generates the first migration,
-seeds the six required personas, and adds CSV loaders for the
-resources and companies datasets. Schema is FROZEN — see
-db/schema.ts header.
+Defines all 12 app-domain tables + Better Auth tables in
+db/schema.ts, generates the first migration, seeds the six required
+personas, and adds CSV loaders for the resources and companies
+datasets. Later agents may extend the schema from their own
+worktrees (rebase before generating to avoid migration-number
+collisions).
 EOF
 ```
 
@@ -286,15 +280,15 @@ EOF
 
 1. All 12 app-domain tables + 4 Better Auth tables (`user`,
    `session`, `account`, `verification`) visible via
-   `wrangler d1 execute startup-state-atlas-db --command "SELECT name FROM sqlite_master WHERE type='table'"`.
+   `wrangler d1 execute startup-state-atlas-db --local --command "SELECT name FROM sqlite_master WHERE type='table'"`.
 2. `npm run seed` succeeds (with the user's CSVs in place).
-3. `wrangler d1 execute startup-state-atlas-db --command "SELECT count(*) FROM founder_passports"`
+3. `wrangler d1 execute startup-state-atlas-db --local --command "SELECT count(*) FROM founder_passports"`
    returns 6.
-4. `wrangler d1 execute startup-state-atlas-db --command "SELECT count(*) FROM resources"`
+4. `wrangler d1 execute startup-state-atlas-db --local --command "SELECT count(*) FROM resources"`
    returns >0 (assuming user dropped the CSV).
-5. `wrangler d1 execute startup-state-atlas-db --command "SELECT count(*) FROM companies"`
+5. `wrangler d1 execute startup-state-atlas-db --local --command "SELECT count(*) FROM companies"`
    returns >0.
-6. `db/schema.ts` has the FROZEN header.
+6. `db/migrations/0000_*.sql` exists and is committed.
 7. PR open.
 
 ## Demo path

@@ -70,14 +70,17 @@ conflicting code. Don't deviate without checking with the user.
     company; admins can edit any).
   Both paths share the same write endpoints. Don't build a
   separate "admin API" — branch inside the route handler.
-- **Schema ownership.** **Only Agent 1** alters `db/schema.ts`,
-  generates migrations, or applies them. This includes the Better
-  Auth tables — Agent 1 runs `npx @better-auth/cli generate` once
-  Agent 5's `auth.ts` is in place, commits the resulting Drizzle
-  schema, and runs the migration. Other agents read/seed but
-  don't touch schema. If you need a new column, ask Agent 1
-  (write a TODO in `docs/agent-tasks/schema-requests.md` if
-  Agent 1 has finished and another agent needs an addition).
+- **Schema ownership.** Any agent may edit `db/schema.ts`, run
+  `npm run db:generate`, and `npm run db:migrate:local` against
+  their own worktree's local D1. **Rebase against `main` before
+  generating** — Drizzle migrations are sequentially numbered
+  (`0001_*.sql`, `0002_*.sql`, …) and two parallel agents can
+  ship colliding indexes. If a collision lands on `main`, rename
+  the loser's file to the next free index and re-run
+  `db:migrate:local`. Agent 1 still lays the *initial* schema +
+  persona seed (and runs `@better-auth/cli generate` once Agent
+  5's `auth.ts` stub is in place); later non-auth additions are
+  anyone's. Touching the Better Auth tables — see next bullet.
 - **Auth schema ownership.** Agent 5 owns `auth.ts` (the Better
   Auth config) and every UI surface that talks to it (sign-up,
   sign-in, claim/upload, admin queue, user mgmt). Agent 1 owns
@@ -146,7 +149,10 @@ checkout is `N=0`.
 | `PORT` (`next dev`)               | 3000 + N | 3000 | 3001 | 3002 | 3003 |
 | `WRANGLER_PORT` (`wrangler dev`)  | 8787 + N | 8787 | 8788 | 8789 | 8790 |
 
-D1 is shared remote — no per-worktree DB.
+D1 is **per-worktree local** (SQLite at `<worktree>/.wrangler/state/v3/d1/`).
+Each agent runs `npm run db:migrate:local` and `npm run seed` in their
+own worktree after pulling new migrations from `main`. No Docker, no
+shared dev DB. Production D1 is created at deploy time, not now.
 
 ## Branch protocol
 
@@ -181,7 +187,9 @@ A brief is "done" when:
 
 ## Skills available to each agent
 
-The agent-kit symlinks these into `.claude/skills/`. Use them.
+These live as real files under `.agents/skills/<name>/`, with
+`.claude/skills/<name>` as a relative symlink so Claude and Codex
+share one copy.
 
 - **`create-worktree`** — when you need a new worktree (the user
   usually creates these, but you may need to reference port logic).
@@ -193,8 +201,6 @@ The agent-kit symlinks these into `.claude/skills/`. Use them.
 - **`ui-testing`** — UI test automation.
 - **`stripe-projects`** — provision SaaS services via Stripe Projects
   CLI (Cloudflare account linkage, etc.).
-- **`agent-kit`** — meta-skill explaining the symlink/template model.
-  Read once.
 
 Loaded Claude Code skills (already active in your session):
 
