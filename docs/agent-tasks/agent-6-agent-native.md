@@ -14,17 +14,27 @@ Aim for ~120 minutes.
 
 ## Reads first
 
-1. `docs/agent-tasks/00-shared-context.md`
-2. `docs/architecture.md` — repo layout (`cli/`, `mcp/`, `public/`).
-3. `docs/requirements.md` — Agent-native layer.
-4. `docs/hackathon-plan.md` lines 196–397 (API + CLI + MCP +
+1. `docs/implementation-plan.md` — your phase + the openapi-additions
+   coordination point with Agents 2 and 4.
+2. `docs/agent-tasks/00-shared-context.md`.
+3. `docs/architecture.md` — repo layout (`cli/`, `mcp/`, `public/`).
+4. `docs/requirements.md` — Agent-native layer.
+5. `docs/hackathon-plan.md` lines 196–397 (API + CLI + MCP +
    llms.txt + AGENTS.md spec).
-5. The **`cloudflare:build-mcp`** loaded skill — required reading
+6. `design/startup-state-atlas-wireframes/project/wireframes/v2/agents.js`
+   (chosen direction: C install hero + B tabs + A reference). The
+   `/agents` page is your one UI surface. Read HTML/CSS — don't
+   render.
+7. **`docs/source_data/page-2026-05-08-19-38-24.md`** — context only;
+   the brief doesn't separately spec the agent-native layer (that's
+   our internal extension), but the "Easily updatable" requirement is
+   what motivates the CLI/API/MCP surfaces.
+8. The **`cloudflare:build-mcp`** loaded skill — required reading
    if you go remote MCP.
-6. `docs/agent-tasks/openapi-additions.md` (Agent 2 writes this) —
+9. `docs/agent-tasks/openapi-additions.md` (Agent 2 writes this) —
    the recommend endpoint shape.
-7. The MCP spec: <https://modelcontextprotocol.io/specification/>
-   (use the version compatible with `@modelcontextprotocol/sdk`).
+10. The MCP spec: <https://modelcontextprotocol.io/specification/>
+    (use the version compatible with `@modelcontextprotocol/sdk`).
 
 ## Depends on
 

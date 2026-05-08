@@ -253,22 +253,36 @@ ownership verification (admin manually reviews), email verification
 
 ## Datasets
 
-The two seed datasets live in Google Sheets linked from the plan:
+The state has provided complete datasets for both products — see
+`docs/source_data/`. Agent 1 loads them into D1 directly from there;
+no copy-into-`db/seed/data/` step.
 
-- **Resources** —
-  <https://docs.google.com/spreadsheets/d/1AdfJ9TDWdICQuzoYQn-6cBmUkOVXWD8mTqJNDnuKD-E/edit>
-- **Companies** — same brief, separate sheet (linked alongside).
+- **`docs/source_data/Resources List - Builder Day - Sheet1.csv`** —
+  226 resource rows. Columns: `id`, `Title`, `description`,
+  `Communities`, `Industries`, `Locations`, `Topics`, `link`, `email`.
+  Multi-values pipe-separated. Upstream IDs preserved as `r_<id>`.
+- **`docs/source_data/Map Data for Builder Day  - Sheet1.csv`** —
+  254 company rows (note **double space** in filename). Columns:
+  `Display Type`, `LinkedIn Link (...)`, `Startup Name `,
+  `Full Address`, `Description of startup`, `Website`, `Stage`,
+  `# of Employees `, `Section`. Address-only — Agent 1 geocodes via
+  city/county centroids.
+- **`docs/source_data/page-2026-05-08-19-38-24.md`** — the canonical
+  AI Builder Day brief from Utah GOED. Contains the verbatim persona
+  descriptions, required company-profile fields, judging breakdown
+  (30 / 25 / 25 / 20), and the link to the live site this build may
+  replace: <https://startup.utah.gov/>.
 
-The user manually downloads them and drops them at:
-
-- `db/seed/data/resources.csv`
-- `db/seed/data/companies.csv`
-
-Agent 1 writes the loaders.
+The brief explicitly says: *"You don't need to research or compile
+anything — focus every hour on the build."* Don't scrape startup.utah.gov,
+LinkedIn, or pampam.city. Use what's in `docs/source_data/`.
 
 ## Source-of-truth pointers
 
+- Implementation map: `docs/implementation-plan.md`.
+- Screens / sitemap: `docs/screens.md`.
 - Full plan: `docs/hackathon-plan.md`.
 - Architecture: `docs/architecture.md`.
+- Hackathon brief (canonical): `docs/source_data/page-2026-05-08-19-38-24.md`.
 - Per-agent execution: `docs/agent-tasks/agent-<N>-<slice>.md`.
 - Shared conventions: `docs/agent-tasks/00-shared-context.md`.

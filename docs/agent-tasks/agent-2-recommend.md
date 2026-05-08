@@ -12,17 +12,29 @@ page. Deterministic scoring first, LLM explanations second. Aim for
 
 ## Reads first
 
-1. `docs/agent-tasks/00-shared-context.md`
-2. `docs/architecture.md` — error shape, lib/ helpers,
+1. `docs/implementation-plan.md` — your phase + the coordination
+   point with Agent 6 (`docs/agent-tasks/openapi-additions.md`).
+2. `docs/agent-tasks/00-shared-context.md`.
+3. `docs/architecture.md` — error shape, lib/ helpers,
    `lib/anthropic.ts`.
-3. `docs/requirements.md` — Recommendation engine section.
-4. `docs/hackathon-plan.md` lines 84–115 (the scoring formula and
+4. `docs/requirements.md` — Recommendation engine section.
+5. `docs/hackathon-plan.md` lines 84–115 (the scoring formula and
    the source-bound LLM prompt).
-5. `db/schema.ts` (after Agent 1 freezes it) — table shapes for
+6. **`docs/source_data/Resources List - Builder Day - Sheet1.csv`**
+   — the actual resource taxonomy you'll be scoring against. Real
+   columns: `Communities`, `Industries`, `Locations`, `Topics`. All
+   pipe-separated. **Communities is empty for most rows.**
+   **Industries vocabulary is GOED's** (`Aerospace and Defense`,
+   `Software and Information Technology`, `Life Sciences and Healthcare`,
+   etc.) — not the brief's "B2B SaaS / FinTech / AI" shorthand.
+   **Topics carries lifecycle markers** like `Late Stage Growth`.
+7. **`docs/source_data/page-2026-05-08-19-38-24.md`** — the canonical
+   GOED brief; verbatim persona descriptions in § Test Cases.
+8. `db/schema.ts` (after Agent 1 freezes it) — table shapes for
    joins.
-6. `db/seed/personas.ts` — your test inputs.
-7. The **`claude-api`** loaded skill — required reading for the
-   Anthropic call. Use prompt caching.
+9. `db/seed/personas.ts` — your test inputs.
+10. The **`claude-api`** loaded skill — required reading for the
+    Anthropic call. Use prompt caching.
 
 ## Depends on
 
@@ -98,6 +110,37 @@ resource_score =
 
 Each `_match` is 0 or 1 (or partial 0..1 for fuzzy matches like
 "adjacent county"). Skip semantic_similarity for v1.
+
+**Scoring notes for the real source data:**
+
+- **`stage_match`** uses `resource_topics` rows (the source CSV's
+  `Topics` column carries values like `Late Stage Growth`,
+  `Pre-Seed`, etc.). Map the founder's structured `stage` enum
+  (`idea` / `pre_seed` / `mvp` / `paying_customers` / `growth` /
+  `mature`) to the source labels with a small lookup. Don't reject a
+  resource just because the topic vocabulary differs — partial-match
+  if the lookup is fuzzy.
+- **`location_match`** must respect `resource_locations.statewide`.
+  A `statewide=true` row matches any Utah county (score full 20).
+  Otherwise compare by county; partial credit for adjacent counties
+  if you have time.
+- **`industry_match`** compares against `resource_industries.industry`,
+  which uses GOED vocabulary (`Aerospace and Defense`,
+  `Software and Information Technology`, …). The founder's
+  `industry` field is more colloquial (`B2B SaaS`, `FinTech`).
+  Build a small alias map (`B2B SaaS → Software and Information Technology`,
+  `FinTech → Financial Services`, …) so the match resolves. Empty
+  industry on the founder side → skip the component (don't penalize).
+- **`community_match`** is empty for most resources (only ~10 of the
+  226 have any value). Treat empty as "doesn't matter" — full credit
+  if the founder has no community tags either; zero contribution
+  otherwise (don't penalize).
+- **`goal_topic_match`** is the most important after stage. Map
+  founder `goal` enum to topics: `raise_seed_round` → `Funding`,
+  `find_mentors` → `Mentorship`, `start_business` → `Education`, etc.
+  When in doubt, lean on the resource's title and description.
+- A passing reasonable score for our data is ~50–80; perfect 100s
+  will be rare. Don't tune the weights to hit 90+.
 
 ```ts
 export function scoreResource(

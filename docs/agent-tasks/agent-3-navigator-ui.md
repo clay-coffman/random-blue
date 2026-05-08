@@ -12,22 +12,43 @@ minutes — this is the demo's headline.
 
 ## Reads first
 
-1. `docs/agent-tasks/00-shared-context.md`
-2. `docs/architecture.md` — repo layout.
-3. `docs/requirements.md` — Founder Passport intake + the
+1. `docs/implementation-plan.md` — your phase + coordination matrix
+   (you depend on Agent 7's layout + persona contract, plus Agent 2
+   for real recommendations).
+2. `docs/agent-tasks/00-shared-context.md`.
+3. `docs/architecture.md` — repo layout.
+4. `docs/requirements.md` — Founder Passport intake + the
    judging-rubric notes (usability + design = 55%).
-4. `docs/hackathon-plan.md` lines 39–82 (intake fields), lines
+5. `docs/hackathon-plan.md` lines 39–82 (intake fields), lines
    449–470 (Jordan + Priya scenes).
-5. `types/api.ts` — `RecommendRequest`, `RecommendResponse`,
+6. **`docs/source_data/page-2026-05-08-19-38-24.md`** — the canonical
+   GOED brief; verbatim persona descriptions (§ Test Cases).
+7. `design/startup-state-atlas-wireframes/project/wireframes/v2/intake.js`
+   (chosen direction: Variant D, two-pane form + live passport JSON)
+   and `design/.../v2/plan.js` (chosen: Variant A, Now / Next /
+   Ignore columns; complement: Variant D printable memo). Read
+   HTML/CSS — don't render.
+8. `types/api.ts` — `RecommendRequest`, `RecommendResponse`,
    `RecommendedResource` (Agent 2 produces these).
-6. `db/seed/personas.ts` — the canonical persona IDs.
-7. `app/api/v1/resources/recommend/route.ts` — the endpoint shape
-   (Agent 2 owns).
+9. `db/seed/personas.ts` — the canonical persona IDs (matches
+   Agent 7's `lib/personas.ts`).
+10. `app/api/v1/resources/recommend/route.ts` — the endpoint shape
+    (Agent 2 owns).
 
 ## Depends on
 
-- **Agent 1 done.** You need `founder_passports` populated with
-  the 6 personas so the "Try Jordan" buttons work.
+- **Agent 1 done.** You need `founder_passports` populated with the
+  6 personas so the "Try Jordan" buttons work. The personas are
+  seeded from the GOED brief (verbatim descriptions in
+  `docs/source_data/page-2026-05-08-19-38-24.md`).
+- **Agent 7 done (or in flight).** You consume `app/layout.tsx`
+  (root nav + footer), brand tokens (paper/ink/ember theme), and
+  `lib/personas.ts` (the typed persona list — your `PersonaButtons`
+  is just rendering of it). The persona-tile click contract from
+  Agent 7's hero is: tile links to `/founder?persona=<id>`. Your
+  `/founder` page reads the query param and either prefills the form
+  or routes straight to `/plan/fp_<id>`. If Agent 7 hasn't merged,
+  hardcode persona names locally and rebase later.
 - **Agent 2 done (or scaffolded).** You need
   `POST /api/v1/resources/recommend` returning real data. If
   Agent 2 isn't done, mock the response from `types/api.ts` and
@@ -37,14 +58,16 @@ minutes — this is the demo's headline.
 ## Owns (write surface)
 
 - `app/founder/page.tsx` — intake landing.
-- `app/founder/results/[id]/page.tsx` — results page (server
-  component reads cached plan).
 - `app/founder/_components/IntakeForm.tsx` — client component.
-- `app/founder/_components/PersonaButtons.tsx` — quick-test row.
-- `app/founder/_components/ResultsView.tsx` — Do Now / Do Next /
+- `app/founder/_components/PersonaButtons.tsx` — quick-test row
+  (mirrors Agent 7's hero-page persona tiles; same `lib/personas.ts`
+  source).
+- `app/plan/[id]/page.tsx` — saved plan / results page (server
+  component, fetches via `GET /api/v1/founder-passports/[id]/plan`).
+  **Shareable URL** — clean and demo-friendly.
+- `app/plan/_components/ResultsView.tsx` — Do Now / Do Next /
   Ignore display + "Why this matched" detail.
-- `app/founder/_components/ShareLink.tsx` — copy-to-clipboard
-  share.
+- `app/plan/_components/ShareLink.tsx` — copy-to-clipboard share.
 - Tailwind tweaks if needed.
 
 You do NOT touch:
@@ -74,7 +97,7 @@ zod schema:
   regulatory help, operating support)
 
 Submit POSTs to `/api/v1/resources/recommend`, then redirects to
-`/founder/results/[passport_id]`.
+`/plan/[passport_id]`.
 
 Use **shadcn/ui** primitives throughout. Lean on Tailwind for
 spacing/typography. Make it look polished — judging weights design
@@ -92,7 +115,7 @@ fastest feedback loop.
 
 Place these *prominently* — they're the demo's main entry point.
 
-### 3. `/founder/results/[id]` — results page
+### 3. `/plan/[id]` — results page
 
 Sections (in order):
 
@@ -111,7 +134,7 @@ LLM "Because…" explanations alongside the field-level reasons.
 
 ### 4. Save / share / re-render
 
-The plan URL `/founder/results/<passport_id>` should be:
+The plan URL `/plan/<passport_id>` should be:
 
 - Stable (deep-linkable).
 - Re-renderable from D1 (server component fetches via
@@ -140,7 +163,7 @@ gh pr create --base main --title "Founder Navigator UI"
 ## DONE when
 
 1. `/founder` renders the form and the six persona buttons.
-2. Clicking "Try Priya" navigates to `/founder/results/fp_priya` and
+2. Clicking "Try Priya" navigates to `/plan/fp_priya` and
    shows VC/angel-flavored recommendations (Pelion, Grix, Tandem,
    etc., assuming Agent 1 seeded them and Agent 2 is producing the
    right data).

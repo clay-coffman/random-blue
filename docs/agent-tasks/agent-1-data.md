@@ -16,12 +16,22 @@ migration-number collisions; see `00-shared-context.md`). Aim for
 
 ## Reads first
 
-1. `docs/agent-tasks/00-shared-context.md`
-2. `docs/architecture.md` — repo layout + bindings.
-3. `docs/requirements.md` — personas + entities.
-4. `docs/hackathon-plan.md` lines 540–560 (table list) for the full
+1. `docs/implementation-plan.md` — your phase + what you unblock.
+2. `docs/agent-tasks/00-shared-context.md`.
+3. `docs/architecture.md` — repo layout + bindings.
+4. `docs/requirements.md` — personas + entities.
+5. `docs/hackathon-plan.md` lines 540–560 (table list) for the full
    table inventory.
-5. Drizzle's D1 docs (via `cloudflare:wrangler` skill) — SQLite
+6. **`docs/source_data/page-2026-05-08-19-38-24.md`** — the canonical
+   GOED hackathon brief; verbatim persona descriptions (§ Test Cases)
+   and the required company-profile fields (§ The Utah Startup Map).
+7. **`docs/source_data/Resources List - Builder Day - Sheet1.csv`** —
+   the actual resources dataset (226 rows). Open it with `head -3 -- "<path>"`
+   or `Read` to see the real columns.
+8. **`docs/source_data/Map Data for Builder Day  - Sheet1.csv`** —
+   the actual map / companies dataset (254 rows). **Filename has a
+   double space.**
+9. Drizzle's D1 docs (via `cloudflare:wrangler` skill) — SQLite
    types, FTS5, JSON columns.
 
 ## Depends on
@@ -43,8 +53,12 @@ it.
   before regenerating migrations to avoid `0003_*.sql` collisions.
 - `db/migrations/0000_*.sql` — generated.
 - `db/seed/index.ts`, `db/seed/personas.ts`, `db/seed/resources.ts`,
-  `db/seed/companies.ts`.
-- `db/seed/data/.gitkeep` (CSVs are gitignored — user drops them in).
+  `db/seed/companies.ts`, `db/seed/centroids.ts`.
+
+You do NOT copy the CSVs into `db/seed/data/`. The seeders read
+directly from `docs/source_data/` — they're committed source-of-truth
+files, not gitignored fixtures. (The previous `db/seed/data/.gitkeep`
+pattern is dropped.)
 
 ## Deliverables
 
@@ -207,8 +221,20 @@ total. Confirm `user.role` defaults to `'owner'`.
 ### 3. Persona seed fixtures
 
 `db/seed/personas.ts` — the six required personas as
-`founder_passports` rows. Use realistic field values from
-`docs/requirements.md` and `docs/hackathon-plan.md` lines 449–470.
+`founder_passports` rows. **The canonical descriptions are in
+`docs/source_data/page-2026-05-08-19-38-24.md` § Test Cases** —
+match the GOED brief verbatim:
+
+| ID | Display | Location | What they need |
+|----|---------|----------|----------------|
+| `fp_jordan` | Jordan, 20 | Salt Lake City | Pre-seed; idea, no business yet; first steps |
+| `fp_maria` | Maria, 38 | Washington County (St. George) | Rural, woman-owned, ag, scaling |
+| `fp_marcus` | Marcus, 34 | Ogden / Weber County | Veteran, custom fab/manufacturing, early-stage |
+| `fp_priya` | Priya, 31 | Salt Lake City | B2B SaaS, 18mo, paying customers, raising — angels/VCs |
+| `fp_david` | David, 45 | Provo / Utah County | Medical device, 12 emp, FDA cleared, expand internationally |
+| `fp_amir` | Dr. Amir, 29 | Salt Lake City | PhD U of U, novel tech, commercialize research, first-time |
+
+Map these to `founder_passports` columns:
 
 ```ts
 export const personas = [
@@ -229,35 +255,179 @@ These live as canonical IDs (`fp_jordan`, `fp_priya`, …) so the
 front-end's "Try Priya" button can pass them as `passport_id`
 directly.
 
-### 4. CSV loaders
+### 4. CSV loaders — source data lives in `docs/source_data/`
 
-The user provides:
+Both CSVs are committed to the repo. The seeders read them in place
+— no copying, no gitignored fixtures. Use a small CSV parser
+(`papaparse` or hand-written; rows have embedded quoted commas and
+multi-line strings).
 
-- `db/seed/data/resources.csv` — from
-  <https://docs.google.com/spreadsheets/d/1AdfJ9TDWdICQuzoYQn-6cBmUkOVXWD8mTqJNDnuKD-E/edit>.
-  Fields per `docs/hackathon-plan.md` lines 29–33: title,
-  description, communities, industries, locations, topics, links,
-  emails.
-- `db/seed/data/companies.csv` — from the same brief. Fields:
-  company name, address, description, website, stage, employee
-  count, LinkedIn, sector/section.
-
-Write loaders that:
-
-- Skip rows missing critical fields.
-- Normalize tags (lowercase, trim).
-- Geocode using **city/county centroids only** (build a tiny
-  `db/seed/centroids.ts` map) — no real geocoding API calls per the
-  hackathon cuts.
-- Insert rows; on conflict (slug for companies), upsert.
-
-`db/seed/index.ts` orchestrates all three:
+`db/seed/index.ts`:
 
 ```ts
+import path from 'node:path';
+
+const SOURCE = path.resolve(process.cwd(), 'docs/source_data');
+const RESOURCES_CSV = path.join(SOURCE, 'Resources List - Builder Day - Sheet1.csv');
+const COMPANIES_CSV = path.join(SOURCE, 'Map Data for Builder Day  - Sheet1.csv');
+//                                       ^ note the DOUBLE space in the filename
+
 await seedPersonas();
-await seedResources('db/seed/data/resources.csv');
-await seedCompanies('db/seed/data/companies.csv');
+await seedResources(RESOURCES_CSV);
+await seedCompanies(COMPANIES_CSV);
 ```
+
+#### 4a. Resources loader (`db/seed/resources.ts`)
+
+**Source:** `Resources List - Builder Day - Sheet1.csv` (226 rows).
+
+**Real columns** (verbatim):
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | int | Upstream ID (starts at 2543). **Preserve as `r_<id>`** so re-imports don't duplicate. |
+| `Title` | string | Resource name. |
+| `description` | string (multiline) | May span lines; CSV-quoted. |
+| `Communities` | pipe-separated | E.g. `Rural\|Veteran`. Often empty. |
+| `Industries` | pipe-separated | E.g. `Aerospace and Defense\|Software and Information Technology`. |
+| `Locations` | pipe-separated | County names. **If all 29 counties listed → set `statewide=true` and don't insert 29 join rows.** |
+| `Topics` | pipe-separated | Stage / lifecycle markers (e.g. `Late Stage Growth`). |
+| `link` | string | URL. |
+| `email` | string | Contact (often empty). |
+
+**Mapping to schema:**
+
+```ts
+// resources row
+{
+  id: `r_${row.id}`,                           // preserve upstream ID
+  title: row.Title.trim(),
+  description: row.description.trim(),
+  source_url: row.link.trim() || null,
+  kind: deriveKind(row.Topics),                // optional; or just store Topics in resource_topics
+  last_updated_at: <import time>,
+}
+
+// resource_locations (or `statewide=true` if all 29 counties)
+const counties = pipeSplit(row.Locations);
+const isStatewide = countyCount(counties) === 29;
+if (isStatewide) {
+  insert(resource_locations, { resource_id, county: null, city: null, statewide: true });
+} else {
+  for (const county of counties) insert(resource_locations, { resource_id, county, city: null, statewide: false });
+}
+
+// resource_industries — pipe-split, lowercase, trim
+// resource_communities — pipe-split (may be empty)
+// resource_topics      — pipe-split
+```
+
+Helper:
+
+```ts
+const pipeSplit = (s: string) =>
+  (s ?? '').split('|').map(x => x.trim()).filter(Boolean);
+```
+
+#### 4b. Companies loader (`db/seed/companies.ts`)
+
+**Source:** `Map Data for Builder Day  - Sheet1.csv` (254 rows). The
+filename has a **double space** between `Day` and `-`. Hard-code it
+or read from a constant.
+
+**Real columns** (verbatim — note the trailing whitespace):
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `Display Type` | string | Always `profile` so far. Filter on this if other types appear. |
+| `LinkedIn Link (map it to Links to get the logo)` | string | LinkedIn URL. The header has the parenthetical — match exactly. |
+| `Startup Name ` | string | **Trailing space in column name.** Trim values. |
+| `Full Address` | string | E.g. `"815 West 1250 South, Orem, UT"`. **No lat/lng — must centroid-geocode.** |
+| `Description of startup` | string (multiline) | Often empty. |
+| `Website` | string | Bare domain or full URL — normalize. |
+| `Stage` | string | E.g. `"Seed "` (trailing whitespace), `"Series A"`, empty. |
+| `# of Employees ` | string | E.g. `"2-10"`. **Trailing space in column name.** Store as text in `companies.employee_count` (column is text-friendly per schema). |
+| `Section` | string | This is `sector` in our schema. Trim trailing spaces. |
+
+**Mapping to schema:**
+
+```ts
+{
+  id: newId('co'),                             // we mint these (no upstream ID)
+  slug: slugify(row['Startup Name '].trim()),  // for /startups/[slug]
+  name: row['Startup Name '].trim(),
+  website: normalizeUrl(row.Website),
+  description: row['Description of startup']?.trim() ?? null,
+  sector: row.Section?.trim() ?? null,
+  stage: row.Stage?.trim().toLowerCase() ?? null,
+  employee_count: row['# of Employees ']?.trim() ?? null,
+  hiring_status: false,                        // not in source; default false
+  founding_year: null,                         // not in source; nullable
+  linkedin: row['LinkedIn Link (map it to Links to get the logo)']?.trim() ?? null,
+  logo_url: null,                              // derive from LinkedIn later if time permits
+  founder_team_json: null,
+  address_text: row['Full Address']?.trim() ?? null,
+  ...geocodeFromAddress(row['Full Address']),  // returns { lat, lng, city, county }
+  verified_at: null,
+  claimed_at: null,
+  claimed_by_user_id: null,
+}
+```
+
+Also populate `company_locations` from the geocoded `city` + `county`.
+
+**Slug uniqueness** — UNIQUE index will reject duplicates. If the
+same company name appears twice, append `-2` etc. or skip.
+
+#### 4c. Geocoding via `db/seed/centroids.ts`
+
+The map data has only `Full Address` strings — no lat/lng. We don't
+call a real geocoding API. Build a small lookup table keyed on city,
+falling back to county.
+
+```ts
+// db/seed/centroids.ts
+type Centroid = { lat: number; lng: number; county: string };
+
+export const cityCentroids: Record<string, Centroid> = {
+  'Salt Lake City': { lat: 40.7608, lng: -111.8910, county: 'Salt Lake' },
+  'Lehi':           { lat: 40.3916, lng: -111.8508, county: 'Utah' },
+  'Provo':          { lat: 40.2338, lng: -111.6585, county: 'Utah' },
+  'Orem':           { lat: 40.2969, lng: -111.6946, county: 'Utah' },
+  'Park City':      { lat: 40.6461, lng: -111.4980, county: 'Summit' },
+  'Ogden':          { lat: 41.2230, lng: -111.9738, county: 'Weber' },
+  'St. George':     { lat: 37.0965, lng: -113.5684, county: 'Washington' },
+  'Logan':          { lat: 41.7370, lng: -111.8338, county: 'Cache' },
+  // ...add ~20–30 entries covering the cities in the dataset
+};
+
+export const countyCentroids: Record<string, Centroid> = {
+  'Salt Lake': { lat: 40.6669, lng: -111.9244, county: 'Salt Lake' },
+  'Utah':      { lat: 40.1187, lng: -111.6603, county: 'Utah' },
+  // ...all 29 counties
+};
+```
+
+Parse `Full Address` to extract the city (typical format:
+`"<street>, <city>, UT"`), look it up in `cityCentroids`, fall back
+to county if known. If neither resolves, store address only and set
+`lat=null, lng=null` (the map skips those pins).
+
+Hardcode every Utah city the dataset references — `cut -d, -f2 docs/source_data/'Map Data for Builder Day  - Sheet1.csv'` gives you the list (after fixing CSV parsing).
+
+#### 4d. Loader expectations
+
+- **Skip rows missing critical fields** silently (no `Startup Name`,
+  no `Title`, no `id`).
+- **Trim every value.** The dataset is full of trailing spaces.
+- **Normalize multi-values** (lowercase + trim) before inserting into
+  join tables; preserve original casing on the parent record.
+- **Statewide-detection rule** for resource_locations: if all 29 Utah
+  counties are listed, store one row with `statewide=true` instead of
+  29 individual rows.
+- **Idempotent re-runs:** `INSERT ... ON CONFLICT DO UPDATE` for
+  `resources.id` (`r_<csv_id>`) and `companies.slug`. The user will
+  re-run `npm run seed` as the source CSVs evolve.
 
 ### 5. PR
 
@@ -281,15 +451,20 @@ EOF
 1. All 12 app-domain tables + 4 Better Auth tables (`user`,
    `session`, `account`, `verification`) visible via
    `wrangler d1 execute startup-state-atlas-db --local --command "SELECT name FROM sqlite_master WHERE type='table'"`.
-2. `npm run seed` succeeds (with the user's CSVs in place).
-3. `wrangler d1 execute startup-state-atlas-db --local --command "SELECT count(*) FROM founder_passports"`
-   returns 6.
-4. `wrangler d1 execute startup-state-atlas-db --local --command "SELECT count(*) FROM resources"`
-   returns >0 (assuming user dropped the CSV).
-5. `wrangler d1 execute startup-state-atlas-db --local --command "SELECT count(*) FROM companies"`
-   returns >0.
-6. `db/migrations/0000_*.sql` exists and is committed.
-7. PR open.
+2. `npm run seed` succeeds (no `db/seed/data/` checked in — loader
+   reads from `docs/source_data/`).
+3. `SELECT count(*) FROM founder_passports` returns **6**.
+4. `SELECT count(*) FROM resources` returns **226** (the full source
+   list; tolerate ±2 for malformed rows).
+5. `SELECT count(*) FROM companies` returns **254** (tolerate ±2).
+6. `SELECT id FROM resources LIMIT 1` returns a value of the form
+   `r_2543` (i.e. upstream ID was preserved with the `r_` prefix).
+7. `SELECT count(*) FROM resource_locations WHERE statewide = 1`
+   returns >0 (statewide detection works).
+8. `SELECT count(*) FROM companies WHERE lat IS NOT NULL` returns
+   most of the 254 (centroid geocoding hit rate).
+9. `db/migrations/0000_*.sql` exists and is committed.
+10. PR open.
 
 ## Demo path
 
@@ -318,3 +493,16 @@ Without your data, every other agent is producing UI-against-fakes.
   read. Or use Drizzle's `text({ mode: 'json' })`.
 - **D1 is remote** for `--remote` migrations; ensure
   `CLOUDFLARE_API_TOKEN` is set in the env so wrangler can apply.
+- **The map CSV filename has a double space** between `Day` and `-`.
+  Quote the path or use `path.join` — don't manually concatenate.
+- **CSV header trailing whitespace.** `Startup Name ` and
+  `# of Employees ` literally include the trailing space. Match the
+  exact key when accessing the parsed row.
+- **Multi-line CSV cells.** `description` and `Description of startup`
+  often contain embedded newlines + commas inside quoted strings. Use
+  a real CSV parser (`papaparse` or `csv-parse`), not a `split(',')`.
+- **Don't generate new `r_*` IDs for resources.** Preserve upstream
+  IDs (`r_2543`) — the source CSV is the system of record and we want
+  re-runs to be idempotent.
+- **Empty / whitespace-only cells** are common. Treat as null, don't
+  insert empty strings into join tables.
