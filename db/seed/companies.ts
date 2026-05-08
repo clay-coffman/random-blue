@@ -41,8 +41,8 @@ function slugify(name: string): string {
   return name
     .toLowerCase()
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/['']/g, "")
+    .replace(/[̀-ͯ]/g, "") // combining diacriticals
+    .replace(/[‘’]/g, "") // smart single quotes
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
@@ -62,18 +62,26 @@ export function loadCompanies(csvPath: string): CompanySeed[] {
     skipEmptyLines: true,
   });
 
-  const seen = new Map<string, number>();
+  // Track every emitted slug (including suffixed variants) so a literal
+  // "Foo-2" in the dataset doesn't collide with the suffixed second "Foo".
+  const used = new Set<string>();
   const seeds: CompanySeed[] = [];
 
   for (const row of parsed.data) {
     const name = (row[COL_NAME] ?? "").trim();
     if (!name) continue;
 
-    let slug = slugify(name);
-    if (!slug) continue;
-    const count = seen.get(slug) ?? 0;
-    if (count > 0) slug = `${slug}-${count + 1}`;
-    seen.set(slugify(name), count + 1);
+    const base = slugify(name);
+    if (!base) {
+      console.warn(
+        `[seed:companies] skipping row, empty slug after normalization: "${name}"`,
+      );
+      continue;
+    }
+    let slug = base;
+    let n = 2;
+    while (used.has(slug)) slug = `${base}-${n++}`;
+    used.add(slug);
 
     const address = (row["Full Address"] ?? "").trim() || null;
     const geo = geocodeFromAddress(address);
