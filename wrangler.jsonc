@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "startup-state-atlas",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-04-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "startup-state-atlas-db",
+      "database_id": "698139c1-1b46-456f-a4fe-6206a8c204bb",
+      "migrations_dir": "db/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "OWNERSHIP_DOCS",
+      "bucket_name": "atlas-ownership-docs"
+    }
+  ]
+}
