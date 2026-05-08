@@ -16,9 +16,14 @@ project policy here.
 
 ## Project Overview
 
-**Startup State Atlas** is a 24-hour hackathon build of Utah's
-agent-readable map of startup companies, founder resources, funding
-sources, mentor networks, and ecosystem programs. It exposes:
+**Startup State Atlas** is a 24-hour hackathon build for Utah's
+Governor's Office of Economic Development (GOED). Two products in
+one platform: the **Founder's Navigator** (intake → personalized
+plan) and the **Utah Startup Map**. Polished founder/investor product
+on top, agent-native API/CLI/MCP underneath. Winning builds may go
+live on <https://startup.utah.gov/>.
+
+It exposes:
 
 - A polished **Founder Navigator** (intake → personalized 90-day plan)
   and **investor map** for human users.
@@ -36,10 +41,32 @@ Deployed to **Cloudflare Workers** via `wrangler deploy`. Provisioning
 of third-party services flows through the **Stripe Projects CLI**
 (`stripe projects`) — see `.agents/skills/stripe-projects/SKILL.md`.
 
+> **Where to start.** If you're forking into a worktree, read
+> `docs/implementation-plan.md` first — it tells you which phase you're
+> in, what depends on what, and which other agents you coordinate
+> with. Then read your assigned brief in `docs/agent-tasks/`.
+
 The full product spec lives in `docs/hackathon-plan.md`. The condensed
 requirements doc is `docs/requirements.md`. Architecture is in
 `docs/architecture.md`. Per-agent task briefs are in
-`docs/agent-tasks/`.
+`docs/agent-tasks/`. The screen / URL ownership matrix is in
+`docs/screens.md`.
+
+### Source data
+
+The state has provided everything needed to seed both products in
+`docs/source_data/`:
+
+- `page-2026-05-08-19-38-24.md` — the canonical AI Builder Day brief
+  from GOED. Persona descriptions, required profile fields, judging
+  rubric (30% usability / 25% tech / 25% design / 20% innovation).
+- `Map Data for Builder Day  - Sheet1.csv` — 254 companies (filename
+  has a **double space**).
+- `Resources List - Builder Day - Sheet1.csv` — 226 resources
+  (pipe-separated multi-values; upstream IDs preserved as `r_<id>`).
+
+The brief explicitly says don't research or compile — use what's
+provided. Agent 1 owns the loaders.
 
 ## Project Structure
 
@@ -189,28 +216,18 @@ served as public URLs.
 ## Worktrees and Ports
 
 This repo is set up for **persistent sibling worktrees** so up to three
-agents can run isolated dev servers in parallel. Worktree index `N`
-comes from `startup-state-atlas-wt<N>`; the main checkout uses `N=0`.
+agents can run isolated dev servers in parallel.
 
-| Variable                          | Formula  | main | wt1  | wt2  | wt3  |
-| --------------------------------- | -------- | ---- | ---- | ---- | ---- |
-| `PORT` (`next dev`)               | 3000 + N | 3000 | 3001 | 3002 | 3003 |
-| `WRANGLER_PORT` (`wrangler dev`)  | 8787 + N | 8787 | 8788 | 8789 | 8790 |
+The **port table** and **D1 isolation rules** live in a single source
+of truth at `docs/agent-tasks/00-shared-context.md` § Worktree port
+table. Read that, not a copy here.
 
-D1 is **per-worktree local** — each worktree has its own SQLite file
-under `<worktree>/.wrangler/state/v3/d1/`, written by `wrangler d1
-... --local` and `wrangler dev`. The binding name is the same in
-every worktree (`startup-state-atlas-db`), but the data is isolated.
-No Docker, no shared remote dev DB. The production D1 instance is
-created at deploy time, not during local development.
-
-Any agent may edit `db/schema.ts`, run `npm run db:generate` (Drizzle),
-and apply with `npm run db:migrate:local` against their own worktree.
-Drizzle migration files are sequentially numbered (`0001_*.sql`,
-`0002_*.sql`, …) — **rebase against `main` before running
-`db:generate`** so two parallel agents don't ship colliding indexes.
-If a collision lands on `main`, rename the loser's file to the next
-free index and re-run `db:migrate:local`.
+The short version: `PORT = 3000 + N`, `WRANGLER_PORT = 8787 + N`,
+where `N` comes from `startup-state-atlas-wt<N>` (main = 0). D1 is
+**per-worktree local** under `<worktree>/.wrangler/state/v3/d1/` —
+no shared remote dev DB. Schema is collaborative; rebase against
+`main` before `npm run db:generate` to avoid colliding migration
+numbers.
 
 Use the shared worktree skills for the lifecycle:
 

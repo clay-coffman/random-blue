@@ -1,17 +1,30 @@
 # 00 — Shared context for every agent
 
-**Read this FIRST**, then your assigned brief
-(`agent-<N>-<slice>.md`), then `../architecture.md` and `../requirements.md`.
+**Read after `../implementation-plan.md`** (which tells you which
+phase you're in and who you coordinate with). Then your assigned
+brief (`agent-<N>-<slice>.md`), then `../architecture.md` and
+`../requirements.md` as needed.
 
 This file is the spine. Every brief assumes you've absorbed it.
 
 ## What we're building
 
-A 24-hour hackathon build of **Startup State Atlas** — Utah's
-agent-readable startup ecosystem. Polished founder/investor product
-on top, agent-native API/CLI/MCP layer underneath. See
-`../requirements.md` for product detail and `../architecture.md` for
-stack.
+A 24-hour hackathon build for Utah's Governor's Office of Economic
+Development (GOED). Two products in one platform: the **Founder's
+Navigator** and the **Utah Startup Map**. Polished founder/investor
+product on top, agent-native API/CLI/MCP layer underneath. Winning
+builds may go live on <https://startup.utah.gov/>.
+
+The canonical hackathon brief from GOED is in
+`../source_data/page-2026-05-08-19-38-24.md`. Read it for verbatim
+persona descriptions, required profile fields, and the judging
+rubric (30% usability / 25% tech / 25% design / 20% innovation).
+The two seed datasets are in `../source_data/` as well — Agent 1
+loads them directly. **Don't research or compile data; use what's
+provided.**
+
+See `../requirements.md` for product detail and `../architecture.md`
+for stack.
 
 ## Stack (FROZEN)
 
@@ -105,39 +118,59 @@ conflicting code. Don't deviate without checking with the user.
 ## Sequencing
 
 ```
-Agent 0 (Foundation)            wt1 / feat/bootstrap
+Agent 0 (Foundation)            wt0 (main) / feat/bootstrap          [DONE: PR #6]
         │     installs better-auth + @better-auth/cli, provisions
         │     OWNERSHIP_DOCS R2 bucket, BETTER_AUTH_SECRET +
         │     RESEND_API_KEY secrets, ATLAS_ADMIN_TOKEN secret.
         ▼   FREEZE: scaffold + lib stubs + auth-secrets land
-Agent 1 (Data layer)            wt1 (or wt2) / feat/data
-        │     writes a minimal auth.ts stub (Drizzle adapter +
-        │     role additionalField) so Better Auth's CLI can emit
-        │     `user`/`session`/`account`/`verification` tables.
-        │     Adds business_ownership_submissions +
-        │     claimed_by_user_id. Deletes company_claims.
-        ▼   FREEZE: db/schema.ts + initial migration + persona seed
         │
-   ┌────┴────┬─────────┬─────────┬──────────┬─────────────┐
-   ▼         ▼         ▼         ▼          ▼             ▼
- Agent 2  Agent 3   Agent 4   Agent 5    Agent 6       (idle)
- Recommend Navigator Map+Prof  Auth+Adm   Agent-Native
- wt[1-3]  wt[1-3]   wt[1-3]   wt[1-3]    wt[1-3]
+   ┌────┴───────────────┐
+   ▼                    ▼
+ Agent 1 (Data)       Agent 7 (Brand & Shell)         (PARALLEL — Phase 2)
+ wt1 / feat/data      wt2 / feat/brand-shell
+   │ writes auth.ts     │ tailwind theme tokens,
+   │ stub, schema,      │ root layout (nav + footer),
+   │ 0000 migration,    │ hero with persona tiles,
+   │ persona seed,      │ activity ticker stub,
+   │ CSV loaders        │ lib/personas.ts
+   ▼ FREEZE: schema     ▼ FREEZE: brand tokens + layout
+        │
+   ┌────┴────┬─────────┬──────────┐
+   ▼         ▼         ▼          ▼
+ Agent 2  Agent 3   Agent 6     (idle)              (PARALLEL — Phase 3)
+ Recommend Navigator Agent-Layer
+ wt[1-3]  wt[1-3]   wt[1-3]
+        │
+   ┌────┴────┬─────────┐
+   ▼         ▼         ▼
+ Agent 4  Agent 5   (idle)                          (PARALLEL — Phase 4)
+ Map+Prof  Auth+Adm
+ wt[1-3]  wt[1-3]
 ```
 
 Agent 5 expands `auth.ts` (email/password provider, email
 verification + reset hooks, role plugin) **without** changing the
-generated tables — the schema is set in stone after Agent 1.
+generated tables — the Better Auth schema is set in stone after
+Agent 1. (Other tables remain extensible; see Schema ownership
+below.)
 
 **Concurrency cap: 3 active worktrees** at a time (each is ~500MB
 node_modules + a dev server + a Claude session). Suggested batches:
 
-- **Batch 1 (after Agent 1 finishes):** Agents 2, 3, 6.
-- **Batch 2:** Agents 4, 5.
+- **Phase 2 (after Agent 0):** Agents 1 + 7 in parallel (2 worktrees).
+- **Phase 3 (after Agent 1):** Agents 2, 3, 6 in parallel (3 worktrees).
+  Agent 7 should also be merged before Agent 3 starts; if not,
+  Agent 3 stubs minimal nav and rebases.
+- **Phase 4 (after Agent 1):** Agents 4, 5 in parallel (2 worktrees).
+  Can start as Phase 3 PRs free up worktrees.
 
 Agent 6 (agent-native) can start in parallel with Agent 2 because the
 OpenAPI spec is a contract Agent 2 is producing — keep them in sync
-via that file (Agent 6 watches `app/api/v1/openapi.yaml`).
+via `docs/agent-tasks/openapi-additions.md` (Agent 2 writes shapes;
+Agent 6 builds OpenAPI from them).
+
+Full phase-by-phase map with dependencies, coordination matrix, and
+demo gating: `../implementation-plan.md`.
 
 ## Worktree port table
 

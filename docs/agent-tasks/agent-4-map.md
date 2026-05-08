@@ -11,26 +11,53 @@ visual polish matters here.
 
 ## Reads first
 
-1. `docs/agent-tasks/00-shared-context.md`
-2. `docs/architecture.md` — repo layout + `/startups/:slug.{md,json}`
+1. `docs/implementation-plan.md` — your phase + coordination matrix
+   (you share `app/api/v1/companies/[slug]/route.ts` with Agent 5).
+2. `docs/agent-tasks/00-shared-context.md`.
+3. `docs/architecture.md` — repo layout + `/startups/:slug.{md,json}`
    route conventions.
-3. `docs/requirements.md` — Investor / map view + Company profiles.
-4. `docs/hackathon-plan.md` lines 117–183 (map + profile spec) and
+4. `docs/requirements.md` — Investor / map view + Company profiles.
+5. `docs/hackathon-plan.md` lines 117–183 (map + profile spec) and
    lines 471–495 (Scene 3, investor view).
-5. `db/schema.ts` (after Agent 1 freezes) — companies + locations.
-6. MapLibre GL JS docs (via the `cloudflare:cloudflare` skill or
-   <https://maplibre.org/maplibre-gl-js/docs/>).
-7. `db/seed/centroids.ts` (Agent 1 produces) for fallback geocoding.
+6. **`docs/source_data/page-2026-05-08-19-38-24.md`** § "The Utah
+   Startup Map" — required company-profile fields, filter list, and
+   the `pampam.city/utah-startup-map` reference. **Don't scrape or
+   fetch the reference site** — it's just inspiration.
+7. **`docs/source_data/Map Data for Builder Day  - Sheet1.csv`** to
+   know what real sector / stage values you'll be filtering on. The
+   `Section` column is what we call `sector`. Vocabulary in the data:
+   `B2B Software`, `Security`, `FinTech`, `Aerospace and Defense`,
+   `Life Sciences`, etc. — match what's there, don't invent
+   "B2B SaaS"-style alternatives.
+8. `design/startup-state-atlas-wireframes/project/wireframes/v2/map.js`
+   (chosen direction: Variant B map-first floating filters + cluster
+   gazetteer toggle complement) and
+   `design/.../v2/profile.js` (Variant A classic + Variant B agent
+   reveal). Read the HTML/CSS — don't render.
+9. `db/schema.ts` (after Agent 1 freezes) — companies + locations.
+10. MapLibre GL JS docs (via the `cloudflare:cloudflare` skill or
+    <https://maplibre.org/maplibre-gl-js/docs/>).
+11. `db/seed/centroids.ts` (Agent 1 produces) for fallback geocoding.
 
 ## Depends on
 
 - **Agent 1 done.** You need `companies`, `company_locations`,
-  `company_jobs` populated.
+  `company_jobs` populated from
+  `docs/source_data/Map Data for Builder Day  - Sheet1.csv`. The
+  source data is **address-only** — Agent 1 fills `lat`/`lng` via
+  `db/seed/centroids.ts`. Some rows will have null coordinates if the
+  city isn't in the centroid map; those pins are skipped on the map.
+- **Agent 7 done (or in flight).** You consume the root layout
+  (`app/layout.tsx`), brand tokens (paper/ink/ember + sector palette),
+  and the `Tile` / `Chip` brand primitives. If Agent 7 hasn't merged
+  yet, stub minimal styles and rebase later.
 - **Agent 0 done.** You need shadcn primitives, `lib/db.ts`,
   `lib/anthropic.ts`.
 - Optionally Agent 2 for the "Investor Brief" panel's source-bound
   Anthropic call (or copy that pattern from
   `app/api/v1/resources/recommend/route.ts`).
+- **Coordinates with Agent 5** on `app/api/v1/companies/[slug]/route.ts`.
+  You ship GET; Agent 5 adds PATCH on top. Land your PR first.
 
 ## Owns (write surface)
 
@@ -222,7 +249,18 @@ website)**. The map is the visual you put on the projector.
   component. Don't import `maplibre-gl` from a server component.
 - **Pin coordinates fall back to centroids** — Agent 1's seed uses
   city/county centroids when geocoding fails. Don't be surprised
-  by clustered pins on a single point.
+  by stacked pins on a single coordinate (e.g., every Salt Lake
+  City company resolving to the same lat/lng). Apply a tiny random
+  jitter or rely on clustering to make this readable.
+- **Sector vocabulary comes from the source data**, not the
+  hackathon brief's prose. Use the actual `Section` values in the
+  CSV (`B2B Software`, `Security`, `FinTech`, `Aerospace and Defense`,
+  `Life Sciences`, etc.) — the brand palette has eight sector colors,
+  but the data may have more or fewer. Map unknown sectors to a
+  neutral color rather than throwing.
+- **`Stage` values include trailing whitespace** in the source
+  (`"Seed "`). Agent 1's loader trims, but if you build dropdowns
+  from a `SELECT DISTINCT stage`, double-check.
 - **Tile attribution.** OSM/CARTO require attribution — render
   the standard badge.
 - **CSS for map container** — set explicit `height: 100%` on a

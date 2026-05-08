@@ -30,23 +30,36 @@ hit ~120 minutes and aren't through the admin half, take Cut #1.
 
 ## Reads first
 
-1. `docs/agent-tasks/00-shared-context.md` — § "Auth-for-write
+1. `docs/implementation-plan.md` — your phase + coordination matrix
+   (you depend on Agent 7's layout, share `[slug]/route.ts` with
+   Agent 4).
+2. `docs/agent-tasks/00-shared-context.md` — § "Auth-for-write
    (dual model)" and "Auth schema ownership".
-2. `docs/architecture.md` — repo layout, dual-auth bindings, and
+3. `docs/architecture.md` — repo layout, dual-auth bindings, and
    the OWNERSHIP_DOCS R2 binding.
-3. `docs/requirements.md` — Authentication, Self-service claim
+4. `docs/requirements.md` — Authentication, Self-service claim
    flow, GOEO admin UI.
-4. `docs/hackathon-plan.md` — § "Authentication & ownership
+5. `docs/hackathon-plan.md` — § "Authentication & ownership
    verification".
-5. `db/schema.ts` — `user` (with `role`), `session`, `account`,
+6. `design/startup-state-atlas-wireframes/project/Auth.html` —
+   primary auth UI reference (sign-up / sign-in / verify / reset).
+7. `design/startup-state-atlas-wireframes/project/wireframes/v2/claim.js`
+   (3-act flow: verify → editor → "update via Claude/ChatGPT"
+   handoff). Read HTML/CSS — don't render. The third-act handoff is
+   a Phase 5 polish target; ship the first two acts.
+8. **`docs/source_data/page-2026-05-08-19-38-24.md`** § "Self-service
+   profiles" — the brief's exact requirement on verification
+   ("lightweight verification method") and the company-profile field
+   list. Confirms the scope of the editor whitelist.
+9. `db/schema.ts` — `user` (with `role`), `session`, `account`,
    `verification`, `business_ownership_submissions`,
    `companies` (now with `claimed_by_user_id`), `profile_updates`
    (Agent 1 owns).
-6. `auth.ts` — the stub Agent 1 wrote. You expand it.
-7. Better Auth docs (via `context7`):
-   <https://www.better-auth.com/docs>.
-8. `app/startups/[slug]/page.tsx` (Agent 4) — to know the
-   "Claim this company" button.
+10. `auth.ts` — the stub Agent 1 wrote. You expand it.
+11. Better Auth docs (via `context7`):
+    <https://www.better-auth.com/docs>.
+12. `app/startups/[slug]/page.tsx` (Agent 4) — to know the
+    "Claim this company" button.
 
 ## Depends on
 
@@ -58,8 +71,14 @@ hit ~120 minutes and aren't through the admin half, take Cut #1.
 - **Agent 1 done.** Need: Better Auth tables, ownership
   submissions table, `companies.claimed_by_user_id`. The old
   `company_claims` table must be gone.
+- **Agent 7 done (or in flight).** You consume `app/layout.tsx`,
+  brand tokens, and brand primitives (`Tile`, `Chip`, etc.) for the
+  auth pages, claim flow, and admin shell. If Agent 7 hasn't
+  merged, stub minimal styles and rebase later.
 - **Agent 4 in progress or done.** You wire your "Claim" button
-  to Agent 4's profile page and re-use their `MapView`.
+  to Agent 4's profile page and add PATCH on top of Agent 4's
+  GET in `app/api/v1/companies/[slug]/route.ts`. Land Agent 4
+  first; your PR adds the PATCH method to the same file.
 
 ## Owns (write surface)
 
