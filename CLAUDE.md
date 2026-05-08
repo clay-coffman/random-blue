@@ -17,6 +17,9 @@ If you're forking into a worktree:
 5. **`docs/architecture.md`** — stack, bindings, frozen contracts.
 6. **`docs/screens.md`** — only if you own a UI surface (the URL
    matrix maps screens to wireframes).
+7. **`docs/design-guidelines.md`** — only if you own a UI surface.
+   Brand tokens, primitives, persona URL contract, and the responsive
+   non-negotiables. Frozen by Agent 7.
 
 ## Project at a glance
 
@@ -36,7 +39,9 @@ human users, `X-Atlas-Admin-Token` for machine clients.
 **Every UI must be responsive.** Design mobile-first (Tailwind base
 = ≤375px), then layer up `sm: md: lg:`. Test every page at
 375 / 768 / 1280px before calling it done. Full policy in
-`AGENTS.md` § Coding Style.
+`AGENTS.md` § Coding Style. Brand tokens, primitives, and the
+persona URL contract live in `docs/design-guidelines.md` — read it
+before adding any new UI.
 
 ## Source data (provided — don't research, build)
 
