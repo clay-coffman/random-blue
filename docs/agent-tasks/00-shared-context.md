@@ -32,10 +32,13 @@ it with the user before you spend any time on it.
 These decisions exist so parallel agents don't accidentally produce
 conflicting code. Don't deviate without checking with the user.
 
-- **Branch protocol.** Never edit on `main`. First action of every
-  agent: `git checkout -b feat/<slice>`. The agent-kit `protect-main`
-  workflow + the `.claude/settings.json` PreToolUse hook will block
-  Edit/Write while on `main` or `dev`.
+- **Branch protocol (trunk-based).** Never edit on `main`. First
+  action of every agent: `git checkout -b feat/<slice>`. The local
+  `.claude/settings.json` PreToolUse hook blocks Edit/Write while on
+  `main`. The `.github/workflows/protect-main.yml` workflow validates
+  PR head branches follow `feat|fix|chore|docs|refactor/...`. PRs
+  land directly on `main` (squash-merge only); there is no `dev`
+  integration branch.
 - **API path prefix:** `/api/v1/...`. Versioned from day one.
 - **Error response shape:**
   `{ error: { code: string, message: string, details?: any } }`.

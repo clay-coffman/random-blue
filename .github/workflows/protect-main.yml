@@ -1,1 +1,26 @@
-../../node_modules/agent-kit/github-workflows/protect-main.yml
+name: Validate PR branch name
+# Trunk-based git flow: feat/* (or fix/, chore/, docs/, refactor/) -> main.
+# This workflow replaces agent-kit's git-flow-oriented protect-main.yml,
+# which required PRs to come from `dev`. Direct pushes to `main` are
+# blocked separately by GitHub branch protection rules.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  branch-name:
+    name: Branch follows feat|fix|chore|docs|refactor convention
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch name
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [[ ! "$HEAD_REF" =~ ^(feat|fix|chore|docs|refactor)/ ]]; then
+            echo "::error::Branch '$HEAD_REF' must start with feat/, fix/, chore/, docs/, or refactor/."
+            echo "Rename the branch and re-open the PR, e.g.:"
+            echo "  git branch -m $HEAD_REF feat/$(echo $HEAD_REF | sed 's|.*/||')"
+            exit 1
+          fi
+          echo "Branch '$HEAD_REF' is OK."

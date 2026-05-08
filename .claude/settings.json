@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "branch=$(git branch --show-current 2>/dev/null); [ \"$branch\" != \"main\" ] && [ \"$branch\" != \"dev\" ] || { echo '{\"block\": true, \"message\": \"Cannot edit on protected branch. Create a feature branch first: git checkout -b feature/your-feature\"}' >&2; exit 2; }",
+            "command": "branch=$(git branch --show-current 2>/dev/null); [ \"$branch\" != \"main\" ] || { echo '{\"block\": true, \"message\": \"Cannot edit on protected main branch. Create a feature branch first: git checkout -b feat/your-slice\"}' >&2; exit 2; }",
             "timeout": 5
           },
           {

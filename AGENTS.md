@@ -65,15 +65,19 @@ creates the application skeleton.** Target tree:
 
 ## Branching and PRs
 
-- All work branches from `main`. **Never edit on `main` directly** —
-  the agent-kit `protect-main.yml` workflow + `.claude/settings.json`
-  PreToolUse hook block any Edit/Write while checked out on `main` or
-  `dev`. First action of every agent: `git checkout -b feat/<slice>`.
-- Branch names follow `feat/*`, `fix/*`, `chore/*`, `docs/*`.
+- All work branches from `main` (**trunk-based**: `feat/*` → `main`
+  directly; we don't use a `dev` integration branch). **Never edit on
+  `main` directly** — the local `.claude/settings.json` PreToolUse
+  hook blocks any Edit/Write while checked out on `main`, and GitHub
+  branch protection blocks direct pushes. First action of every
+  agent: `git checkout -b feat/<slice>`.
+- Branch names follow `feat/*`, `fix/*`, `chore/*`, `docs/*`, or
+  `refactor/*`. The `.github/workflows/protect-main.yml` workflow
+  validates this on every PR.
 - Commit messages use conventional prefixes (`feat:`, `fix:`,
-  `chore:`, `docs:`).
+  `chore:`, `docs:`, `refactor:`).
 - PRs target `main`. Use `gh pr create --base main`. Include a test
-  plan and screenshots for UI changes.
+  plan and screenshots for UI changes. Squash-merge only.
 
 ## Runtime and Tooling
 
