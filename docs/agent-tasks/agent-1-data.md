@@ -1,5 +1,10 @@
 # Agent 1 — Data layer
 
+> **Status: shipped (PR #10).** This brief documents what Agent 1
+> delivered. The schema gets extended after this brief by other
+> agents; specifically, Agent 5 adds `investor_profiles` and
+> `admin_invites` (see § Post-ship schema deltas below).
+
 You define the **initial** schema, generate the first migration, and
 write the seeders. Schema is no longer frozen after this brief — any
 later agent may extend it in their own worktree (`db/schema.ts` lives
@@ -180,9 +185,15 @@ npm run db:migrate:remote
 ```
 
 Agent 5 will later expand `auth.ts` with the email-verification
-hook, password-reset hook, and role plugin — **none of those
-changes alter the generated tables**, so the Better Auth schema
-stays stable even though general schema is no longer frozen.
+hook (the `emailOTP` plugin — 6-digit code), password-reset hook,
+and a widened role enum
+(`founder | owner | investor | goeo_admin | superadmin`, default
+flipped from `owner` → `founder`). **None of those changes alter
+the generated tables**, so the Better Auth schema stays stable
+even though general schema is no longer frozen. Agent 5 also
+adds two **new** tables (`investor_profiles`, `admin_invites`) in
+its own migration — see § Post-ship schema deltas at the end of
+this brief.
 
 For each column, choose appropriate SQLite types (`text`, `integer`,
 `real`, `blob`). Use `text` for JSON columns and parse on read. Use
@@ -513,3 +524,60 @@ Without your data, every other agent is producing UI-against-fakes.
   re-runs to be idempotent.
 - **Empty / whitespace-only cells** are common. Treat as null, don't
   insert empty strings into join tables.
+
+## Post-ship schema deltas (Agent 5 owns)
+
+Agent 1 froze the Better Auth tables and the
+`business_ownership_submissions` / `claimed_by_user_id` columns.
+Two additional tables land in Agent 5's PR (the full target schema
+is documented here so Agent 1's brief stays the canonical schema
+reference). Agent 5 generates the next migration on its own
+worktree (rebase before generate to avoid number collisions).
+
+```ts
+// investor preferences (one per investor user)
+investor_profiles
+  id              text PRIMARY KEY                  // inv_*
+  user_id         text NOT NULL UNIQUE              // FK -> user.id
+  firm_name       text                              // optional, free text
+  investor_type   text                              // 'vc' | 'angel' | 'family_office' | 'corp_dev' | 'scout' | 'lp'
+  stages_json     text                              // JSON array of {pre_seed, seed, series_a, growth}
+  sectors_json    text                              // JSON array, mirrors company.sector taxonomy
+  check_size_min  integer                           // USD, nullable
+  check_size_max  integer                           // USD, nullable
+  geo_focus_json  text                              // JSON array of {wasatch_front, statewide, national}
+  created_at      integer NOT NULL                  // ms epoch
+  updated_at      integer NOT NULL                  // ms epoch
+
+// admin invites (one-shot tokens for promoting users to goeo_admin)
+admin_invites
+  id              text PRIMARY KEY
+  email           text NOT NULL
+  role            text NOT NULL                     // always 'goeo_admin' (no superadmin invites)
+  token_hash      text NOT NULL                     // sha256 of the one-time token sent by email
+  invited_by      text NOT NULL                     // FK -> user.id (the issuing superadmin)
+  created_at      integer NOT NULL
+  expires_at      integer NOT NULL
+  consumed_at     integer                           // nullable; set when accepted
+```
+
+**Indexes Agent 5 should add:**
+- `investor_profiles.user_id` (already UNIQUE — covers the lookup).
+- `admin_invites.email`, `admin_invites.token_hash`,
+  `admin_invites.consumed_at` (queue + lookup paths).
+
+**Auth config delta Agent 5 lands in the same PR:** the
+`additionalFields.role` default flips from `'owner'` to
+`'founder'`, and the role enum widens to include `'investor'`.
+Existing seeded persona users (role = `'owner'`) stay as-is —
+personas are anonymous quick-test buttons, so the value is
+cosmetic. Agent 5 may optionally update `db/seed/users.ts` to
+backfill three personas as `founder`, two as `owner`, one as
+`investor` so `/admin/users` displays representative role-filter
+counts on first run.
+
+`investor_profiles` seed: Agent 5 ships
+`db/seed/investor-profiles.ts` with three demo rows tied to one
+new investor user (`d@pelion.io` per the wireframe) — so the
+admin user table has a real investor entry on day one.
+

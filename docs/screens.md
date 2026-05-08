@@ -16,10 +16,13 @@ ones.
 
 - **Wireframe column** — relative path under
   `design/startup-state-atlas-wireframes/project/` plus the variant
-  letter (per the v2 chosen direction).
+  letter (per the v2 chosen direction). For pages designed in
+  `Auth.html`, the column points at the relevant tab anchor
+  (e.g. `Auth.html#signup`).
 - **Role** — what auth gate the route enforces. `anon` = no session
-  required; `signed-in` = any role; `owner-of-co` = session user
-  matches `companies.claimed_by_user_id`; `admin` = role
+  required; `signed-in` = any role; `founder|owner|investor` = the
+  matching `user.role`; `owner-of-co` = session user matches
+  `companies.claimed_by_user_id`; `admin` = role
   `goeo_admin | superadmin`; `superadmin` = role `superadmin`;
   `machine` = `X-Atlas-Admin-Token` header.
 - **Agent** — the agent brief that owns the file at
@@ -45,12 +48,29 @@ ones.
 
 | URL | Agent | Wireframe variant | Role | Notes |
 |-----|-------|------------------|------|-------|
-| `/sign-in` | 5 | `project/Auth.html` | anon | Better Auth email + password |
-| `/sign-up` | 5 | `project/Auth.html` | anon | Default role: `owner` |
-| `/verify-email` | 5 | `project/Auth.html` | anon-with-token | Verification link from Resend |
-| `/forgot-password` | 5 | `project/Auth.html` | anon | Sends reset link via Resend |
-| `/reset-password` | 5 | `project/Auth.html` | anon-with-token | Reset link target |
-| `/api/auth/[...all]` | 5 | — | varies | Better Auth catch-all handler |
+| `/sign-in` | 5 | `project/Auth.html#login` (2.1) | anon | Email + password. Magic-link / Google buttons render as Phase-5 stubs. |
+| `/sign-up` | 5 | `project/Auth.html#signup` (1.1) | anon | Step 1: role select (founder · owner · investor). Default role: `founder`. |
+| `/sign-up/account` | 5 | `project/Auth.html#signup` (1.2) | anon | Step 2: name + email + password (12+ chars, strength meter). |
+| `/sign-up/verify` | 5 | `project/Auth.html#signup` (1.3) | anon-with-token | Step 3: 6-digit OTP (10-min expiry, 30-sec resend). Better Auth `emailOTP` plugin. |
+| `/forgot-password` | 5 | `project/Auth.html#login` (2.2) | anon | Generic confirmation — does not leak whether email is on file. |
+| `/reset-password` | 5 | `project/Auth.html#login` (2.3) | anon-with-token | OTP-driven; same plugin as signup verify. |
+| `/login/sent` | 5 | `project/Auth.html#login` (2.3) | anon | Shared "code/link sent" confirmation. Phase 4: reset only. Phase 5: magic-link too. |
+| `/api/auth/[...all]` | 5 | — | varies | Better Auth catch-all handler (incl. OTP endpoints) |
+
+## Onboarding screens (signed-in, role-specific)
+
+| URL | Agent | Wireframe variant | Role | Notes |
+|-----|-------|------------------|------|-------|
+| `/onboarding/founder` | 5 (redirect) + 3 (page) | `project/Auth.html#onboard` (Founder) | founder | 302 to `/founder?onboard=1`; the existing intake (Variant D) renders a stepper when the param is set. Submit → `/onboarding/done`. |
+| `/onboarding/owner` | 5 | `project/Auth.html#onboard` (Owner) | owner | Search-and-claim shortcut. Pick a company → redirect to `/companies/[slug]/claim`. Builds on existing claim flow. |
+| `/onboarding/investor` | 5 | `project/Auth.html#onboard` (Investor) | investor | Preferences form; persists to `investor_profiles` via `POST /api/v1/investor-profiles`. Submit → `/onboarding/done`. |
+| `/onboarding/done` | 5 | `project/Auth.html#onboard` (final) | signed-in | Shared template; copy + CTA swap by `session.user.role` (founder → `/plan/<id>`, owner → claim, investor → `/map`). |
+
+## Account settings (signed-in)
+
+| URL | Agent | Wireframe variant | Role | Notes |
+|-----|-------|------------------|------|-------|
+| `/settings` | 5 | `project/Auth.html#settings` | signed-in | Single-page sectioned: Profile, Security, role-specific (Founder Passport view OR Investor preferences OR Claimed companies), Notifications (stub), Agent tokens (stub), Danger zone. Includes "Switch role" link. |
 
 ## Owner screens (signed-in)
 
@@ -64,15 +84,16 @@ ones.
 
 | URL | Agent | Wireframe variant | Role | Notes |
 |-----|-------|------------------|------|-------|
-| `/admin` | 5 | — | admin | Landing — pending edits review |
+| `/admin` | 5 | `project/Auth.html#admin` (dashboard) | admin | Stats row (5 cards) + claim-queue summary + recent agent edits feed + coverage-gaps strip |
 | `/admin/submissions` | 5 | — | admin | Ownership-submission queue |
-| `/admin/submissions/:id` | 5 | — | admin | Single-submission review with 60-second signed R2 URL |
-| `/admin/resources` | 5 | — | admin | Resource CRUD (list + create) |
+| `/admin/submissions/:id` | 5 | `project/Auth.html#admin` (claim review · manual) | admin | Two modes: auto-approve (domain-match clean) and manual (no match — claimant note + LinkedIn + GOEO contact). 60-second signed R2 URL for the doc. |
+| `/admin/resources` | 5 | `project/Auth.html#admin` (resources) | admin | Resource CRUD with status chips (live / stale / link-broken / draft) |
 | `/admin/resources/:id` | 5 | — | admin | Resource edit |
-| `/admin/companies` | 5 | — | admin | Company CRUD without whitelist |
+| `/admin/companies` | 5 | `project/Auth.html#admin` (companies) | admin | Company CRUD without whitelist; status chips (claimed / pending / unclaimed / flagged / duplicate) |
 | `/admin/companies/:slug` | 5 | — | admin | Direct company edit |
 | `/admin/map` | 5 | — | admin | Map curation — fix coordinates, hide stale entries |
-| `/admin/users` | 5 | — | superadmin | Promote/demote between `owner` and `goeo_admin` |
+| `/admin/users` | 5 | `project/Auth.html#admin` (users) | admin (read) / superadmin (role flip) | Role-filter chips: `all · founder · owner · investor · admin`. Superadmin flips between `owner` and `goeo_admin`. |
+| `/admin/admins` | 5 | (implied by `Auth.html#admin` "+ Invite admin") | superadmin | List current admins + invite form. Writes `admin_invites` row, sends one-time link. |
 
 ## API routes
 
@@ -97,8 +118,13 @@ This list is for orientation — when in doubt, check the spec.
 | GET `/api/v1/ownership-submissions` | 5 | signed-in | Owner's own submissions |
 | GET `/api/v1/ownership-submissions/:id` | 5 | owner OR admin | Owner sees own; admin sees any |
 | PATCH `/api/v1/ownership-submissions/:id` | 5 | admin | Approve / reject |
-| GET `/api/v1/admin/users` | 5 | superadmin | Users management list |
-| PATCH `/api/v1/admin/users/:id` | 5 | superadmin | Role flip |
+| GET `/api/v1/admin/users` | 5 | admin | Users list (filterable by role) |
+| PATCH `/api/v1/admin/users/:id` | 5 | superadmin | Role flip (owner ⇄ goeo_admin) |
+| POST `/api/v1/admin/invites` | 5 | superadmin | Issue admin-invite token (writes `admin_invites`, emails link) |
+| GET `/api/v1/admin/invites` | 5 | superadmin | List active + consumed invites |
+| GET `/api/v1/admin/invites/:token` | 5 | signed-in | Consume token; flips role to `goeo_admin` once |
+| POST `/api/v1/investor-profiles` | 5 | investor (or signed-in) | Upsert investor preferences keyed by `user_id` |
+| GET `/api/v1/investor-profiles` | 5 | signed-in | Caller's own investor profile (or 404) |
 | GET `/api/v1/search` | 6 | anon | Generic search across resources + companies |
 | GET `/api/v1/openapi.json` | 6 | anon | Spec |
 
@@ -143,15 +169,22 @@ device toolbar) before marking your brief DONE.
 
 Worth flagging — these need invented UI without a designer reference:
 
-- Email-verification screen (intermediate states: "check your email",
-  "link expired", "verified, redirecting").
-- Password-reset screens (request, success, expired-link).
+- OTP-error states ("expired", "wrong code", "rate-limited") on
+  `/sign-up/verify` — wireframe shows the success path only.
 - `/me/submissions` (owner's submission status list).
-- Every admin screen except `Auth.html` (submissions queue, single
-  submission review, users management).
+- The admin shell layout (dark sidebar) is in `Auth.html#admin` but
+  individual admin pages beyond dashboard / users / resources /
+  companies / claim-review need invented detail (e.g. `/admin/map`,
+  `/admin/admins` form, the audit-log drill-down).
 - Loading / empty / error / 404 states across the app.
 - "Update via Claude/ChatGPT" claim-flow third act.
 - Ownership document file-upload UI (drag-and-drop, progress, error).
+- Settings sub-modals (change password, sign out other sessions,
+  delete-account confirm) — `Auth.html#settings` shows the section
+  layout but not the destructive-confirm dialogs.
+- Phase-5 stub appearance (greyed-out "coming soon" buttons) on
+  `/sign-in`, `/sign-up`, and the agent-tokens / 2FA / connected
+  accounts blocks in `/settings`.
 
 Default to "shadcn primitive + paper/ink theme tokens, mobile-first,
 keep it boring" for these.

@@ -134,21 +134,81 @@ before submitting.
   Drizzle adapter against D1. CLI-managed migrations
   (`npx @better-auth/cli generate` + `migrate`). No external auth
   dashboard. Sessions stored in D1.
-- **Roles** on `user.role`: `owner` (default for sign-up),
-  `goeo_admin` (Utah Startup State staff), `superadmin`
-  (bootstrapping role; promotes/demotes admins).
-- **Method**: email + password, with email verification and
-  password reset (delivery via the `send-email` skill / Resend).
-  No third-party social providers for the hackathon.
+- **Roles** on `user.role`:
+  - `founder` — default for self-serve sign-up. Building a
+    company; uses the Founder Navigator.
+  - `owner` — already running a Utah company; uses the claim
+    flow to verify ownership and edit a profile.
+  - `investor` — VC, angel, family office, scout, or LP looking
+    at the Utah ecosystem; uses the map and saved filters.
+  - `goeo_admin` — Utah Startup State / GOEO staff. **Invite-only**
+    (no self-serve admin sign-up).
+  - `superadmin` — bootstrapping role; promotes/demotes admins.
+    **Invite-only** via the `bootstrap-superadmin` script.
+- **Sign-up flow**: 3 steps on one URL with a stepper.
+  1. Pick role (founder / owner / investor).
+  2. Enter name, email, password (12+ chars).
+  3. Verify with a 6-digit OTP emailed to that address (10-minute
+     expiry, 30-second resend cooldown). Better Auth's `emailOTP`
+     plugin handles storage/expiry.
+- **Sign-in flow**: email + password on `/sign-in`.
+  "Magic link" and "Continue with Google" appear as Phase-5
+  Coming Soon stubs in Phase 4.
+- **Reset flow**: `/forgot-password` (generic confirmation —
+  don't leak whether the email is on file) → 6-digit code (same
+  OTP plugin) → `/reset-password`.
+- **Onboarding** (post-verify, role-specific):
+  - **Founder** → `/founder?onboard=1` (the existing Navigator
+    intake form, framed with a stepper).
+  - **Owner** → `/onboarding/owner` (search the company index,
+    pick one, redirect to `/companies/[slug]/claim`).
+  - **Investor** → `/onboarding/investor` (preferences form;
+    persists to `investor_profiles`).
+  - All three end on `/onboarding/done` — single template with
+    role-aware copy + CTA.
+- **Settings**: single sectioned page at `/settings`. Sections:
+  Profile (display name, email, time zone), Security (password,
+  sessions, 2FA stub, connected accounts stub), role-specific
+  (Founder Passport summary OR Investor preferences OR Claimed
+  companies), Notifications (stub), Agent tokens (stub for Phase
+  5 — distinct from the machine `X-Atlas-Admin-Token`), Danger
+  zone (delete account; "Switch role" link).
 - **Bootstrapping**: first `superadmin` is set by a one-shot
   `npm run bootstrap-superadmin <email>` script run by an
   operator with `wrangler` D1 access. After that, `superadmin`
-  promotes other users to `goeo_admin` from `/admin/users`.
+  invites other admins via `/admin/admins` (writes
+  `admin_invites`, sends a one-time link). `superadmin`
+  promotes/demotes existing users between `owner` and
+  `goeo_admin` from `/admin/users`.
 - **Anonymous founder passports stay anonymous** — sign-up is
-  not required to use the Founder Navigator.
+  not required to use the Founder Navigator. The persona
+  quick-test buttons on `/founder` work without an account.
 - **Read endpoints stay open.** Writes from the web app require a
   Better Auth session; writes from the CLI/MCP layer use the
   machine-only `X-Atlas-Admin-Token` (see Agent-native layer).
+
+### Investor profile (preferences)
+
+Investors are first-class users alongside founders and owners. On
+sign-up they pick the `investor` role and complete a preferences
+form (`/onboarding/investor`) that persists to `investor_profiles`,
+keyed by `user.id`:
+
+- **Firm / affiliation** (free text, e.g. "Pelion Ventures").
+- **Investor type** (single-select):
+  `vc | angel | family_office | corp_dev | scout | lp`.
+- **Stages of interest** (multi-select):
+  `pre_seed | seed | series_a | growth`.
+- **Sectors of interest** (multi-select; mirrors the company
+  sector taxonomy used on the map).
+- **Check size** (range: optional min + max, USD integers).
+- **Geographic focus** (multi-select):
+  `wasatch_front | statewide | national`.
+
+Phase 4 ships the data and the form. Phase 5 wires the
+preferences into `/map` filter chips and a weekly cluster-brief
+email. Investors can still see the whole map regardless — the
+preferences personalize, they don't gate.
 
 ### Self-service claim flow (with ownership verification)
 
@@ -181,26 +241,50 @@ breakpoint policy and test checklist.
 ### GOEO admin UI
 
 Utah Startup State / GOEO staff can keep the data current without
-a developer. Auth is the same Better Auth system the owners use;
-admin pages require a session with role `goeo_admin` or
+a developer. Auth is the same Better Auth system the regular users
+use; admin pages require a session with role `goeo_admin` or
 `superadmin` (Next.js middleware enforced — no separate token gate).
+The admin shell uses a darker chrome (Auth.html#admin) to make role
+context obvious.
 
+- **Dashboard** (`/admin`) — landing page. Stats row (users,
+  companies, resources, claim-queue size, open reports).
+  Two-column body: pending claim queue (top of
+  `/admin/submissions`) and a feed of recent agent edits drawn
+  from `profile_updates` (Crew added 2 jobs via claude.ai;
+  Routable description updated via chatgpt.com; etc.). Coverage
+  gaps strip below — by county, sector, identity tag — surfaces
+  what the catalog is missing.
 - **Ownership-submission queue** (`/admin/submissions`) — review
   pending business-ownership submissions. View the uploaded doc
   via a signed R2 URL; approve (sets
   `companies.claimed_by_user_id` + `verified_at` + `claimed_at`)
-  or reject (with notes).
-- **Pending edits** review for founder-submitted profile changes.
+  or reject (with notes). The single-submission page handles two
+  modes: auto-approvable (domain match clean — one-click approve)
+  and manual (no domain match — show claimant note, LinkedIn
+  link, GOEO contact lookup, then Approve/Reject/Need-more-info).
+- **Pending edits** review for owner-submitted profile changes.
 - **Resources CRUD** — create, edit, delete entries in the
   resource directory (funding, mentoring, training, etc.) with
   all join-table fields (locations, industries, communities,
-  topics).
+  topics). Status chips for live / stale / draft / broken-link.
 - **Companies CRUD** — create, edit (no founder field whitelist),
-  delete companies directly without a claim flow.
+  delete companies directly without a claim flow. Status chips
+  for claimed / unclaimed / pending / flagged / duplicate.
 - **Map curation** — click a pin to fix coordinates, edit the
   company, or hide a stale entry.
-- **Users management** (`/admin/users`, `superadmin` only) —
-  promote/demote users between `owner` and `goeo_admin`.
+- **Users management** (`/admin/users`, read = admin, role-flip
+  = `superadmin`) — list every user with role-filter chips
+  (`all · founder · owner · investor · admin`) and counts. The
+  superadmin can flip any user between `owner` and `goeo_admin`;
+  the current logged-in superadmin's own row is disabled (no
+  self-demotion). No "promote to superadmin" option from the UI —
+  that's the bootstrap script's job.
+- **Admin invites** (`/admin/admins`, `superadmin` only) —
+  list current admins; "+ Invite admin" form writes a row to
+  `admin_invites` (token hash + expiry) and emails a one-time
+  link. Consuming the link flips the recipient's role to
+  `goeo_admin` and marks the invite consumed.
 
 ### Agent-native layer
 
@@ -235,10 +319,19 @@ admin pages require a session with role `goeo_admin` or
 
 Per `docs/hackathon-plan.md`, do not invest in:
 
-- Real OAuth with ChatGPT/Claude (Better Auth covers our owner /
+- Real OAuth with ChatGPT/Claude (Better Auth covers our user /
   admin login; agents use `X-Atlas-Admin-Token`).
-- Third-party social login providers (Google, GitHub, etc.) —
-  email + password is enough for the hackathon.
+- Third-party social login providers (Google, GitHub, etc.) for
+  Phase 4 — email + password is enough. The "Continue with
+  Google" button on `/sign-up` and `/sign-in` renders as a
+  Phase-5 stub (matches the wireframe; doesn't ship).
+- Magic-link login for Phase 4 — same pattern: the `/sign-in`
+  "Email me a magic link" button is a Phase-5 stub.
+- 2FA, connected accounts, per-user agent tokens UI — `/settings`
+  shows these sections with "coming soon" badges in Phase 4.
+- Real-time notifications, weekly investor cluster-brief email,
+  and map-personalization wired from `investor_profiles` —
+  Phase 5.
 - Complex CRM workflows.
 - LinkedIn enrichment. Deferred. The GOED brief explicitly puts
   scraped LinkedIn enrichment out of scope; using Parallel.ai

@@ -273,22 +273,52 @@ merge and free up worktrees.
   their PR — Agent 4 replaces it on merge.
 - **Demo enables:** Scenes 3, 4.
 
-### Agent 5 — Auth + Claim + Admin
+### Agent 5 — Auth + Onboarding + Claim + Admin
 
 - **Branch:** `feat/auth-claim-admin`
 - **Worktree:** any free of wt1-3
 - **Brief:** `agent-tasks/agent-5-claim.md`
+- **Design reference:** `design/startup-state-atlas-wireframes/project/Auth.html`
+  — five tabs (Sign up · Log in · Onboarding · Settings · Admin)
+  carry the full visual scope. Read top-to-bottom before coding.
 - **Depends on:** Agent 0 (better-auth installed, OWNERSHIP_DOCS
   binding, secrets), Agent 1 (auth tables + `business_ownership_submissions`),
   Agent 4 (Claim button on profile page; coordinates on `[slug]/route.ts`),
   Agent 7 (root layout + tokens).
+- **Schema extensions Agent 5 adds** (Better Auth tables stay
+  frozen; Agent 5 extends `db/schema.ts` per the schema-collaborative
+  rule and ships its own migration):
+  - `investor_profiles` (`id` `inv_*`, `user_id` UNIQUE FK,
+    `firm_name`, `investor_type`, `stages_json`, `sectors_json`,
+    `check_size_min`, `check_size_max`, `geo_focus_json`,
+    `created_at`, `updated_at`).
+  - `admin_invites` (`id`, `email`, `role`, `token_hash`,
+    `invited_by` FK, `created_at`, `expires_at`, `consumed_at`).
+- **Auth wiring delta:** flip `auth.ts` `additionalFields.role`
+  default from `'owner'` to `'founder'`; turn on Better Auth's
+  `emailOTP` plugin (6-digit code, 10-min expiry, 30-sec resend).
+  Magic-link plugin and Google social provider stay off in Phase 4
+  (the buttons render as Phase-5 stubs).
 - **Touches:**
-  - `auth.ts` (full Better Auth config — expanded from Agent 1's stub)
+  - `auth.ts` (full Better Auth config — expanded from Agent 1's stub
+    with `emailOTP` plugin + role default change)
   - `lib/auth-client.ts`, `lib/email.ts`, `middleware.ts`
+  - `db/schema.ts` (extension — investor_profiles + admin_invites)
+  - `db/migrations/000N_*.sql` (generated; rebase before generate)
+  - `db/seed/investor-profiles.ts` (3 demo rows)
   - `app/api/auth/[...all]/route.ts`
-  - `app/sign-in/page.tsx`, `app/sign-up/page.tsx`,
-    `app/verify-email/page.tsx`, `app/forgot-password/page.tsx`,
+  - `app/sign-in/page.tsx`, `app/sign-up/page.tsx` (step 1),
+    `app/sign-up/account/page.tsx` (step 2),
+    `app/sign-up/verify/page.tsx` (step 3 — OTP),
+    `app/login/sent/page.tsx`,
+    `app/forgot-password/page.tsx`,
     `app/reset-password/page.tsx`
+  - `app/onboarding/founder/page.tsx` (server-redirect to
+    `/founder?onboard=1` — Agent 3 owns the page itself),
+    `app/onboarding/owner/page.tsx`,
+    `app/onboarding/investor/page.tsx`,
+    `app/onboarding/done/page.tsx`
+  - `app/settings/page.tsx`
   - `app/companies/[slug]/claim/page.tsx`,
     `app/companies/[slug]/edit/page.tsx`,
     `app/companies/[slug]/_components/EditorForm.tsx`
@@ -296,7 +326,13 @@ merge and free up worktrees.
   - `app/api/v1/ownership-submissions/route.ts`,
     `app/api/v1/ownership-submissions/[id]/route.ts`
   - `app/api/v1/companies/[slug]/route.ts` (PATCH — three auth paths)
-  - `app/admin/layout.tsx` + `app/admin/{page,submissions,users,resources,companies,map}/page.tsx`
+  - `app/api/v1/investor-profiles/route.ts`
+  - `app/api/v1/admin/invites/route.ts`,
+    `app/api/v1/admin/invites/[token]/route.ts`
+  - `app/api/v1/admin/users/[id]/route.ts`
+  - `app/admin/layout.tsx` (dark sidebar shell from Auth.html#admin)
+  - `app/admin/page.tsx` (dashboard: stats + claim queue + edits feed),
+    `app/admin/{submissions,users,admins,resources,companies,map}/page.tsx`
   - `scripts/bootstrap-superadmin.ts`
 - **Three auth paths on PATCH `/api/v1/companies/:slug`:**
   1. Better Auth session, `user.id === companies.claimed_by_user_id` →
@@ -305,7 +341,12 @@ merge and free up worktrees.
      (no whitelist).
   3. `X-Atlas-Admin-Token` header matches `env.ATLAS_ADMIN_TOKEN` →
      machine edit (no whitelist).
+- **Time budget:** ~210 minutes (was 150 — absorbs Auth.html scope
+  + investor type). If you hit ~150 min and aren't through admin,
+  start the cuts cascade below.
 - **Demo enables:** Scene 4 (claim → review → edit → all surfaces update).
+- **Production enables:** real founder/owner/investor sign-up,
+  ongoing GOEO admin operation.
 
 ## Phase 5 — Polish, production readiness, e2e, demo dry-run
 
@@ -349,7 +390,10 @@ Phase 3 or Phase 4.**
 
 | Agent A | Agent B | Shared surface | Resolution |
 |---------|---------|----------------|------------|
-| Agent 1 | Agent 5 | `auth.ts` | Agent 1 ships a minimal stub (Drizzle adapter + `additionalFields.role`). Agent 5 expands with email hooks + role plugin. **Better Auth tables stay frozen after Agent 1.** |
+| Agent 1 | Agent 5 | `auth.ts` | Agent 1 ships a minimal stub (Drizzle adapter + `additionalFields.role`, default `'owner'`). Agent 5 expands with email-OTP plugin, password-reset hooks, role enum expansion, and **flips the default to `'founder'`**. **Better Auth tables stay frozen after Agent 1.** |
+| Agent 1 | Agent 5 | `db/schema.ts` extensions | Better Auth tables (`user`, `session`, `account`, `verification`) and `business_ownership_submissions` stay frozen after Agent 1. Agent 5 adds `investor_profiles` and `admin_invites` in its own migration (rebase before generate). |
+| Agent 3 | Agent 5 | `/founder?onboard=1` query param | Agent 3 reads the param on `/founder` and renders a stepper chrome (1 role · 2 account · 3 *intake*); submitting from onboarding mode redirects to `/onboarding/done` instead of straight to `/plan/[id]`. Agent 5's `/onboarding/founder` is a server-side redirect to `/founder?onboard=1`. If Agent 3 ships before Agent 5, Agent 3 stubs the param handling no-op-ily (no behavior change). |
+| Agent 4 | Agent 5 | investor map filters | **Phase 5 polish.** Agent 5 ships `investor_profiles` data + the form. Agent 4 (or whoever has cycles in Phase 5) wires the preferences into `/map` filter chips and a saved-filters affordance. No coordination required for Phase 4 — investor data lands without map integration. |
 | Agent 2 | Agent 6 | `docs/agent-tasks/openapi-additions.md` | Agent 2 writes endpoint shapes there; Agent 6 builds OpenAPI from it. Create the file when first needed. |
 | Agent 2 | Agent 3 | `POST /api/v1/founder-passports/enrich` shape | Agent 2 owns the endpoint and the `EnrichRequest` / `EnrichResponse` types in `types/api.ts`. The response is a partial `FounderPassportInput` plus a `confidence` per field (so Agent 3 can render the "filled from your site" chips). Agent 2 publishes the shape in `openapi-additions.md`; Agent 3 consumes via `types/api.ts`. If Agent 2 hasn't shipped enrich yet, Agent 3 stubs the call to return `{}` so the form falls back to manual fill — that's the always-works path. |
 | Agent 3 | Agent 7 | persona tile click target | Persona tiles on `/` (Agent 7) link to `/founder?persona=<id>`. Agent 3's `/founder` page reads the query param, prefills the form (or routes directly to `/plan/fp_<persona>` if Agent 2's seeded recommendations are loaded). `lib/personas.ts` (Agent 7) is the typed source for persona names + IDs. |
@@ -405,6 +449,12 @@ If a phase slips, scenes drop in this order: 5 → 4 → 3 → 2 → 1
 (keep the founder Navigator scenes if at all possible — they're the
 headline). Scene 5 is a 20-second flourish; cut first.
 
+The **investor user type** does not gate any demo scene. It's
+production scaffolding (sign-up, onboarding, profile persistence,
+admin user-table representation) for a real user class GOEO will
+have on the live site. If Agent 5 takes its cuts cascade, investor
+features drop *before* any demo-load-bearing surface.
+
 ## Cuts cascade — when behind, take these in order
 
 These are **production cuts**, not demo cuts. The mental model is
@@ -419,11 +469,35 @@ sections, prioritized.
    OpenAPI to Phase 3 endpoints only.
 3. **Agent 7** — skip activity ticker, skip Caveat font, skip brand
    primitives folder (inline as needed), skip footer.
-4. **Agent 5** — collapse admin to submissions queue + resources CRUD
-   (drop `/admin/companies`, `/admin/map`, `/admin/users`); skip AI
-   draft button; skip email-verification hard gate; skip
-   `profile_updates` review tab; **last resort:** cosmetic-only
-   ownership upload (no R2 persistence).
+4. **Agent 5** — cuts cascade in priority order:
+   1. Drop the **coverage-gaps strip** on `/admin`.
+   2. Drop the **stats row** on `/admin` (5 cards).
+   3. Drop **`/admin/admins`** — promote admins via the bootstrap
+      script + manual `wrangler d1 execute` for the hackathon.
+   4. Drop **investor onboarding persistence** — collect the form
+      inputs but skip writing `investor_profiles` (the row never
+      gets created; map personalization is Phase 5 anyway).
+   5. Drop **`/onboarding/investor`** entirely — investor users
+      land on `/onboarding/done` immediately.
+   6. Drop **role select on signup** — default everyone to
+      `founder`, and don't render onboarding role-specific
+      branches.
+   7. Drop **`/settings`** — replace with a single profile-edit
+      form (display name + email).
+   8. Drop **email-OTP plugin** — fall back to Better Auth's
+      default link-based verification (the wireframe matches less
+      well, but auth still works).
+   9. Drop **email-verification hard gate** — sign-up immediately
+      yields a session.
+   10. Collapse admin to **submissions queue + resources CRUD**
+       (drop `/admin/companies`, `/admin/map`, `/admin/users`);
+       skip AI draft button; skip `profile_updates` review tab.
+   11. **Last resort:** cosmetic-only ownership upload (no R2
+       persistence).
+
+   The investor flow is **production scaffolding**, not a demo
+   gate — its drops are first because cutting it doesn't damage
+   any of the five demo scenes.
 5. **Agent 4** — skip vector tiles (raster basemap), skip
    InvestorBrief panel, skip clustering (individual pins), skip
    "Update with Claude/ChatGPT" button.
@@ -450,7 +524,7 @@ Cut earliest from agents whose work is *least* visible in the demo.
 | 1 | done | — |
 | 2 | ~90 min (Agent 1 critical; Agent 7 ~60 min in parallel) | ~150 min |
 | 3 | ~120 min (longest of Agents 2, 3, 6) | ~330 min |
-| 4 | ~150 min (Agent 5 critical; Agent 4 ~120 min in parallel) | ~270 min |
+| 4 | ~210 min (Agent 5 critical — Auth.html scope + investor; Agent 4 ~120 min in parallel) | ~330 min |
 | 5 | remainder, capped at 3 hr | varies |
 
 Buffer for demo prep, deploy validation, and slippage: at least 2 hr

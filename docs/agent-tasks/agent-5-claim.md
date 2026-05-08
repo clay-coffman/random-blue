@@ -1,26 +1,46 @@
-# Agent 5 — Auth, ownership verification, GOEO admin
+# Agent 5 — Auth, onboarding, ownership verification, GOEO admin
 
-You build three surfaces:
+You build five surfaces:
 
-1. **Authentication** — Better Auth (email + password) for two
-   real user types: business **owners** and Utah Startup State /
-   GOEO **admins**. Sign-up, sign-in, email verification, password
-   reset.
-2. **Founder claim flow with real ownership verification** —
-   founders sign up, upload a verification document to R2,
-   admin reviews and approves, owner can edit their company.
-3. **GOEO admin UI** — staff log in (same Better Auth, with role
-   `goeo_admin` or `superadmin`) and maintain the
-   ownership-submission queue, the resource directory, the
-   company list, and the map without a developer.
+1. **Authentication** — Better Auth (email + password + 6-digit
+   email-OTP verification) for three self-serve user types
+   (`founder` / `owner` / `investor`) plus invite-only
+   `goeo_admin` and `superadmin`. Three-step sign-up (role →
+   account → verify), single sign-in URL with password / forgot,
+   and password-reset on the same OTP plumbing.
+2. **Role-specific onboarding** — `/onboarding/founder` (redirects
+   to Agent 3's intake with a stepper), `/onboarding/owner`
+   (search-and-claim shortcut into the existing claim flow),
+   `/onboarding/investor` (preferences form, NEW), shared
+   `/onboarding/done`.
+3. **Founder/owner claim flow with real ownership verification** —
+   owners sign up, upload a verification document to R2, admin
+   reviews and approves, owner can edit their company.
+4. **Account settings** — single sectioned page at `/settings`:
+   profile, security, role-specific (Founder Passport view OR
+   Investor preferences OR Claimed companies), notifications stub,
+   agent-tokens stub, danger zone.
+5. **GOEO admin UI** — staff log in (same Better Auth, with role
+   `goeo_admin` or `superadmin`) and operate the dashboard,
+   ownership-submission queue, claim-review modal, resource
+   directory, company list, users list, admin invites, and map
+   curation without a developer.
 
 The admin half is required for the demo narrative ("the state can
 maintain this without us"). The owner-edit half is the headline
-"business owners are the website" demo. The auth UI itself is
-plumbing — it has to work but doesn't need design polish.
+"business owners are the website" demo. The investor type is
+production scaffolding — it doesn't gate any demo scene; cut it
+first if you slip.
 
-Aim for **~150 minutes** (this brief grew to absorb auth). If you
-hit ~120 minutes and aren't through the admin half, take Cut #1.
+The auth visual scope comes from
+`design/startup-state-atlas-wireframes/project/Auth.html`.
+**Read all five tabs (Sign up · Log in · Onboarding · Settings ·
+Admin) top-to-bottom before coding.** That's the contract.
+
+Aim for **~210 minutes** (was 150 before Auth.html absorbed +
+investor type). If you hit ~150 minutes and aren't through the
+admin half, start the cuts cascade in
+`docs/implementation-plan.md` § Cuts cascade → Agent 5.
 
 ## Branch + worktree
 
@@ -42,7 +62,9 @@ hit ~120 minutes and aren't through the admin half, take Cut #1.
 5. `docs/hackathon-plan.md` — § "Authentication & ownership
    verification".
 6. `design/startup-state-atlas-wireframes/project/Auth.html` —
-   primary auth UI reference (sign-up / sign-in / verify / reset).
+   **primary** auth/onboarding/admin UI reference. Read all five
+   tabs (Sign up · Log in · Onboarding · Settings · Admin)
+   top-to-bottom; the wireframe is the contract for this brief.
 7. `design/startup-state-atlas-wireframes/project/wireframes/v2/claim.js`
    (3-act flow: verify → editor → "update via Claude/ChatGPT"
    handoff). Read HTML/CSS — don't render. The third-act handoff is
@@ -55,9 +77,13 @@ hit ~120 minutes and aren't through the admin half, take Cut #1.
    `verification`, `business_ownership_submissions`,
    `companies` (now with `claimed_by_user_id`), `profile_updates`
    (Agent 1 owns).
-10. `auth.ts` — the stub Agent 1 wrote. You expand it.
+10. `auth.ts` — the stub Agent 1 wrote. You expand it (enable the
+    `emailOTP` plugin, flip role default to `founder`, widen the
+    role enum).
 11. Better Auth docs (via `context7`):
-    <https://www.better-auth.com/docs>.
+    <https://www.better-auth.com/docs>. Specifically
+    <https://www.better-auth.com/docs/plugins/email-otp> for the
+    6-digit OTP flow.
 12. `app/startups/[slug]/page.tsx` (Agent 4) — to know the
     "Claim this company" button.
 
@@ -70,7 +96,9 @@ hit ~120 minutes and aren't through the admin half, take Cut #1.
   hook in `package.json`.
 - **Agent 1 done.** Need: Better Auth tables, ownership
   submissions table, `companies.claimed_by_user_id`. The old
-  `company_claims` table must be gone.
+  `company_claims` table must be gone. **You** add two more
+  tables in this PR (`investor_profiles`, `admin_invites`) — see
+  Deliverable 14 below.
 - **Agent 7 done (or in flight).** You consume `app/layout.tsx`,
   brand tokens, and brand primitives (`Tile`, `Chip`, etc.) for the
   auth pages, claim flow, and admin shell. If Agent 7 hasn't
@@ -85,23 +113,106 @@ hit ~120 minutes and aren't through the admin half, take Cut #1.
 Auth wiring:
 
 - `auth.ts` — full Better Auth config (expanded from Agent 1's
-  stub). Hooks `lib/email.ts` for verification + reset mail.
-  Configures the role plugin / additional fields. Reads the
-  request-bound D1 client from `lib/cf.ts`.
+  stub). Enable the `emailOTP` plugin (6-digit code, 10-min
+  expiry, 30-sec resend cooldown). Widen the
+  `additionalFields.role` enum to
+  `founder | owner | investor | goeo_admin | superadmin`; flip
+  the default from `'owner'` to **`'founder'`**. Hooks
+  `lib/email.ts` for verification + reset mail. Reads the
+  request-bound D1 client from `lib/cf.ts`. Magic-link plugin
+  and Google social provider stay **off** in Phase 4 (the
+  `/sign-in` and `/sign-up` buttons render as Phase-5 stubs to
+  match the wireframe).
 - `lib/auth-client.ts` — Better Auth React client for the
   browser.
 - `lib/email.ts` — thin Resend wrapper used by Better Auth's
-  email-verification + password-reset hooks.
+  email-OTP + password-reset hooks.
 - `middleware.ts` — Next.js middleware that gates `/admin/*` on
-  `goeo_admin | superadmin` roles, gates `/companies/[slug]/edit`
-  on ownership match, and gates `/companies/[slug]/claim` on
-  any signed-in user.
+  `goeo_admin | superadmin` roles (with extra `superadmin`-only
+  gate on `/admin/users`'s role-flip handler and `/admin/admins`),
+  gates `/companies/[slug]/edit` on ownership match, gates
+  `/companies/[slug]/claim` on any signed-in user, gates
+  `/onboarding/*` on signed-in, gates `/settings` on signed-in.
 - `app/api/auth/[...all]/route.ts` — Better Auth's catch-all
-  handler (it serves sign-up, sign-in, etc.).
-- `app/sign-in/page.tsx`, `app/sign-up/page.tsx`,
-  `app/verify-email/page.tsx`, `app/forgot-password/page.tsx`,
-  `app/reset-password/page.tsx` — minimal but functional. Use
-  shadcn primitives.
+  handler (it serves sign-up, sign-in, OTP send/verify, etc.).
+
+Auth UI pages — three-step signup, single sign-in, reset, sent:
+
+- `app/sign-up/page.tsx` — **step 1 of 3**: role-select cards
+  (founder default, owner, investor) + Continue. Persists the
+  role pick in a short-lived cookie or query param so step 2
+  can read it. "Already have an account? Log in →" link to
+  `/sign-in`. "Admin accounts are not self-serve" footer note.
+- `app/sign-up/account/page.tsx` — **step 2 of 3**: full name,
+  email, password (12+ chars w/ strength bar), Terms +
+  Privacy checkbox. Phase-5 stubs for "Continue with Google"
+  and "Email me a magic link." On submit: create the Better
+  Auth user with the captured role and request a verification
+  OTP via the `emailOTP` plugin → redirect to step 3.
+- `app/sign-up/verify/page.tsx` — **step 3 of 3**: 6-digit OTP
+  inputs. Auto-advances on the 6th digit. Shows expiry
+  countdown + resend cooldown chips. Wrong code → inline
+  error (no destructive state change). Verify success →
+  redirect to `/onboarding/{role}`.
+- `app/sign-in/page.tsx` — single page; email + password +
+  Remember me + Forgot. "Email me a magic link" and "Continue
+  with Google" render as **Phase-5 stubs** (greyed-out, label
+  "Coming soon"). On success → redirect to `?next=` (or `/`).
+- `app/forgot-password/page.tsx` — single email field, generic
+  confirmation copy ("If we have an account, we'll send a
+  6-digit code"); on submit → `/login/sent`.
+- `app/reset-password/page.tsx` — OTP entry + new password
+  fields. Uses the same `emailOTP` plugin as signup verify.
+- `app/login/sent/page.tsx` — shared "code/link sent"
+  confirmation. In Phase 4, only the reset-code path lands here;
+  in Phase 5 the magic-link path lands here too.
+
+Onboarding pages:
+
+- `app/onboarding/founder/page.tsx` — server-side redirect to
+  `/founder?onboard=1`. Agent 3's `/founder` page reads the
+  param and renders a stepper above the existing intake form;
+  submit redirects to `/onboarding/done` instead of straight to
+  `/plan/[id]`.
+- `app/onboarding/owner/page.tsx` — search input bound to
+  `GET /api/v1/companies?q=…` (Agent 4). Match list with status
+  chips (claimed / unclaimed / pending). "+ Add a new company"
+  affordance for misses. On click → redirect to
+  `/companies/[slug]/claim`.
+- `app/onboarding/investor/page.tsx` — preferences form
+  (firm/affiliation, investor type single-select, stages
+  multi-select, sectors multi-select, check-size range,
+  geographic focus). Submit → `POST /api/v1/investor-profiles`,
+  redirect to `/onboarding/done`.
+- `app/onboarding/done/page.tsx` — single template; reads
+  `session.user.role` and renders role-aware copy + CTA
+  (founder → `/plan/<latest-passport-id>` if known else
+  `/founder`; owner → `/companies/<picked-slug>/claim`;
+  investor → `/map`).
+
+Account settings:
+
+- `app/settings/page.tsx` — single sectioned page (no tabs).
+  Sections per `Auth.html#settings`:
+  1. **Profile** — display name, email (change → re-verify),
+     phone (optional), time zone (auto-detected). Save action
+     PATCHes Better Auth user.
+  2. **Security** — password change, list of active sessions
+     ("Sign out other sessions"), connected accounts
+     (Google linked stub), 2FA stub.
+  3. **Role-specific** — depending on `session.user.role`:
+     Founder Passport summary + "Edit passport" link to
+     `/founder?settings=1` (or just inline edit; designer's
+     choice), OR Investor preferences form (re-uses the
+     onboarding form), OR Claimed companies list (re-uses
+     the existing `/me/submissions` data, presented inline).
+  4. **Notifications** — stub (Phase 5).
+  5. **Agent tokens** — stub (Phase 5; distinct from the
+     machine `X-Atlas-Admin-Token`).
+  6. **Danger zone** — delete account (releases claimed
+     companies; prompts confirmation).
+  Sidebar rail mirrors the wireframe with a "Switch role" link
+  near the bottom.
 
 Ownership submission + edit:
 
@@ -133,32 +244,73 @@ Ownership submission + edit:
 
 Admin UI (GOEO-facing, role `goeo_admin` or `superadmin`):
 
-- `app/admin/layout.tsx` — admin shell with nav (Submissions •
-  Pending edits • Resources • Companies • Map • Users) gated by
+- `app/admin/layout.tsx` — admin shell with the dark sidebar
+  per `Auth.html#admin`. Nav groups (Overview · Moderation ·
+  Content · People · System) per the wireframe. Gated by
   `middleware.ts`. No password input — if your session lacks the
   role, you're redirected to `/sign-in?next=/admin`.
-- `app/admin/page.tsx` — landing / pending-edits review.
+- `app/admin/page.tsx` — **dashboard**. Stats row of 5 cards
+  (USERS / COMPANIES / RESOURCES / CLAIM QUEUE / REPORTS) with
+  real D1 counts + week-over-week deltas. Two-column body:
+  claim-queue summary (top 4 pending submissions, link to full
+  queue) + recent agent edits feed (top 4 from `profile_updates`,
+  flagged with the originating client when present —
+  claude.ai / chatgpt.com / staff). Coverage-gaps strip below
+  the columns (county / sector / community / identity counts;
+  placeholder data acceptable for Phase 4).
 - `app/admin/submissions/page.tsx` — ownership-submission queue.
-- `app/admin/submissions/[id]/page.tsx` — review one submission:
-  show metadata, fetch a short-lived signed R2 URL for the
-  document, render in an `<iframe>`/`<img>`, approve/reject
-  buttons + a notes textarea.
+- `app/admin/submissions/[id]/page.tsx` — single-submission
+  review with **two visual modes**:
+  - **Auto-approvable** — domain match clean. One-click
+    Approve, with a small "Reject" / "Need more info"
+    affordance.
+  - **Manual** — no domain match. Show claimant + company info
+    blocks (per `Auth.html#admin` claim-review · manual panel),
+    claimant note, optional LinkedIn lookup link, GOEO
+    contact-on-file lookup, then Approve / Reject / Need more
+    info actions with a notes textarea.
+  Document preview: server-side, generate a 60-second signed R2
+  URL for `r2_key` and embed in an `<iframe>` (PDF) or `<img>`
+  (image).
 - `app/admin/_components/UpdateReviewer.tsx` — pending
-  `profile_updates` reviewer.
+  `profile_updates` reviewer (used inside the dashboard's recent
+  edits feed and on a dedicated audit-log page if scope allows).
 - `app/admin/resources/page.tsx`, `[id]/page.tsx`,
-  `_components/ResourceForm.tsx` — resource CRUD (same as before).
+  `_components/ResourceForm.tsx` — resource CRUD with status
+  chips (live / stale / link-broken / draft) per `Auth.html#admin`.
 - `app/admin/companies/page.tsx`, `[slug]/page.tsx` — direct
   company editor (no ownership requirement; admin role
-  short-circuits the whitelist).
+  short-circuits the whitelist) with status chips
+  (claimed / pending / unclaimed / flagged / duplicate).
 - `app/admin/map/page.tsx` — map curation (same as before).
-- `app/admin/users/page.tsx` — **`superadmin` only**. Lists
-  every user with current role and a dropdown to switch between
-  `owner` and `goeo_admin`. (You can't demote yourself; you
-  can't promote anyone to `superadmin` from the UI — that's the
-  bootstrap script's job.)
+- `app/admin/users/page.tsx` — read = admin, role-flip =
+  `superadmin`. Role-filter chips
+  (`all · founder · owner · investor · admin`) with counts.
+  Dropdown on each row flips between `owner` and `goeo_admin`.
+  (You can't demote yourself; you can't promote anyone to
+  `superadmin` from the UI — that's the bootstrap script's job.)
+  Status chips (verified / pending / flagged) per the wireframe.
+- `app/admin/admins/page.tsx` — **`superadmin` only**. Lists
+  current admins (email, name, status, joined date) and a "+
+  Invite admin" form. Submit writes a row to `admin_invites`
+  (random token; store sha256 hash) and emails a one-time link
+  via `lib/email.ts`. Consuming the link (via
+  `GET /api/v1/admin/invites/:token` + a small landing page)
+  flips the recipient's role to `goeo_admin` and marks the
+  invite consumed.
 - `app/api/v1/admin/users/[id]/route.ts` — `PATCH` for role
   change (superadmin-gated by middleware + a defense-in-depth
   check in the handler).
+- `app/api/v1/admin/invites/route.ts` — `POST` (superadmin only;
+  emits email + writes `admin_invites`), `GET` (superadmin
+  only; lists invites with `consumed_at` status).
+- `app/api/v1/admin/invites/[token]/route.ts` — `GET` consume
+  (signed-in caller; one-shot — looks up by `token_hash`,
+  flips role on the calling user if email matches and not yet
+  consumed, sets `consumed_at`).
+- `app/api/v1/investor-profiles/route.ts` — `POST` (signed-in;
+  upserts by `user_id`), `GET` (signed-in; returns caller's
+  own profile or 404).
 - `app/api/v1/resources/route.ts`, `[id]/route.ts` — CRUD with
   admin-role check.
 - `app/api/v1/companies/route.ts` — POST create with admin-role
@@ -173,9 +325,16 @@ Ops:
   D1 (via wrangler's `d1 execute` or a tiny direct query).
   Wired through `npm run bootstrap-superadmin <email>`.
 
+You DO touch `db/schema.ts` — but only to **add** two new tables
+(`investor_profiles`, `admin_invites`). Better Auth tables and
+`business_ownership_submissions` are frozen post-Agent-1; do not
+touch them. Rebase against `main` before running
+`npm run db:generate` to avoid migration-number collisions.
+
 You do NOT touch:
 
-- `db/schema.ts`.
+- Existing Better Auth tables, `business_ownership_submissions`,
+  or `companies.claimed_by_user_id` (frozen post-Agent-1).
 - The map or company list endpoints (Agent 4).
 - The recommend endpoint (Agent 2).
 
@@ -185,9 +344,15 @@ You do NOT touch:
 
 Expand Agent 1's stub. Wire the Drizzle adapter to the real
 request-bound D1 client (lazy — Better Auth runs inside a request
-context). Enable email + password. Set up email-verification and
-password-reset hooks that call `lib/email.ts` (Resend). Keep the
-`role` `additionalFields` from the stub.
+context). Enable email + password. Turn on the **`emailOTP`
+plugin** with 6-digit code, 10-minute expiry, 30-second resend
+cooldown — this becomes both the signup-verification path AND
+the password-reset path. Hook the OTP send into `lib/email.ts`
+(Resend). Keep the `role` `additionalFields` from the stub but
+**widen the enum** to
+`founder | owner | investor | goeo_admin | superadmin` and
+**flip the default from `'owner'` to `'founder'`**. Magic-link
+plugin + Google social provider stay off in Phase 4.
 
 ### 2. `lib/email.ts`
 
@@ -198,12 +363,38 @@ Templates can be plain HTML — no React Email yet.
 If `RESEND_API_KEY` is unset (dev / time-pressed), fall back to
 `console.log`-ing the link. Do **not** crash the request.
 
-### 3. Auth UI pages
+### 3. Auth UI pages — three-step signup, single sign-in,
+###    forgot/reset, sent
 
-Minimal but real. Each page calls `lib/auth-client.ts`. shadcn
-primitives. Server-side error rendering. After sign-up, redirect
-to `/verify-email`. After successful sign-in, redirect to
-`?next=` (or `/`).
+Each page calls `lib/auth-client.ts`. Tailwind + shadcn primitives,
+brand tokens from Agent 7. Server-side error rendering. Visual
+contract: `Auth.html#signup` (1.1, 1.2, 1.3), `Auth.html#login`
+(2.1, 2.2, 2.3).
+
+- `/sign-up` (step 1) — three role cards (founder default,
+  owner, investor); Continue → `/sign-up/account`. The role pick
+  threads forward via short-lived cookie (`next-step-state`) or
+  signed query param.
+- `/sign-up/account` (step 2) — full name, email, password
+  (12+ chars w/ live strength bar), Terms checkbox. Phase-5
+  stubs for "Continue with Google" and magic link. Submit:
+  call `signUp.email` with the captured role; immediately
+  request an OTP via the `emailOTP` plugin; redirect to step 3.
+- `/sign-up/verify` (step 3) — 6-digit OTP entry, auto-advance
+  on the 6th digit, expiry countdown chip, resend cooldown
+  chip. Verify success → redirect to `/onboarding/{role}`.
+- `/sign-in` — email + password + Remember + Forgot. Magic-link
+  / Google buttons render as Phase-5 stubs. Success → `?next=`
+  or `/`.
+- `/forgot-password` — single email field + generic-confirmation
+  copy ("If we have an account, we'll send a 6-digit code").
+  Submit → POST `forgetPassword` (or the OTP send equivalent) →
+  redirect to `/login/sent` (with mode=reset).
+- `/reset-password` — OTP entry + new password. Uses the same
+  OTP plugin verification.
+- `/login/sent` — shared confirmation page. Phase 4 only renders
+  the reset-code variant; Phase 5 also renders the magic-link
+  variant.
 
 ### 4. `middleware.ts`
 
@@ -226,6 +417,11 @@ export async function middleware(req: NextRequest) {
   if (req.nextUrl.pathname.match(/^\/companies\/[^/]+\/(claim|edit)/)) {
     if (!session) return redirect("/sign-in?next=" + req.nextUrl.pathname);
     // Ownership check happens in the route/page (DB lookup).
+  }
+
+  if (req.nextUrl.pathname.startsWith("/onboarding") ||
+      req.nextUrl.pathname.startsWith("/settings")) {
+    if (!session) return redirect("/sign-in?next=" + req.nextUrl.pathname);
   }
 }
 ```
@@ -340,67 +536,163 @@ edit, delete — except the auth gate is "session has admin role,"
 not "knows the shared token." The single shared token is gone
 from the human admin path entirely.
 
-### 13. PR
+### 13. Onboarding pages (role-specific)
 
-```bash
-git add auth.ts middleware.ts lib/auth-client.ts lib/email.ts \
-        app/sign-in app/sign-up app/verify-email \
-        app/forgot-password app/reset-password \
-        app/companies app/me app/admin \
-        app/api/auth app/api/v1/ownership-submissions \
-        app/api/v1/companies app/api/v1/resources \
-        app/api/v1/admin scripts/bootstrap-superadmin.ts
-git commit -m "feat(auth): Better Auth + ownership verification + GOEO admin"
-git push -u origin feat/auth-claim-admin
-gh pr create --base main --title "Auth, ownership verification, GOEO admin"
-```
+- **`/onboarding/founder`** — kicks the user into Agent 3's
+  intake page in onboarding mode (with the stepper). Submitting
+  the intake lands on `/onboarding/done`.
+- **`/onboarding/owner`** — search the company index by name,
+  website, or domain. Match list shows status (claimed /
+  unclaimed / pending). Picking an unclaimed match continues
+  into the existing claim flow. "Don't see your company?" leads
+  to a "submit a request" CTA — for Phase 4 it's enough that
+  the request reaches GOEO; the actual creation can happen via
+  `/admin/companies`.
+- **`/onboarding/investor`** — the preferences form: firm /
+  affiliation, investor type, stages of interest, sectors of
+  interest, check-size range, geographic focus. Saves to the
+  investor profile and lands on `/onboarding/done`.
+- **`/onboarding/done`** — one template, role-aware copy + CTA:
+  founder → "See my 90-day plan"; owner → "Verify your domain";
+  investor → "Open the map." Visual contract:
+  `Auth.html#onboard` final pane.
+
+### 14. Schema additions
+
+Extend `db/schema.ts` with the two tables documented in
+`docs/agent-tasks/agent-1-data.md` § Post-ship schema deltas
+(`investor_profiles`, `admin_invites`) and generate the next
+migration. Rebase before generating to avoid number collisions
+(per `00-shared-context.md`).
+
+Add a small seed file with three demo investor profiles (Pelion
+Ventures / Salt Lake Angels / Kickstart Fund) tied to one new
+investor user so the admin user table has a representative
+investor row on day one.
+
+### 15. `/settings` — single sectioned page
+
+Visual contract: `Auth.html#settings`. Sections, in order:
+
+1. **Profile** — display name, email (change re-verifies),
+   phone (optional), time zone.
+2. **Security** — password change, active sessions ("Sign out
+   other sessions"), connected accounts and 2FA as Phase-5
+   stubs.
+3. **Role-specific** — depends on the user's current role:
+   founder passport summary + edit, OR the investor preferences
+   form, OR a claimed-companies list.
+4. **Notifications** — Phase-5 stub.
+5. **Agent tokens** — Phase-5 stub. Distinct from the machine
+   `X-Atlas-Admin-Token`; this would be per-user scoped tokens
+   that let Claude/ChatGPT update profiles the user owns.
+6. **Danger zone** — delete account (releases claimed companies
+   back to GOEO review).
+
+The sidebar rail also exposes a "Switch role" link that flips
+the user's role between `founder | owner | investor`.
+
+### 16. Investor preferences endpoint
+
+A small REST surface that backs the onboarding form and the
+Settings investor section: write the caller's preferences, read
+the caller's own preferences. Used in Phase 5 by the map for
+filter chip defaults and a weekly cluster-brief email; in
+Phase 4 just persistence.
+
+### 17. Admin invites flow
+
+`/admin/admins` (superadmin only) lists current admins and
+exposes an "Invite admin" form. Submitting the form emails a
+one-time link to the recipient; opening the link while signed
+in (with the matching email) flips that user's role to
+`goeo_admin` and marks the invite consumed. Invites expire,
+are single-use, and never grant `superadmin` (that's the
+bootstrap script's job).
+
+### 18. Admin dashboard (`/admin` landing)
+
+Visual contract: `Auth.html#admin` dashboard panel.
+
+- **Stats row** — five cards with live counts: users,
+  companies, resources, claim queue, reports. Week-over-week
+  deltas where they're meaningful.
+- **Claim queue summary** — top pending ownership submissions
+  with a link to the full queue.
+- **Recent agent edits feed** — most-recent profile updates,
+  with the originating client surfaced when known
+  (e.g. `claude.ai`, `chatgpt.com`, staff). Helps GOEO see the
+  agent-native loop working.
+- **Coverage gaps strip** — county / sector / community /
+  identity placeholders for Phase 4. Phase 5 wires real
+  surfaces here.
+
+### 19. PR
+
+Open a PR titled "Auth, onboarding, ownership verification, GOEO
+admin" against `main` from `feat/auth-claim-admin`. Use the
+`/ship` skill or the project's normal flow.
 
 ## DONE when
 
-1. **Sign-up + sign-in:** `/sign-up` creates an `owner` user;
-   `/sign-in` returns a session cookie. Email verification mail
-   arrives (or is logged to console if Resend is unset).
-2. **Bootstrap a superadmin:**
-   `npm run bootstrap-superadmin -- you@example.com` flips that
-   user's role; signing in lands you on `/admin/*` without a
-   redirect.
-3. **Owner submission flow:** sign in as a fresh owner,
-   visit `/companies/crew/claim`, upload a PDF → `/me/submissions`
-   shows a `pending` row.
-4. **Admin approval flow:** sign in as the superadmin, visit
-   `/admin/submissions`, open the new submission, view the
-   document via the signed R2 URL, click Approve. The submission
-   row flips to `approved`; `companies.claimed_by_user_id` is
-   set; `verified_at` + `claimed_at` are stamped.
-5. **Owner edit:** the original owner can now visit
-   `/companies/crew/edit` and `PATCH /api/v1/companies/crew`
-   succeeds with their session cookie. The whitelist blocks
-   changes to `slug`, `linkedin`, `address_text`.
-6. **`/admin` shows the pending update** in the
-   `profile_updates` reviewer.
-7. **`/startups/crew`, `/startups/crew.md`, `/api/v1/companies/crew`**
-   all reflect the owner's edit (Agent 4's reads are unchanged).
-8. **`/admin/resources`** — full CRUD works (role-gated; no
-   token prompt).
-9. **`/admin/companies`** — admin can edit any company directly
-   (no whitelist).
-10. **`/admin/map`** — pin → side panel → "Edit" deep-link
-    works.
-11. **`/admin/users`** (superadmin) — flipping a user from
-    `owner` to `goeo_admin` lets them into `/admin/*` on next
+1. **Sign-up role select.** `/sign-up` lets you pick founder /
+   owner / investor; default is founder; admin accounts are
+   clearly not self-serve.
+2. **6-digit OTP verification.** Verification mail arrives with
+   a 6-digit code (or is logged to console when Resend is unset);
+   wrong codes show an inline error; codes expire; resend is
+   rate-limited.
+3. **Sign-in.** Email + password works. The magic-link and
+   Google buttons render visibly disabled (Phase-5 stubs).
+4. **Forgot/reset.** `/forgot-password` returns the same
+   confirmation regardless of whether the email is on file;
+   `/reset-password` succeeds with the OTP.
+5. **Founder onboarding.** Verifying as a founder lands on the
+   intake page in onboarding mode (stepper visible); submit
+   reaches `/onboarding/done` with founder copy + CTA.
+6. **Owner onboarding.** Verifying as an owner lands on the
+   search-and-claim shortcut; picking a company continues into
+   the claim flow.
+7. **Investor onboarding.** Verifying as an investor lands on
+   the preferences form; submit persists the investor profile
+   and lands on `/onboarding/done` with the "Open the map" CTA.
+8. **`/onboarding/done`.** Shows the right copy + CTA for each
+   role.
+9. **`/settings`.** Renders the Profile + Security + role-specific
+   + Notifications + Agent tokens + Danger zone sections per the
+   wireframe; profile edits save; Phase-5 stubs are clearly
+   labeled.
+10. **Bootstrap a superadmin.** Running the bootstrap script
+    against a signed-up user lets them into `/admin/*` on next
     sign-in.
-12. **Machine token still works:**
-    `curl -H "X-Atlas-Admin-Token: $ATLAS_ADMIN_TOKEN" -X PATCH
-     https://<worker>/api/v1/companies/crew -d '{...}'`
-    succeeds without a session. (Used by Agent 6's CLI/MCP.)
-13. **Mobile (375px):** sign-up, sign-in, claim/upload, owner
-    edit, `/me/submissions`, `/admin/submissions`,
-    `/admin/submissions/[id]`, `/admin/users`, and every other
-    admin page work without horizontal scroll. Document preview
-    on `/admin/submissions/[id]` scrolls **inside** its container,
-    not the page. Verified with
-    `mcp__playwright__browser_resize`.
-14. PR open.
+11. **Owner submission flow.** Fresh owner uploads a verification
+    doc → `/me/submissions` shows a pending row.
+12. **Admin approval flow.** Superadmin opens the queue, views
+    the document via a short-lived signed URL, approves; the
+    company gets the new owner stamped on it.
+13. **Owner edit + propagation.** The owner can edit the company;
+    the website, the markdown card, and the JSON endpoint all
+    reflect the change.
+14. **`/admin` dashboard.** Renders the five stat cards with real
+    counts, the claim-queue summary, and the recent agent edits
+    feed.
+15. **`/admin/users`.** Filters by role
+    (founder · owner · investor · admin) with correct counts.
+    Superadmin can flip a user between owner and goeo_admin.
+16. **`/admin/admins`.** Superadmin can invite a new admin via
+    email; opening the invite link flips that user's role.
+17. **`/admin/resources` and `/admin/companies`.** Full CRUD
+    works (role-gated, no shared-token prompt).
+18. **Machine token still works.** Writes from the CLI / MCP
+    using `X-Atlas-Admin-Token` continue to succeed.
+19. **Mobile (375px).** Every shipped surface — signup steps,
+    OTP entry, sign-in, forgot/reset, onboarding (all three
+    roles), `/onboarding/done`, `/settings`, claim/upload, owner
+    edit, `/me/submissions`, and every admin page — works
+    without horizontal scroll. The document preview on
+    `/admin/submissions/[id]` scrolls inside its container, not
+    the page.
+20. PR open.
 
 ## Demo path
 
@@ -413,28 +705,40 @@ verification story.
 
 ## Cuts allowed if time-pressed (in priority order)
 
-1. **Collapse admin to submissions queue + resources CRUD.**
-   Drop `/admin/companies`, `/admin/map`, `/admin/users`. Keep
-   `/admin/submissions` (the new headline) and resources CRUD
-   (the prior demo). Ownership flow is the load-bearing demo
-   surface.
-2. **Skip `/admin/users`.** Bootstrap script + manual
-   `wrangler d1 execute` for role flips is fine for the
-   hackathon.
-3. **Skip the AI draft button** on the edit page. The editor
-   still works without it.
-4. **Skip email verification** as a hard gate. New accounts can
-   submit immediately; the verification link still gets sent
-   (or logged) but isn't required to use the app.
-5. **Skip `/admin/map`.**
-6. **Skip the `profile_updates` review tab** — owner edits
-   apply directly, no admin review.
-7. **Cosmetic-only ownership upload:** the upload form goes to
-   a "thanks, your submission is pending review" page that
-   doesn't actually persist. **The demo says "this WOULD update
-   everywhere" without actually doing it.** Acceptable only as a
-   last resort — note the GOEO admin UI is now the load-bearing
-   surface.
+The investor type is **production scaffolding**, not a demo
+gate — its drops come first because cutting any of them doesn't
+damage the five demo scenes.
+
+1. **Drop the coverage-gaps strip** on `/admin`.
+2. **Drop the stats row** on `/admin`.
+3. **Drop `/admin/admins`** — promote admins via the bootstrap
+   script + manual SQL.
+4. **Drop investor onboarding persistence** — collect the form
+   inputs but don't write `investor_profiles`. Map
+   personalization is Phase 5 anyway.
+5. **Drop `/onboarding/investor` entirely** — investor users
+   land on `/onboarding/done` immediately.
+6. **Drop role select on signup** — default everyone to
+   `founder` and skip role-specific onboarding branches.
+7. **Drop `/settings`** — replace with a minimal profile-edit
+   form (display name + email).
+8. **Drop the email-OTP plugin** — fall back to Better Auth's
+   default link-based verification. The wireframe matches less
+   well, but auth still works.
+9. **Drop email verification as a hard gate.** New accounts get
+   a session immediately; the verification mail still goes out
+   but isn't required.
+10. **Drop the AI draft button** on the edit page.
+11. **Drop `/admin/map`.**
+12. **Drop the `profile_updates` review tab** — owner edits
+    apply directly.
+13. **Collapse admin to submissions queue + resources CRUD.**
+    Drop `/admin/companies` and `/admin/users`. Keep
+    `/admin/submissions` (the headline) and resources CRUD.
+14. **Last resort: cosmetic-only ownership upload** — the upload
+    form lands on a "thanks, your submission is pending review"
+    page that doesn't actually persist. The demo says "this
+    WOULD update everywhere" without actually doing it.
 
 ## Common pitfalls
 
