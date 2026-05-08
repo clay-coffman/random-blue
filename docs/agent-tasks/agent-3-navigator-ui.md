@@ -2,7 +2,10 @@
 
 You build the highest-scoring user-facing surface: the founder
 intake → personalized plan flow. Polish matters here. Aim for ~120
-minutes — this is the demo's headline.
+minutes — this is the live product's primary entry point. Real
+founders will land here on https://startup.utah.gov/ and the demo
+rides on top of the same flow; "demo-visible" and "production-
+critical" mean the same thing for this brief.
 
 ## Branch + worktree
 
@@ -84,6 +87,10 @@ Server component for layout, client component for the form. Fields
 per `docs/hackathon-plan.md` lines 41–53 + the `FounderPassportInput`
 zod schema:
 
+- **Optional website URL** at the top of the form ("Got a
+  website? Drop the URL and we'll pre-fill what we can"). Triggers
+  the prefill flow described in § 1b below. Skippable — manual
+  fill always works.
 - County (select — Utah counties)
 - City (text, optional)
 - Stage (select)
@@ -96,12 +103,37 @@ zod schema:
 - What you want (multi-select: capital, customers, talent,
   regulatory help, operating support)
 
-Submit POSTs to `/api/v1/resources/recommend`, then redirects to
+Submit POSTs to `/api/v1/resources/recommend` (passing
+`website_url` along when present), then redirects to
 `/plan/[passport_id]`.
 
 Use **shadcn/ui** primitives throughout. Lean on Tailwind for
 spacing/typography. Make it look polished — judging weights design
 heavily.
+
+### 1b. Smart prefill from business website
+
+When the founder fills the URL field and triggers prefill (button
+or blur — pick whichever feels less twitchy):
+
+1. POST `/api/v1/founder-passports/enrich` with `{ website_url }`
+   (Agent 2 owns the endpoint).
+2. Show a non-blocking loading state next to the URL field
+   ("Reading your site…"). The form must remain interactive — if
+   the founder wants to start typing, they can.
+3. On response, populate matching form fields with the returned
+   `fields[*].value` and render a small dismissible "filled from
+   your site" chip on each prefilled field. The founder is the
+   decider — every prefilled value must be editable.
+4. On `degraded: true`, network error, or timeout: silently fall
+   back to manual fill. Show a small inline note ("couldn't read
+   that site — fill in below"). **Never block the form.**
+5. Persona quick-test buttons bypass this entirely — they load
+   fixtures and skip the URL field.
+
+The exact field-mapping comes from Agent 2's `EnrichResponse`
+shape in `types/api.ts`. Don't invent fields the response doesn't
+return.
 
 ### 2. Persona quick-test buttons
 
@@ -186,6 +218,9 @@ owner). This is the headline of the hackathon presentation.
 
 ## Cuts allowed if time-pressed
 
+- **Skip the URL-prefill UX** (the URL field can stay; it just
+  submits alongside the intake without triggering enrich). Manual
+  fill is the always-works path. Coordinate with Agent 2.
 - **Skip the "Ignore for now" bucket** — only show top-6.
 - **Skip the field-level "Why we recommended these" modal** — show
   reasons inline only.

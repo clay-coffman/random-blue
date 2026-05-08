@@ -96,6 +96,13 @@ company_photos               // id, company_id, r2_key, caption, sort_order
 // Founder passports
 founder_passports            // id (fp_*), county, city, stage, industry, communities_json,
                              // goal, urgency, business_size, needs_json, constraints_json,
+                             // website_url (text, nullable — founder-supplied URL for the
+                             //   prefill-from-website feature; see requirements § Smart
+                             //   prefill and Agent 2's enrich endpoint),
+                             // enriched_at (integer ms, nullable — set when Parallel.ai
+                             //   filled fields; null = no enrichment ran),
+                             // enrichment_source (text, nullable — 'parallel' for now;
+                             //   future-proofs swapping providers),
                              // created_at
 
 // Recommendations (cached)

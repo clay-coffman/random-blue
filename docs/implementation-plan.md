@@ -173,16 +173,21 @@ soon as Agent 1 merges.
 - **Brief:** `agent-tasks/agent-2-recommend.md`
 - **Depends on:** Agent 1 (schema + personas seeded)
 - **Touches:**
-  - `schemas/founder-passport.ts` (zod)
+  - `schemas/founder-passport.ts` (zod — incl. optional `website_url`)
   - `lib/recommend.ts` (deterministic scoring — pure, testable)
+  - `lib/parallel.ts` (Parallel.ai client — mirrors `lib/anthropic.ts`)
   - `app/api/v1/resources/recommend/route.ts` (POST)
   - `app/api/v1/founder-passports/route.ts` (POST)
   - `app/api/v1/founder-passports/[id]/plan/route.ts` (GET, cached)
-  - `types/api.ts` (RecommendRequest/Response/RecommendedResource)
+  - `app/api/v1/founder-passports/enrich/route.ts` (POST — website URL → partial passport for prefill)
+  - `types/api.ts` (RecommendRequest/Response/RecommendedResource + EnrichRequest/EnrichResponse)
   - `tests/recommend.test.ts`
 - **Coordination:** writes endpoint shapes to
   `docs/agent-tasks/openapi-additions.md` for Agent 6 to consume.
 - **Demo enables:** Scenes 1 (Jordan), 2 (Priya).
+- **Production enables:** Real founders' first-touch UX on
+  `/founder` (URL → prefill → review → submit). Demo personas
+  bypass enrich.
 
 ### Agent 3 — Founder Navigator UI
 
@@ -195,7 +200,9 @@ soon as Agent 1 merges.
 - **Touches:**
   - `app/founder/page.tsx` (intake)
   - `app/plan/[id]/page.tsx` (saved plan — shareable URL)
-  - `app/founder/_components/IntakeForm.tsx`
+  - `app/founder/_components/IntakeForm.tsx` (incl. optional URL
+    field at the top → calls enrich → prefills the form; manual
+    fill always works)
   - `app/founder/_components/PersonaButtons.tsx` (consumes
     `lib/personas.ts` from Agent 7)
   - `app/plan/_components/ResultsView.tsx`
@@ -204,6 +211,9 @@ soon as Agent 1 merges.
   `/founder/results/:id`. The intake stays at `/founder`. See
   `screens.md` for the full URL map.
 - **Demo enables:** Scenes 1, 2, 4 (the headline of the demo).
+- **Production enables:** the live `/founder` flow for founders
+  who don't match a persona. The optional URL prefill is the
+  primary first-touch friction-reducer.
 
 ### Agent 6 — Agent-native layer
 
@@ -297,15 +307,24 @@ merge and free up worktrees.
      machine edit (no whitelist).
 - **Demo enables:** Scene 4 (claim → review → edit → all surfaces update).
 
-## Phase 5 — Polish, e2e, demo dry-run
+## Phase 5 — Polish, production readiness, e2e, demo dry-run
 
 Whoever has cycles after Phase 4 merges. Targeted work, not a single
-agent's brief. Candidate items in priority order:
+agent's brief. **This phase doubles as production readiness — we're
+shipping a real product, not just a demo.** Candidate items in
+priority order:
 
-1. **Mobile sweep.** Open every shipped page at 375px and fix
+1. **Production-readiness sweep.** Every shipped surface needs:
+   working empty state, working error state, loading state, mobile
+   layout, basic a11y (semantic HTML + keyboard reachability + alt
+   text). The persona buttons make happy-path demos trivial; real
+   users hit the failure paths first. Particular attention to: the
+   enrich endpoint failing (Parallel.ai down, malformed URL,
+   timeout) — the form must always fall back to hand-fill.
+2. **Mobile sweep.** Open every shipped page at 375px and fix
    horizontal-scroll / tap-target violations. Use
    `mcp__playwright__browser_resize` or agent-browser device toolbar.
-2. **Demo dry-run** — run all five demo scenes end-to-end against the
+3. **Demo dry-run** — run all five demo scenes end-to-end against the
    deployed Worker. Catch broken share URLs, persona-tile flows, R2
    doc previews, MCP tool listing.
 3. **Activity ticker wire-up** — Agent 7 stubbed it with three fake
@@ -332,6 +351,7 @@ Phase 3 or Phase 4.**
 |---------|---------|----------------|------------|
 | Agent 1 | Agent 5 | `auth.ts` | Agent 1 ships a minimal stub (Drizzle adapter + `additionalFields.role`). Agent 5 expands with email hooks + role plugin. **Better Auth tables stay frozen after Agent 1.** |
 | Agent 2 | Agent 6 | `docs/agent-tasks/openapi-additions.md` | Agent 2 writes endpoint shapes there; Agent 6 builds OpenAPI from it. Create the file when first needed. |
+| Agent 2 | Agent 3 | `POST /api/v1/founder-passports/enrich` shape | Agent 2 owns the endpoint and the `EnrichRequest` / `EnrichResponse` types in `types/api.ts`. The response is a partial `FounderPassportInput` plus a `confidence` per field (so Agent 3 can render the "filled from your site" chips). Agent 2 publishes the shape in `openapi-additions.md`; Agent 3 consumes via `types/api.ts`. If Agent 2 hasn't shipped enrich yet, Agent 3 stubs the call to return `{}` so the form falls back to manual fill — that's the always-works path. |
 | Agent 3 | Agent 7 | persona tile click target | Persona tiles on `/` (Agent 7) link to `/founder?persona=<id>`. Agent 3's `/founder` page reads the query param, prefills the form (or routes directly to `/plan/fp_<persona>` if Agent 2's seeded recommendations are loaded). `lib/personas.ts` (Agent 7) is the typed source for persona names + IDs. |
 | Agent 3 | Agent 7 | nav + footer in root layout | Agent 7 owns `app/layout.tsx`. Agent 3 places its routes under it. If Agent 3 starts before Agent 7 merges, stub a minimal nav and rebase. |
 | Agent 4 | Agent 5 | `app/api/v1/companies/[slug]/route.ts` | Agent 4 owns GET; Agent 5 adds PATCH. Land Agent 4 first, then Agent 5 PR adds PATCH method to the same file. |
@@ -367,6 +387,12 @@ This file does **not** restate them. Sources of truth:
 
 ## Demo gating
 
+Demo gating doubles as production-criticality. Anything that gates
+scenes 1–4 is production-blocking — those scenes are the live
+product's primary surfaces, just exercised with seeded personas.
+Scene 5 (CLI/MCP) is a flourish; if it slips, the product still
+ships.
+
 | Scene | Story | Required agents |
 |-------|-------|-----------------|
 | 1 | Jordan (pre-seed) — start-business plan | 1, 2, 3, 7 |
@@ -381,8 +407,10 @@ headline). Scene 5 is a 20-second flourish; cut first.
 
 ## Cuts cascade — when behind, take these in order
 
-Drawn from each brief's "Cuts allowed if time-pressed" sections,
-prioritized.
+These are **production cuts**, not demo cuts. The mental model is
+"what can the live site live without," not "what won't the judges
+see." Drawn from each brief's "Cuts allowed if time-pressed"
+sections, prioritized.
 
 1. **Phase 5 entirely** — only do Phase 5 if every Phase 4 PR has
    merged with time to spare.
@@ -399,12 +427,17 @@ prioritized.
 5. **Agent 4** — skip vector tiles (raster basemap), skip
    InvestorBrief panel, skip clustering (individual pins), skip
    "Update with Claude/ChatGPT" button.
-6. **Agent 3** — skip "Ignore for now" bucket, skip field-level
-   modal, skip share URL (deep-link still works), skip skeleton
-   loaders. **Mobile is not optional** — never cut responsive.
-7. **Agent 2** — skip persistence (recompute on every GET), skip LLM
-   explanation (reasons[] only), skip prompt caching, skip "Ignore
-   for now" bucket.
+6. **Agent 3** — skip the URL-prefill UX (manual fill is the
+   always-works path; cut early if Parallel.ai integration slips
+   or bites into demo polish), skip "Ignore for now" bucket, skip
+   field-level modal, skip share URL (deep-link still works), skip
+   skeleton loaders. **Mobile is not optional** — never cut
+   responsive.
+7. **Agent 2** — skip the enrich endpoint and `lib/parallel.ts`
+   (front-end falls back to manual fill — coordinate with Agent 3),
+   skip persistence (recompute on every GET), skip LLM explanation
+   (reasons[] only), skip prompt caching, skip "Ignore for now"
+   bucket.
 8. **Agent 1** — skip embedding column, skip FTS5 (LIKE %term%
    instead), skip `company_photos`, drop malformed CSV rows silently.
 

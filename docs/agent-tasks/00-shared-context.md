@@ -273,8 +273,14 @@ Loaded Claude Code skills (already active in your session):
   features.
 - **Don't gold-plate.** No exhaustive tests, no comprehensive error
   handling, no premature optimization. The plan calls for "good
-  enough to demo at hour 24."
-- **Demo first.** If the work isn't visible in the 5-minute demo,
-  it's lower priority than the work that is.
+  enough to ship at hour 24" — and "ship" means real founders use
+  it on https://startup.utah.gov/, not just judges watch a 5-minute
+  demo.
+- **Demo-visible first.** Demo-visible surfaces are the priority
+  *because* they're the user-facing surfaces, not because they're
+  the demo. Don't ship something demo-pretty that breaks in
+  production: broken share URLs, 5xxs on real input, mobile
+  regressions, dead empty/error states. The persona buttons make
+  the happy path trivial; real users hit the failure paths first.
 
 Now go read your brief.

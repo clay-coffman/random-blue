@@ -49,9 +49,18 @@ page. Deterministic scoring first, LLM explanations second. Aim for
 - `app/api/v1/founder-passports/route.ts` — POST (create passport).
 - `app/api/v1/founder-passports/[id]/plan/route.ts` — GET (cached
   plan).
+- `app/api/v1/founder-passports/enrich/route.ts` — POST. Takes a
+  founder-supplied business website URL, calls Parallel.ai, returns
+  a partial `FounderPassportInput` for Agent 3 to prefill the form
+  with. **No persistence on this call** — persistence happens on
+  the existing intake POST once the founder submits.
 - `lib/recommend.ts` — scoring lib (pure, testable).
-- `schemas/founder-passport.ts` — zod schema for the request.
-- `types/api.ts` additions for recommend request/response.
+- `lib/parallel.ts` — Parallel.ai client (mirrors `lib/anthropic.ts`;
+  reads `PARALLEL_API_KEY` from `env()`).
+- `schemas/founder-passport.ts` — zod schema for the request (incl.
+  optional `website_url`).
+- `types/api.ts` additions for recommend request/response **and**
+  enrich request/response.
 - `tests/recommend.test.ts` (Vitest) — unit tests for scoring.
 
 You do NOT touch:
@@ -88,6 +97,9 @@ export const FounderPassportInput = z.object({
   business_type: z.string().optional(),
   needs: z.array(z.string()).default([]),
   constraints: z.array(z.string()).default([]),
+  website_url: z.string().url().optional(),    // optional URL the founder
+                                                // pasted on the intake form
+                                                // (see § Enrich endpoint).
 });
 
 export type FounderPassportInput = z.infer<typeof FounderPassportInput>;
@@ -228,6 +240,57 @@ retrieved set varies). Default model: `claude-opus-4-7`. Use the
 `recommendations` rows for a passport, formatted the same way. Used
 by the front-end's shareable plan URL.
 
+### 5b. Enrich endpoint — `POST /api/v1/founder-passports/enrich`
+
+The Founder Navigator's intake form has an optional URL field. When
+the founder pastes a website, the front-end calls this endpoint and
+uses the response to prefill the form. The founder reviews + edits
+before submitting, so this is a UX-quality endpoint (not a
+correctness-critical one) — it can return partial / lower-confidence
+results.
+
+- **Request:** `{ website_url: string }`. Validate the URL; reject
+  obviously-non-business hosts (e.g. linkedin.com, facebook.com,
+  x.com) with a `BAD_REQUEST` error in the standard error shape.
+  See `requirements.md` § Out of scope — LinkedIn enrichment is
+  deferred. Business websites only.
+- **Response:** a partial `FounderPassportInput` plus a per-field
+  confidence so Agent 3 can render "filled from your site" chips:
+  ```json
+  {
+    "fields": {
+      "industry":      { "value": "Software and Information Technology", "confidence": 0.85 },
+      "stage":         { "value": "mvp",                                  "confidence": 0.6  },
+      "city":          { "value": "Lehi",                                 "confidence": 0.9  },
+      "county":        { "value": "Utah",                                 "confidence": 0.9  },
+      "business_type": { "value": "B2B SaaS",                             "confidence": 0.7  },
+      "needs":         { "value": ["customers", "talent"],                "confidence": 0.5  }
+    },
+    "source_url": "https://example.com",
+    "fetched_at": 1715199900000
+  }
+  ```
+- **No persistence.** This endpoint doesn't insert a
+  `founder_passports` row. Persistence happens later on the intake
+  POST when the founder submits — that POST already accepts
+  `website_url` (added in § 1) and the route handler stamps
+  `enriched_at` + `enrichment_source` if the front-end indicates the
+  enrich path ran.
+- **Implementation calls `lib/parallel.ts`.** The Parallel.ai
+  endpoint choice (Task vs Search vs Extract) is implementation's
+  call — for sub-30s form UX, Search or Extract is more likely the
+  right pick than Task. See Parallel.ai docs.
+- **Hard timeout** of 15s on the upstream call; on timeout or 5xx,
+  return an empty `fields: {}` response with a `degraded: true`
+  flag so the front-end can quietly fall back to manual fill. The
+  endpoint must never 5xx the form into a dead end.
+- **Cost / cache hint:** keying a small in-memory or D1 cache by
+  normalized URL is a good idea for cost (re-submits, bot traffic,
+  etc.). Decide at implementation.
+
+Tell Agent 6 about the enrich endpoint shape via
+`docs/agent-tasks/openapi-additions.md`.
+
 ### 6. Persona test fixtures
 
 In `tests/recommend.test.ts` (Vitest), feed each persona through
@@ -271,6 +334,11 @@ your endpoint.
 
 ## Cuts allowed if time-pressed
 
+- **Skip the enrich endpoint and `lib/parallel.ts`.** Coordinate
+  with Agent 3 — they fall back to manual fill (the always-works
+  path). The URL field can stay in the form and just submit
+  alongside the intake; we still capture `website_url` for future
+  enrichment.
 - **Skip persistence** to `recommendations` table — recompute on
   every GET. Simpler.
 - **Skip the LLM explanation** — just return `reasons[]` from
