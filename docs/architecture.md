@@ -14,6 +14,7 @@ disagrees with this file, this file wins.
 | Auth             | **Better Auth** (email + password, self-hosted in D1 via Drizzle adapter; Web Crypto password hashing; CLI migrations) |
 | Email            | **Resend** (via the `send-email` skill) — used for Better Auth verification + password-reset mail |
 | LLM              | **Anthropic Claude `claude-opus-4-7`** (use prompt caching where possible)               |
+| Enrichment       | **Parallel.ai** — founder-website context extraction during intake (`PARALLEL_API_KEY`). Optional path; the form remains submittable without it. |
 | Map              | **MapLibre GL** (open tiles via OpenStreetMap or CARTO basemap; no API token)            |
 | Errors / logs    | **Cloudflare Workers Observability** (built-in, free) — `wrangler tail` + Workers Logs UI |
 | Provisioning     | **Stripe Projects CLI** (`stripe projects`) for SaaS credentials and account linkage     |
@@ -51,16 +52,18 @@ disagrees with this file, this file wins.
 │   │ D1 binding `DB`  │  │ R2 `OWNERSHIP_DOCS` │  │ env: ANTHROPIC_…, ││
 │   │ (SQLite + auth)  │  │ (verification docs) │  │ BETTER_AUTH_…,    ││
 │   │                  │  │ optional photos R2  │  │ RESEND_…,         ││
-│   │                  │  │                     │  │ ATLAS_ADMIN_…    │ │
+│   │                  │  │                     │  │ ATLAS_ADMIN_…,    ││
+│   │                  │  │                     │  │ PARALLEL_API_KEY  ││
 │   └─────────┬────────┘  └─────────────────────┘  └────────┬─────────┘│
 └─────────────┼──────────────────────────────────────┼─────────────────┘
               │                                       │
         ┌─────▼──────┐                       ┌────────▼─────────┐
         │ D1 DB:     │                       │ Anthropic API    │
         │ resources, │                       │ (claude-opus-4-7)│
-        │ companies, │                       └──────────────────┘
-        │ passports  │
-        └────────────┘
+        │ companies, │                       │ Parallel.ai      │
+        │ passports  │                       │ (founder website │
+        └────────────┘                       │  enrichment)     │
+                                             └──────────────────┘
 
 Side surfaces (same package, different bin):
 - cli/index.ts → `startup-state` bin (talks to the Worker via HTTPS)
@@ -168,8 +171,14 @@ startup-state-atlas/
 
 ```
 Browser /founder
+  → (optional) POST /api/v1/founder-passports/enrich  (Agent 2)
+      → call Parallel.ai with founder-supplied website URL
+      → return partial FounderPassportInput shape (county, city,
+        stage, industry, business_type, identity tags, needs)
+      → front-end pre-populates the form; founder reviews + edits
   → POST /api/v1/founder-passports        (Agent 2)
-      → insert into D1 founder_passports
+      → insert into D1 founder_passports (incl. website_url,
+        enriched_at, enrichment_source if the enrich path ran)
   → POST /api/v1/resources/recommend      (Agent 2)
       → SELECT scored resources from D1 with field-match scoring
       → Anthropic call (source-bound explanation, IDs only from set)
@@ -233,6 +242,7 @@ Claude/ChatGPT reads /llms.txt and /AGENTS.md
   //   BETTER_AUTH_SECRET
   //   RESEND_API_KEY
   //   ATLAS_ADMIN_TOKEN  (machine-only; CLI/MCP write path)
+  //   PARALLEL_API_KEY   (founder-website enrichment during intake)
 }
 ```
 

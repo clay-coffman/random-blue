@@ -22,9 +22,17 @@ The product is really an **ecosystem graph** with three interfaces:
 
 ## Personas (six required test cases per the brief)
 
+We're shipping a real product. The six personas are the GOED brief's
+**required test cases** — they gate the live flow, not replace it.
+Real founders will hit the live site with arbitrary inputs; the
+intake form, recommendation engine, and explanations have to hold up
+for those founders too. The prefill-from-website path (below) is one
+of the affordances that makes the live flow tolerable for users who
+don't fit a persona.
+
 Persona fixtures live in `db/seed/personas.ts` (Agent 1 writes these).
-For the demo, each persona is one-click testable on the founder
-page ("Try Jordan", "Try Maria", etc.).
+For the demo and for QA regression, each persona is one-click
+testable on the founder page ("Try Jordan", "Try Maria", etc.).
 
 | Persona     | One-line description                                                   |
 | ----------- | ---------------------------------------------------------------------- |
@@ -47,6 +55,31 @@ page ("Try Jordan", "Try Maria", etc.).
   regulatory help, operating support).
 - Persisted as a `founder_passports` row; returns `passport_id`.
 - Quick-test buttons for each persona.
+
+#### Smart prefill from business website (optional)
+
+Founders who already run a business shouldn't have to retype what's
+on their public website. The intake form has an optional URL field
+at the top: paste a business website, the form pre-populates the
+fields it can infer (industry, stage, business_type, county/city,
+likely identity tags and needs), and the founder reviews + edits
+before submitting.
+
+- The lookup hits `POST /api/v1/founder-passports/enrich` (Agent 2),
+  which calls **Parallel.ai** against the supplied URL and returns a
+  partial `FounderPassportInput`. No persistence happens on the
+  enrich call — persistence is still on the existing intake POST.
+- `founder_passports` carries a `website_url` (the founder's input)
+  plus `enriched_at` / `enrichment_source` audit fields so we know
+  which rows were touched by enrichment.
+- Prefilled fields are visually marked (subtle "filled from your
+  site" chip per field, dismissible). The founder is always the
+  decider.
+- The form must remain submittable without ever calling enrich —
+  manual fill is the always-works path. Persona quick-test buttons
+  bypass the URL field entirely.
+- LinkedIn is **not** an accepted enrichment source; see Out of
+  scope below.
 
 ### Recommendation engine
 
@@ -207,7 +240,12 @@ Per `docs/hackathon-plan.md`, do not invest in:
 - Third-party social login providers (Google, GitHub, etc.) —
   email + password is enough for the hackathon.
 - Complex CRM workflows.
-- Scraped LinkedIn enrichment.
+- LinkedIn enrichment. Deferred. The GOED brief explicitly puts
+  scraped LinkedIn enrichment out of scope; using Parallel.ai
+  (which abstracts the scraping) on a LinkedIn URL doesn't change
+  the spirit of that cut. Founder-supplied **business website**
+  URLs *are* in scope and get enrichment via Parallel.ai (see
+  § Founder Passport → Smart prefill).
 - Perfect geocoding (use city/county centroids).
 - Complicated vector-only RAG (defer embeddings).
 - Calendar integration.
