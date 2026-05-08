@@ -24,5 +24,14 @@ node_modules/
 .env.*.local
 !.env.example
 
-# Wrangler local state — per-worktree D1 SQLite, KV cache, etc.
+# Next.js
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# OpenNext / Wrangler / Cloudflare
+.open-next/
 .wrangler/
+worker-configuration.d.ts
+cloudflare-env.d.ts
