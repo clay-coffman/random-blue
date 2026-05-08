@@ -103,8 +103,8 @@ policy in `AGENTS.md` and `docs/agent-tasks/00-shared-context.md`.
 If you're a parallel Claude Code session spawned in a worktree, **read
 these in order**:
 
-1. `docs/agent-tasks/00-shared-context.md` — frozen conventions, port
-   table, schema ownership, branch protocol, sequencing.
+1. `docs/agent-tasks/00-shared-context.md` — port table, schema policy,
+   branch protocol, sequencing.
 2. Your assigned agent brief: `docs/agent-tasks/agent-<N>-<slice>.md`.
 3. `AGENTS.md` (root) — repo policy.
 4. `docs/architecture.md` — stack and bindings.
@@ -113,47 +113,52 @@ Then `git checkout -b feat/<slice>` (the `protect-main` hook blocks
 edits on `main`). Work to your brief's DONE-when criteria. Keep a
 clean PR scope.
 
-> This project uses **`agent-kit`** for shared Claude infrastructure.
-> Hooks, agents, and many skills under `.claude/` are symlinks into
-> `node_modules/agent-kit/`. See `.agents/skills/agent-kit/SKILL.md`
-> for the symlink model and CLI commands.
-
 ## Claude Code Hooks
 
 Claude Code uses `.claude/settings.json` for local safety and convenience
-hooks (rendered from `agent-kit`'s `claude/settings.template.json` on
-`agent-kit init`):
+hooks. All hook scripts live in `.claude/hooks/` as real files (no
+external dependency):
 
-- Edit/Write operations are blocked on protected branches (e.g. `main`,
-  `dev`).
-- Edit/Write operations against shared `agent-kit` symlinks are blocked,
-  with a message pointing the agent at the source repo. Edit shared content
-  in `~/Dev/repos/agent-kit/` (or wherever your local checkout lives), not
-  in this project.
-- Bash commands that call your secrets manager (e.g. Doppler) are
-  auto-approved, except destructive mutations.
-- Bash commands that hit the Linear API are auto-approved, except
-  destructive org/team/project/user/workspace mutations.
-- Bash commands that use `agent-browser` are auto-approved.
-- Notification hooks run `cc-notify.sh`.
+- **`protect-main`** (inline in settings.json) — Edit/Write is blocked
+  while the current branch is `main`. Create a feature branch first.
+- **`guard-shared-edits.sh`** — kept for parity with the original
+  agent-kit setup, but no longer load-bearing now that nothing in
+  this repo is a symlink into a shared package. Safe to leave or
+  remove.
+- **`allow-agent-browser.sh`** — auto-approves `agent-browser` Bash
+  invocations.
+- **`allow-linear.sh`** — auto-approves Linear API calls (except
+  destructive org/team/project/user/workspace mutations).
+- **`allow-doppler.sh`** — installed but unused on this project (we
+  don't run Doppler). Harmless no-op.
+- **`cc-notify.sh`** — Notification + Stop hook (desktop ping).
 
-These hooks are Claude-specific. Codex follows `AGENTS.md`, `.agents/skills`,
-its own approval policy, and local Codex plugin or MCP configuration.
+These hooks are Claude-specific. Codex follows `AGENTS.md`,
+`.agents/skills/`, and its own approval policy.
 
 ## Claude Skills
 
-Shared skills live in `.agents/skills/` (most are symlinks into
-`agent-kit`). The corresponding `.claude/skills/*` entries are
-symlinks to those `.agents/skills/*` paths so both Claude and Codex pick
-them up.
+Skills live in `.agents/skills/<name>/` as real files. The
+corresponding `.claude/skills/<name>` is a relative symlink to
+`.agents/skills/<name>` so both Claude and Codex pick them up from a
+single source of truth.
 
-To **add a project-local skill** (one that should not propagate to other
-projects), drop a real (non-symlink) directory under `.agents/skills/<name>/`.
-The agent-kit `sync` step leaves non-symlink entries alone.
+To **add a skill**, drop a `SKILL.md` (with frontmatter) into a new
+`.agents/skills/<name>/` directory and create the matching
+`.claude/skills/<name>` symlink:
 
-To **edit a shared skill**, work in `~/Dev/repos/agent-kit/skills/<name>/`
-and either republish (`npm publish` + `npm update`) or use `npm link` for
-hot iteration.
+```bash
+mkdir -p .agents/skills/<name>
+$EDITOR .agents/skills/<name>/SKILL.md
+ln -s ../../.agents/skills/<name> .claude/skills/<name>
+```
+
+To **edit a skill**, just edit `.agents/skills/<name>/SKILL.md`
+directly. There is no longer any "shared package" to publish back to
+— the contents originally came from
+[`clay-coffman/agent-kit`](https://github.com/clay-coffman/agent-kit)
+but were vendored into this repo for the hackathon to avoid sync
+churn. Diverge freely.
 
 Claude-only behavior should stay in `.claude/` and must not duplicate
 project policy from `AGENTS.md`.

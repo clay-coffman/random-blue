@@ -89,20 +89,25 @@ You do NOT touch:
    npx shadcn@latest add button card input select dialog badge
    ```
 
-5. **Create the D1 database:**
-   ```bash
-   wrangler d1 create startup-state-atlas-db
-   ```
-   Capture the `database_id` from the output and add the binding to
-   `wrangler.jsonc`:
+5. **Wire the D1 binding (local-first).** Do **not** run
+   `wrangler d1 create` yet — production D1 is provisioned at deploy
+   time (step 17). For local development, every worktree gets its
+   own SQLite at `<worktree>/.wrangler/state/v3/d1/`; the binding
+   resolves by `database_name`.
+
+   Add the binding to `wrangler.jsonc`:
    ```jsonc
    "d1_databases": [
      { "binding": "DB",
        "database_name": "startup-state-atlas-db",
-       "database_id": "<paste id here>",
+       "database_id": "local-placeholder",
        "migrations_dir": "db/migrations" }
    ]
    ```
+   The `database_id` is overwritten in step 17 with the real ID
+   returned by `wrangler d1 create`. `wrangler dev` and
+   `wrangler d1 ... --local` ignore it; only `--remote` and
+   `wrangler deploy` need a real one.
 
 5a. **Create the ownership-docs R2 bucket** (verification document
     storage — required, not optional):
@@ -192,8 +197,7 @@ You do NOT touch:
       "cli": "tsx cli/index.ts",
       "mcp": "tsx mcp/server.ts",
       "lint": "next lint",
-      "typecheck": "tsc --noEmit",
-      "postinstall": "agent-kit sync"
+      "typecheck": "tsc --noEmit"
     }
     ```
     `auth:generate` invokes `@better-auth/cli` to emit the Drizzle
@@ -241,12 +245,18 @@ You do NOT touch:
     `RESEND_API_KEY` powers Better Auth's verification +
     password-reset mail (Agent 5 wires `lib/email.ts`).
 
-17. **Deploy the empty scaffold** to confirm wiring works:
+17. **Provision production D1 + deploy** the empty scaffold to confirm
+    wiring works end-to-end:
     ```bash
+    wrangler d1 create startup-state-atlas-db
+    # paste the returned database_id into wrangler.jsonc, replacing
+    # "local-placeholder" from step 5.
     npm run deploy
     ```
     Confirm the Worker URL renders. Output the URL — Agents 1+ will
-    use it for `wrangler tail` and remote queries.
+    use it for `wrangler tail` and remote queries. The remote D1
+    starts empty; agents apply migrations to remote with
+    `npm run db:migrate:remote` after their PRs merge.
 
 18. **Commit + open PR:**
     ```bash
@@ -267,10 +277,13 @@ Verify each in order:
 1. `npm run dev` starts Next.js on `http://localhost:${PORT:-3000}`
    and serves the placeholder home page.
 2. `npx wrangler dev` (or `npm run preview`) starts the Worker on
-   port `${WRANGLER_PORT:-8787}` with the D1 binding live.
-3. `wrangler d1 list` shows `startup-state-atlas-db`.
-4. `wrangler d1 execute startup-state-atlas-db --command "SELECT 1"`
-   returns `1`.
+   port `${WRANGLER_PORT:-8787}` with the D1 binding live (using the
+   local SQLite under `.wrangler/state/v3/d1/`).
+3. `wrangler d1 execute startup-state-atlas-db --local --command "SELECT 1"`
+   returns `1` and `ls .wrangler/state/v3/d1/` shows a SQLite file.
+4. `wrangler d1 list` shows `startup-state-atlas-db` (provisioned in
+   step 17) and `wrangler d1 execute startup-state-atlas-db --remote
+   --command "SELECT 1"` returns `1` against the production binding.
 5. `npm run deploy` produces a live URL that renders the placeholder.
 6. `lib/cf.ts`, `lib/db.ts`, `lib/anthropic.ts`, `lib/api-error.ts`,
    `lib/ids.ts` all type-check (`npm run typecheck`).
@@ -302,13 +315,13 @@ hackathon's demo URL.
 ## Common pitfalls
 
 - **C3 may complain about non-empty directory.** It will offer to
-  merge. Accept. The agent-kit `.agents/`, `.claude/`, `.github/`
+  merge. Accept. The vendored `.agents/`, `.claude/`, `.github/`
   directories must survive — verify after C3 finishes.
 - **OpenNext + Next.js 15 may need `nodejs_compat` flag** in
   `wrangler.jsonc`. C3 usually adds it; if not, add it.
-- **`agent-kit sync` runs in postinstall** — if you change
-  `package.json` scripts, keep `postinstall: agent-kit sync`.
-- **Never edit `.agents/skills/<name>/`** — those are symlinks. The
-  `guard-shared-edits.sh` hook will block, but be aware.
+- **Skill content lives in `.agents/skills/<name>/SKILL.md`.** The
+  `.claude/skills/<name>` entries are relative symlinks to those
+  paths, so editing the `.agents/` copy updates both Claude and
+  Codex automatically.
 - **Don't commit `node_modules`** — `.gitignore` already excludes it,
   but double-check before pushing.
