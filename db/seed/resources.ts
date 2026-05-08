@@ -61,7 +61,11 @@ export function loadResources(csvPath: string): ResourceSeed[] {
       : counties.map((county) => ({ county, city: null, statewide: false }));
 
     const topics = pipeSplit(row.Topics).map(normalize);
-    const kind = topics[0] ?? null;
+    // `kind` indexes resources by their primary topic. The CSV has no
+    // dedicated Kind column, so we collapse the first pipe-separated topic
+    // and lowercase it to match the (also-lowercased) `resource_topics.topic`
+    // rows, so any join/filter on topic == kind hits the resources_kind_idx.
+    const kind = topics[0]?.toLowerCase() ?? null;
 
     seeds.push({
       id: `r_${upstreamId}`,

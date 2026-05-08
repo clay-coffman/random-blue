@@ -25,7 +25,7 @@ export const resources = sqliteTable(
     sourceUrl: text("source_url"),
     kind: text("kind"),
     contactEmail: text("contact_email"),
-    lastUpdatedAt: integer("last_updated_at", { mode: "timestamp" }).$defaultFn(
+    lastUpdatedAt: integer("last_updated_at", { mode: "timestamp_ms" }).$defaultFn(
       now,
     ),
   },
@@ -121,13 +121,13 @@ export const companies = sqliteTable(
     addressText: text("address_text"),
     lat: real("lat"),
     lng: real("lng"),
-    verifiedAt: integer("verified_at", { mode: "timestamp" }),
-    claimedAt: integer("claimed_at", { mode: "timestamp" }),
+    verifiedAt: integer("verified_at", { mode: "timestamp_ms" }),
+    claimedAt: integer("claimed_at", { mode: "timestamp_ms" }),
     claimedByUserId: text("claimed_by_user_id").references(() => user.id, {
       onDelete: "set null",
     }),
     lastUpdatedBy: text("last_updated_by"),
-    lastUpdatedAt: integer("last_updated_at", { mode: "timestamp" }),
+    lastUpdatedAt: integer("last_updated_at", { mode: "timestamp_ms" }),
     embedding: blob("embedding"),
   },
   (t) => [
@@ -163,7 +163,7 @@ export const companyJobs = sqliteTable(
       .references(() => companies.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     url: text("url"),
-    postedAt: integer("posted_at", { mode: "timestamp" }),
+    postedAt: integer("posted_at", { mode: "timestamp_ms" }),
   },
   (t) => [index("company_jobs_company_idx").on(t.companyId)],
 );
@@ -203,7 +203,7 @@ export const founderPassports = sqliteTable(
     businessSize: text("business_size"),
     needsJson: text("needs_json"),
     constraintsJson: text("constraints_json"),
-    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(now),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(now),
   },
   (t) => [index("founder_passports_user_idx").on(t.userId)],
 );
@@ -226,7 +226,7 @@ export const recommendations = sqliteTable(
     reasonsJson: text("reasons_json"),
     actionText: text("action_text"),
     bucket: text("bucket"),
-    createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(now),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(now),
   },
   (t) => [index("recommendations_passport_idx").on(t.passportId)],
 );
@@ -248,12 +248,12 @@ export const businessOwnershipSubmissions = sqliteTable(
     r2Key: text("r2_key").notNull(),
     mimeType: text("mime_type"),
     fileSize: integer("file_size"),
-    submittedAt: integer("submitted_at", { mode: "timestamp" }).$defaultFn(now),
+    submittedAt: integer("submitted_at", { mode: "timestamp_ms" }).$defaultFn(now),
     status: text("status").default("pending").notNull(),
     reviewedByUserId: text("reviewed_by_user_id").references(() => user.id, {
       onDelete: "set null",
     }),
-    reviewedAt: integer("reviewed_at", { mode: "timestamp" }),
+    reviewedAt: integer("reviewed_at", { mode: "timestamp_ms" }),
     reviewNotes: text("review_notes"),
   },
   (t) => [
@@ -275,7 +275,7 @@ export const profileUpdates = sqliteTable(
       { onDelete: "set null" },
     ),
     patchJson: text("patch_json").notNull(),
-    appliedAt: integer("applied_at", { mode: "timestamp" }).$defaultFn(now),
+    appliedAt: integer("applied_at", { mode: "timestamp_ms" }).$defaultFn(now),
     reviewedByUserId: text("reviewed_by_user_id").references(() => user.id, {
       onDelete: "set null",
     }),
