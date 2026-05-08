@@ -1,6 +1,6 @@
 ---
 description:
-  Commit current changes, open or update a PR against dev, monitor checks, and
+  Commit current changes, open or update a PR against main, monitor checks, and
   handle review feedback.
 allowed-tools:
   Bash(git:*), Bash(gh:*), Bash(npm:*), Bash(curl:*), Bash(doppler:*), Read,
@@ -9,8 +9,12 @@ allowed-tools:
 
 # Ship
 
-Commit current changes, open or update a PR targeting `dev`, monitor checks,
+Commit current changes, open or update a PR targeting `main`, monitor checks,
 and address actionable review feedback until the branch is ready.
+
+This repo uses a trunk-based flow: feature branches (`feat/*`, `fix/*`,
+`chore/*`, `docs/*`, `refactor/*`) merge directly into `main`. There is
+no `dev` branch.
 
 **Commit message hint:** `$ARGUMENTS`
 
@@ -50,14 +54,14 @@ and address actionable review feedback until the branch is ready.
 2. If no PR exists, gather context:
 
    ```bash
-   git log dev..HEAD --oneline
-   git diff --stat dev..HEAD
+   git log main..HEAD --oneline
+   git diff --stat main..HEAD
    ```
 
-3. Create the PR against `dev`:
+3. Create the PR against `main`:
 
    ```bash
-   gh pr create --base dev --title "<title>" --body "<body>"
+   gh pr create --base main --title "<title>" --body "<body>"
    ```
 
 The PR body must include `Summary` and `Test plan` sections.
