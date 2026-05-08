@@ -1,0 +1,194 @@
+# 00 — Shared context for every agent
+
+**Read this FIRST**, then your assigned brief
+(`agent-<N>-<slice>.md`), then `../architecture.md` and `../requirements.md`.
+
+This file is the spine. Every brief assumes you've absorbed it.
+
+## What we're building
+
+A 24-hour hackathon build of **Startup State Atlas** — Utah's
+agent-readable startup ecosystem. Polished founder/investor product
+on top, agent-native API/CLI/MCP layer underneath. See
+`../requirements.md` for product detail and `../architecture.md` for
+stack.
+
+## Stack (FROZEN)
+
+- **Next.js 15** (App Router) on **Cloudflare Workers** via
+  `@opennextjs/cloudflare`.
+- **D1** (SQLite at edge) + **Drizzle ORM**.
+- **R2** for object storage if photos are in scope.
+- **Anthropic Claude `claude-opus-4-7`** for LLM calls.
+- **MapLibre GL** (open tiles, no token).
+- **Wrangler CLI** for Cloudflare ops; **Stripe Projects CLI**
+  (`stripe projects`) for SaaS provisioning.
+
+Don't pivot the stack. If you think you have a strong reason, raise
+it with the user before you spend any time on it.
+
+## Pre-decided conventions (FROZEN)
+
+These decisions exist so parallel agents don't accidentally produce
+conflicting code. Don't deviate without checking with the user.
+
+- **Branch protocol.** Never edit on `main`. First action of every
+  agent: `git checkout -b feat/<slice>`. The agent-kit `protect-main`
+  workflow + the `.claude/settings.json` PreToolUse hook will block
+  Edit/Write while on `main` or `dev`.
+- **API path prefix:** `/api/v1/...`. Versioned from day one.
+- **Error response shape:**
+  `{ error: { code: string, message: string, details?: any } }`.
+  Use `lib/api-error.ts`.
+- **ID prefixes:**
+  - `fp_*` — founder passports
+  - `co_*` — companies
+  - `r_*`  — resources
+  - `rec_*` — recommendations
+  - `cl_*` — claims
+  Use `lib/ids.ts` (`newId('fp')` etc.).
+- **Casing.** snake_case in API requests/responses (wire format);
+  camelCase in TS code. Convert at the Drizzle / zod boundary.
+- **Map.** MapLibre GL only. No Mapbox tokens.
+- **Auth-for-write.** Single shared `X-Atlas-Admin-Token` header,
+  read from `env.ATLAS_ADMIN_TOKEN` (Workers secret). Read endpoints
+  are open. Claim flow uses email-domain mock (no real OAuth).
+- **Schema ownership.** **Only Agent 1** alters `db/schema.ts`,
+  generates migrations, or applies them. Other agents read/seed but
+  don't touch schema. If you need a new column, ask Agent 1
+  (write a TODO in `docs/agent-tasks/schema-requests.md` if Agent 1
+  has finished and another agent needs an addition).
+- **API contract.** `app/api/v1/openapi.yaml` is the source of truth
+  for endpoint shapes. Agent 6 owns it. If your agent needs a new
+  endpoint, define it there and notify Agent 6.
+
+## Sequencing
+
+```
+Agent 0 (Foundation)            wt1 / feat/bootstrap
+        │
+        ▼   FREEZE: scaffold + lib stubs land
+Agent 1 (Data layer)            wt1 (or wt2) / feat/data
+        │
+        ▼   FREEZE: db/schema.ts + initial migration + persona seed
+        │
+   ┌────┴────┬─────────┬─────────┬──────────┬─────────────┐
+   ▼         ▼         ▼         ▼          ▼             ▼
+ Agent 2  Agent 3   Agent 4   Agent 5    Agent 6       (idle)
+ Recommend Navigator Map+Prof  Claim/Adm  Agent-Native
+ wt[1-3]  wt[1-3]   wt[1-3]   wt[1-3]    wt[1-3]
+```
+
+**Concurrency cap: 3 active worktrees** at a time (each is ~500MB
+node_modules + a dev server + a Claude session). Suggested batches:
+
+- **Batch 1 (after Agent 1 finishes):** Agents 2, 3, 6.
+- **Batch 2:** Agents 4, 5.
+
+Agent 6 (agent-native) can start in parallel with Agent 2 because the
+OpenAPI spec is a contract Agent 2 is producing — keep them in sync
+via that file (Agent 6 watches `app/api/v1/openapi.yaml`).
+
+## Worktree port table
+
+`N` is the worktree index (`startup-state-atlas-wt<N>`). Main
+checkout is `N=0`.
+
+| Variable                          | Formula  | main | wt1  | wt2  | wt3  |
+| --------------------------------- | -------- | ---- | ---- | ---- | ---- |
+| `PORT` (`next dev`)               | 3000 + N | 3000 | 3001 | 3002 | 3003 |
+| `WRANGLER_PORT` (`wrangler dev`)  | 8787 + N | 8787 | 8788 | 8789 | 8790 |
+
+D1 is shared remote — no per-worktree DB.
+
+## Branch protocol
+
+```bash
+# First action in any worktree:
+cd startup-state-atlas-wtN
+git checkout -b feat/<slice>      # the slice from your brief
+
+# Make changes, commit, push:
+git add <files> && git commit -m "feat(<scope>): …"
+git push -u origin feat/<slice>
+
+# Open a PR:
+gh pr create --base main --title "<scope>: <one-liner>" --body "<…>"
+```
+
+If you forget and try to edit on `main`, the Claude hook blocks the
+Edit and tells you to switch branches. Listen to it.
+
+## Done definitions
+
+A brief is "done" when:
+
+1. The DONE-when criteria in the brief are verifiable — usually a
+   command (curl, test, CLI invocation) that produces expected
+   output.
+2. A PR is open against `main` with a clear description.
+3. The PR doesn't break other agents' work (no schema conflicts, no
+   stomping on owned write surfaces).
+4. **No leaks:** no `node_modules`, no `.env*`, no secrets in
+   committed files.
+
+## Skills available to each agent
+
+The agent-kit symlinks these into `.claude/skills/`. Use them.
+
+- **`create-worktree`** — when you need a new worktree (the user
+  usually creates these, but you may need to reference port logic).
+- **`refresh-worktrees`**, **`validate-worktrees`** — health checks
+  across worktrees.
+- **`ship`** — deployment helper.
+- **`validate`** — full validation suite (lint + typecheck + tests).
+- **`pr-summary`** — auto-generate PR summaries.
+- **`ui-testing`** — UI test automation.
+- **`stripe-projects`** — provision SaaS services via Stripe Projects
+  CLI (Cloudflare account linkage, etc.).
+- **`agent-kit`** — meta-skill explaining the symlink/template model.
+  Read once.
+
+Loaded Claude Code skills (already active in your session):
+
+- **`claude-api`** — Anthropic SDK + prompt caching (use this every
+  time you call Claude).
+- **`cloudflare:wrangler`** — wrangler command reference.
+- **`cloudflare:cloudflare`** — broad Cloudflare platform reference.
+- **`cloudflare:workers-best-practices`** — review/author against best
+  practices.
+- **`cloudflare:durable-objects`** — Durable Objects (probably
+  unused this hackathon).
+- **`cloudflare:build-mcp`** — building MCP servers on Workers (Agent 6).
+- **`cloudflare:agents-sdk`** — Agents SDK (probably unused; informative).
+
+## What to do when you hit a blocker
+
+1. **Check the docs first.** `docs/architecture.md`, `requirements.md`,
+   `hackathon-plan.md`, your brief. 80% of "blockers" are answered there.
+2. **Check loaded skills.** Especially `cloudflare:wrangler` and
+   `claude-api`.
+3. **Check `.agents/skills/<name>/SKILL.md`** for the
+   stripe-projects, ship, validate, etc. skills.
+4. **If you need a schema change** — write a request to
+   `docs/agent-tasks/schema-requests.md` (create the file if it
+   doesn't exist). Don't run `drizzle-kit generate` yourself.
+5. **If you need a new endpoint** — define it in
+   `app/api/v1/openapi.yaml` and write the route under
+   `app/api/v1/...`. Coordinate with Agent 6 (agent-native).
+6. **Anything else** — ask the user. Don't guess on architecture,
+   auth, error shape, ID prefixes, or third-party SaaS additions.
+
+## Hackathon time discipline
+
+- **Frequent commits.** Small, working increments.
+- **Cut early.** Each brief lists "Cuts allowed if time-pressed."
+  Take them when you're behind. Cosmetic UI > non-functional
+  features.
+- **Don't gold-plate.** No exhaustive tests, no comprehensive error
+  handling, no premature optimization. The plan calls for "good
+  enough to demo at hour 24."
+- **Demo first.** If the work isn't visible in the 5-minute demo,
+  it's lower priority than the work that is.
+
+Now go read your brief.

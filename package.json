@@ -1,0 +1,20 @@
+{
+  "name": "startup-state-atlas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "agent-kit sync"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "agent-kit": "github:clay-coffman/agent-kit#c7f69c60de8c229e08228e01bcaa7618915bd712"
+  }
+}

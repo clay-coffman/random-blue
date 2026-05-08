@@ -1,0 +1,19 @@
+{
+  "projectName": "Startup State Atlas",
+  "repoSlug": "startup-state-atlas",
+  "stack": "TypeScript / Next.js 15 (App Router) on Cloudflare Workers",
+  "primaryDb": "Cloudflare D1 (SQLite) + Drizzle ORM",
+  "codeHost": "GitHub",
+  "deployTarget": "Cloudflare Workers (via @opennextjs/cloudflare)",
+  "defaultBranch": "main",
+  "nodeVersion": "22",
+  "secretsManager": ".env.local (dev) + wrangler secrets (prod) + stripe-projects vault for SaaS keys",
+  "unitRunner": "Vitest",
+  "e2eRunner": "Playwright",
+  "mockingLib": "none",
+  "stylingLib": "Tailwind CSS + shadcn/ui",
+  "authMethod": "X-Atlas-Admin-Token (mock; magic-link domain check for claims)",
+  "errorMonitor": "Cloudflare Workers Observability (built-in, free)",
+  "analyticsLib": "none (Workers Analytics covers basics)",
+  "llmProviders": "Anthropic Claude (claude-opus-4-7)"
+}

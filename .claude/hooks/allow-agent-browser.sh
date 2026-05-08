@@ -1,0 +1,1 @@
+../../node_modules/agent-kit/claude/hooks/allow-agent-browser.sh

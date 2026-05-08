@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "stripe-projects": {
+      "source": "docs.stripe.com",
+      "sourceType": "well-known",
+      "computedHash": "5f82f044d22f5d23b5ddd8cf0370d173e05d9d82345176e388eb49deeac3af0e"
+    }
+  }
+}
