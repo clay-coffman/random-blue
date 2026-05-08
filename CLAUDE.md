@@ -22,6 +22,82 @@ narrow widths. Use `mcp__playwright__browser_resize` (or the
 `agent-browser` device toolbar) during UI testing. Full policy in
 `AGENTS.md` § Coding Style.
 
+## Architecture at a glance
+
+Two layers over the same D1 data:
+
+- **Web product** (Next.js App Router on Cloudflare Workers): Founder
+  Navigator intake → 90-day plan, ecosystem map (MapLibre), company
+  profiles, self-service claim flow, GOEO admin UI.
+- **Agent-native layer**: REST at `/api/v1/...`, CLI binary
+  `startup-state`, MCP server `startup-state-mcp`, `/llms.txt`, public
+  `/AGENTS.md`. Same DB; machine-friendly surfaces.
+
+Dual auth model (frozen):
+
+- **Humans** → Better Auth (cookie sessions in D1, Web Crypto only — no
+  Node `crypto`). Roles: `owner` (sign-up default), `goeo_admin`,
+  `superadmin`. Email verification + password reset via Resend.
+- **Machine clients** (CLI / MCP / scripts) → `X-Atlas-Admin-Token`
+  header validated against `env.ATLAS_ADMIN_TOKEN`.
+- Reads are unauthenticated. Anonymous founder-passport intake is
+  allowed.
+
+LLM usage is narrow and source-bound: Claude `claude-opus-4-7` generates
+*explanations* for recommendations, not the rankings. Scoring is
+deterministic field-match (see Agent 2 brief). Prompt caching is required.
+
+## Commands
+
+> **The repo is in bootstrap state.** Only docs and agent-kit
+> scaffolding exist; Agent 0's brief
+> (`docs/agent-tasks/agent-0-foundation.md`) wires up the Next.js
+> scaffold, `wrangler.jsonc`, Drizzle config, and most of the scripts
+> below. Until Agent 0 lands, `npm run dev` etc. will not work.
+
+Target npm scripts (full list and details in `AGENTS.md` § Commands):
+
+```
+npm run dev                # next dev (port 3000+N — see worktree formula below)
+npm run preview            # local Cloudflare Worker preview (port 8787+N)
+npm run db:generate        # drizzle-kit generate  (Agent 1 only — see Hard rules)
+npm run db:migrate:local   # wrangler d1 migrations apply --local
+npm run db:migrate:remote  # wrangler d1 migrations apply --remote
+npm run seed               # load personas + resource/company CSVs into D1
+npm run cli                # local CLI entry (startup-state ...)
+npm run mcp                # local stdio MCP server
+npm test                   # vitest
+npm run test:e2e           # playwright
+npm run lint / typecheck
+npm run deploy             # wrangler deploy
+```
+
+`postinstall` runs `agent-kit sync` to refresh symlinks under
+`.agents/skills/` and `.claude/`. Don't disable it.
+
+## Hard rules to remember
+
+A few cross-cutting rules that cause real damage if violated. Full
+policy in `AGENTS.md` and `docs/agent-tasks/00-shared-context.md`.
+
+- **Schema ownership: Agent 1 only.** Do not modify `db/schema.ts` or
+  run `drizzle-kit generate` from any other agent's worktree. Need a
+  new column? Append a request to `docs/agent-tasks/schema-requests.md`
+  for Agent 1 to pick up.
+- **D1 is shared remote.** Every worktree binds to the same
+  `startup-state-atlas-db`. Don't try to provision a per-worktree DB.
+- **All API routes live under `/api/v1/...`** from day one.
+- **Frozen error shape:** `{ error: { code, message, details? } }`. Use
+  `lib/api-error.ts`.
+- **ID prefixes (frozen):** `fp_*` (founder passports), `co_*`
+  (companies), `r_*` (resources), `rec_*` (recommendations), `bos_*`
+  (business ownership submissions). Generate via `lib/ids.ts`.
+- **Casing:** snake_case on the wire, camelCase in TS. Convert at the
+  Drizzle / Zod boundary.
+- **Worktree ports:** `PORT = 3000 + N`, `WRANGLER_PORT = 8787 + N`
+  where N is your worktree index (main=0, wt1=1, wt2=2, wt3=3). Read
+  from `.env.local`.
+
 ## Working in a worktree
 
 If you're a parallel Claude Code session spawned in a worktree, **read
