@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Startup State Atlas — Wireframes</title>
+<template id="__bundler_thumbnail" data-bg-color="#F7F4ED">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#F7F4ED"/>
+    <g stroke="#C4B89B" stroke-width="1" fill="none" opacity="0.55">
+      <path d="M0 400 Q 150 320, 300 400 T 600 400 T 900 400 T 1200 400"/>
+      <path d="M0 460 Q 150 380, 300 460 T 600 460 T 900 460 T 1200 460"/>
+      <path d="M0 520 Q 150 450, 300 520 T 600 520 T 900 520 T 1200 520"/>
+      <path d="M0 340 Q 150 270, 300 340 T 600 340 T 900 340 T 1200 340"/>
+    </g>
+    <g transform="translate(600 400)" text-anchor="middle" font-family="Georgia, serif">
+      <text y="-30" font-size="92" fill="#0F1B2D" letter-spacing="-2">Atlas</text>
+      <text y="40" font-size="46" fill="#C2410C" font-style="italic" font-family="cursive">~ wireframes ~</text>
+    </g>
+    <circle cx="600" cy="600" r="14" fill="#C2410C" stroke="#F7F4ED" stroke-width="4"/>
+    <circle cx="540" cy="620" r="10" fill="#2563EB" stroke="#F7F4ED" stroke-width="3"/>
+    <circle cx="660" cy="620" r="10" fill="#16A34A" stroke="#F7F4ED" stroke-width="3"/>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Roboto+Serif:opsz,wght@8..144,400;8..144,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F4ED;
+    --paper-2:#FBF9F4;
+    --stone:#ECE7DC;
+    --topo:#C4B89B;
+    --topo-2:#A89A78;
+    --ink:#0F1B2D;
+    --ink-2:#2A3647;
+    --ink-3:#5A6678;
+    --ember:#C2410C;
+    --sage:#4F6F52;
+    --sky:#2563EB;
+    --hand:"Kalam","Caveat",cursive;
+    --scribble:"Caveat",cursive;
+    --body:"Hanken Grotesk",system-ui,sans-serif;
+    --serif:"Roboto Serif",Georgia,serif;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--body)}
+  body{
+    background:
+      radial-gradient(1200px 800px at 15% -10%, rgba(196,184,155,.18), transparent 60%),
+      radial-gradient(1000px 700px at 90% 110%, rgba(196,184,155,.14), transparent 60%),
+      var(--paper);
+  }
+
+  /* ---- top bar ---- */
+  .topbar{
+    position:sticky;top:0;z-index:50;
+    background:rgba(247,244,237,.92);backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--topo);
+  }
+  .topbar-inner{
+    max-width:1480px;margin:0 auto;padding:14px 28px;
+    display:flex;align-items:center;gap:24px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-size:22px;letter-spacing:-.01em}
+  .brand .mark{
+    width:30px;height:30px;border:1.5px solid var(--ink);border-radius:50%;
+    display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:600;
+  }
+  .brand small{font-family:var(--scribble);font-size:18px;color:var(--ember);margin-left:6px;transform:rotate(-3deg);display:inline-block}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+  .tab{
+    font-family:var(--hand);font-size:17px;font-weight:700;
+    padding:8px 14px;border-radius:8px;cursor:pointer;
+    background:transparent;border:1.5px dashed transparent;color:var(--ink-2);
+    transition:.15s;
+  }
+  .tab:hover{background:var(--stone)}
+  .tab.is-active{
+    background:var(--paper-2);color:var(--ink);
+    border-color:var(--ink);box-shadow:2px 2px 0 var(--ink);
+  }
+
+  /* ---- page intro ---- */
+  .intro{
+    max-width:1480px;margin:0 auto;padding:36px 28px 8px;
+  }
+  .intro h1{
+    font-family:var(--serif);font-weight:400;font-size:48px;line-height:1.05;letter-spacing:-.02em;
+    margin:0 0 8px;
+  }
+  .intro .scrib{font-family:var(--scribble);color:var(--ember);font-size:30px;display:inline-block;transform:rotate(-2deg);margin-left:8px}
+  .intro p{max-width:780px;color:var(--ink-2);font-size:17px;line-height:1.55;margin:8px 0 0}
+  .intro .legend{
+    display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;
+    font-family:var(--hand);font-size:15px;color:var(--ink-3);
+  }
+  .legend .chip{display:inline-flex;align-items:center;gap:6px}
+  .legend .swatch{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:3px}
+
+  /* ---- panels ---- */
+  .panel{display:none;max-width:1480px;margin:0 auto;padding:24px 28px 80px}
+  .panel.is-active{display:block}
+
+  .tab-head{
+    display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:18px;
+    margin:24px 0 8px;padding-bottom:14px;border-bottom:1.5px dashed var(--topo);
+  }
+  .tab-head h2{
+    font-family:var(--serif);font-weight:400;font-size:34px;line-height:1.1;margin:0;letter-spacing:-.01em
+  }
+  .tab-head .lede{
+    max-width:560px;font-family:var(--hand);font-size:17px;color:var(--ink-2);line-height:1.4
+  }
+  .tab-head .pill{
+    font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    background:var(--ink);color:var(--paper);padding:5px 9px;border-radius:4px;
+  }
+
+  /* ---- variant grid ---- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:28px;margin-top:22px}
+  .grid.wide{grid-template-columns:repeat(auto-fill,minmax(560px,1fr))}
+  .grid.full{grid-template-columns:1fr}
+
+  .variant{
+    background:var(--paper-2);
+    border:1.5px solid var(--ink);
+    border-radius:14px;
+    padding:18px;
+    box-shadow:5px 5px 0 var(--ink);
+    position:relative;
+    transition:.2s;
+  }
+  .variant:hover{transform:translate(-1px,-1px);box-shadow:7px 7px 0 var(--ink)}
+  .variant > header{
+    display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap;
+  }
+  .variant .label{
+    font-family:var(--hand);font-weight:700;font-size:20px;color:var(--ink);
+  }
+  .variant .label .opt{
+    display:inline-block;background:var(--ember);color:var(--paper);
+    font-family:var(--mono);font-size:11px;font-weight:500;
+    padding:2px 7px;border-radius:4px;margin-right:8px;letter-spacing:.06em;text-transform:uppercase;
+    transform:translateY(-2px);
+  }
+  .variant .note{
+    font-family:var(--hand);font-size:15px;color:var(--ink-3);line-height:1.35;flex:1 1 100%;
+  }
+
+  /* ---- screen frame (the wireframe canvas itself) ---- */
+  .screen{
+    background:#fff;
+    border:1.5px solid var(--ink);
+    border-radius:8px;
+    overflow:hidden;
+    position:relative;
+  }
+  .screen.tall{min-height:560px}
+  .screen.short{min-height:320px}
+  .screen .chrome{
+    background:var(--stone);border-bottom:1.5px solid var(--ink);
+    padding:7px 12px;display:flex;align-items:center;gap:8px;
+    font-family:var(--mono);font-size:11px;color:var(--ink-2);
+  }
+  .screen .chrome .dots{display:flex;gap:5px}
+  .screen .chrome .dots i{width:9px;height:9px;border:1.2px solid var(--ink);border-radius:50%;display:block}
+  .screen .chrome .url{
+    flex:1;background:#fff;border:1.2px solid var(--ink);border-radius:4px;padding:2px 8px;font-size:11px
+  }
+  .screen .body{padding:14px}
+
+  /* ---- sketchy primitives ---- */
+  .box{
+    border:1.5px solid var(--ink);border-radius:6px;background:#fff;
+  }
+  .box.dashed{border-style:dashed;border-color:var(--ink-3)}
+  .box.fill{background:var(--stone)}
+  .box.ink{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .box.ember{background:var(--ember);color:var(--paper);border-color:var(--ember)}
+  .box.sage{background:var(--sage);color:var(--paper);border-color:var(--sage)}
+  .box.tint{background:var(--paper)}
+
+  .h-line{height:1.5px;background:repeating-linear-gradient(90deg,var(--ink-2) 0 6px,transparent 6px 10px);margin:6px 0}
+  .h-solid{height:1.5px;background:var(--ink);margin:8px 0}
+
+  .sketch-text{
+    font-family:var(--hand);font-size:14px;color:var(--ink);line-height:1.3;
+  }
+  .sketch-text.sm{font-size:12.5px}
+  .sketch-text.lg{font-size:17px}
+  .sketch-text.xl{font-size:22px;font-family:var(--serif);font-weight:500}
+  .sketch-text.muted{color:var(--ink-3)}
+  .sketch-text.mono{font-family:var(--mono);font-size:12px}
+
+  .scribble{
+    height:8px;background:repeating-linear-gradient(90deg,var(--ink-3) 0 8px,transparent 8px 12px);
+    border-radius:2px;
+  }
+  .scribble.short{width:55%}
+  .scribble.med{width:75%}
+  .scribble.full{width:100%}
+  .scribble.dark{background:repeating-linear-gradient(90deg,var(--ink) 0 10px,transparent 10px 14px)}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 12px;border-radius:6px;border:1.5px solid var(--ink);
+    font-family:var(--hand);font-weight:700;font-size:14px;background:#fff;color:var(--ink);
+  }
+  .btn.primary{background:var(--ink);color:var(--paper)}
+  .btn.ember{background:var(--ember);color:var(--paper);border-color:var(--ember)}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:4px 9px;font-size:13px}
+
+  .chip{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:3px 8px;border:1.2px solid var(--ink-3);border-radius:999px;
+    font-family:var(--hand);font-size:13px;background:var(--paper);
+  }
+  .chip.dot::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ink-3)}
+  .chip.fintech::before{background:#16A34A}
+  .chip.bio::before{background:#DC2626}
+  .chip.aero::before{background:#7C3AED}
+  .chip.sw::before{background:#2563EB}
+  .chip.ai::before{background:#0891B2}
+  .chip.energy::before{background:#EA580C}
+  .chip.consumer::before{background:#DB2777}
+  .chip.security::before{background:#475569}
+  .chip.ember-tint{background:#FBE7DC;border-color:var(--ember);color:var(--ember)}
+  .chip.sage-tint{background:#DDE7DD;border-color:var(--sage);color:var(--sage)}
+  .chip.sky-tint{background:#DDE6FB;border-color:var(--sky);color:var(--sky)}
+
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .row.tight{gap:6px}
+  .col{display:flex;flex-direction:column;gap:8px}
+  .stack-2>*+*{margin-top:8px}
+  .stack-3>*+*{margin-top:12px}
+
+  /* arrow / annotation callout */
+  .callout{
+    position:absolute;font-family:var(--scribble);font-size:18px;color:var(--ember);
+    line-height:1.05;text-align:center;pointer-events:none;
+  }
+  .callout.tr{top:-12px;right:-10px;transform:rotate(6deg)}
+  .callout.tl{top:-12px;left:-10px;transform:rotate(-6deg)}
+  .callout.bl{bottom:-14px;left:10px;transform:rotate(-3deg)}
+  .callout.br{bottom:-14px;right:10px;transform:rotate(3deg)}
+
+  /* annotated arrow */
+  .anno{
+    font-family:var(--scribble);color:var(--ember);font-size:16px;line-height:1.1;
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  .anno svg{flex:none}
+
+  /* faux map background */
+  .mapbg{
+    position:absolute;inset:0;
+    background:
+      radial-gradient(circle at 35% 50%, rgba(196,184,155,.4), transparent 35%),
+      radial-gradient(circle at 65% 35%, rgba(196,184,155,.35), transparent 30%),
+      repeating-radial-gradient(circle at 50% 50%, transparent 0 28px, rgba(168,154,120,.18) 28px 30px),
+      linear-gradient(180deg, #F0EBDB, #E8E1CF);
+  }
+  .mapbg.dim::after{
+    content:"";position:absolute;inset:0;background:rgba(247,244,237,.25)
+  }
+  .pin{
+    position:absolute;width:14px;height:14px;border-radius:50%;
+    border:2px solid #fff;box-shadow:0 1px 0 var(--ink),0 2px 4px rgba(15,27,45,.25);
+  }
+  .pin.sel{
+    width:18px;height:18px;outline:6px solid rgba(196,184,155,.55);
+  }
+  .pin.sel::after{
+    content:"";position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;
+    background:var(--ember);border:1.5px solid #fff;
+  }
+
+  /* keyboard helper */
+  .kbd{
+    font-family:var(--mono);font-size:11px;border:1.2px solid var(--ink);
+    background:var(--paper);border-radius:4px;padding:1px 5px;box-shadow:0 1px 0 var(--ink);
+  }
+
+  /* checkbox / radio sketch */
+  .ck{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:3px;display:inline-block;flex:none}
+  .ck.on{background:var(--ink);position:relative}
+  .ck.on::after{content:"✓";position:absolute;color:var(--paper);font-family:var(--mono);font-size:11px;left:1.5px;top:-3px}
+  .rd{width:14px;height:14px;border:1.5px solid var(--ink);border-radius:50%;display:inline-block;flex:none}
+  .rd.on{background:radial-gradient(circle,var(--ink) 0 4px, #fff 5px 100%)}
+
+  /* responsive nav scroll */
+  @media (max-width:900px){
+    .tabs{order:3;margin-left:0;width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
+    .tab{white-space:nowrap}
+    .intro h1{font-size:34px}
+  }
+
+  /* fade-in tabs */
+  .panel.is-active{animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<template id="__bundler_thumbnail" data-bg-color="#F7F4ED">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#F7F4ED"/>
+    <g fill="none" stroke="#C4B89B" stroke-width="2" opacity="0.5">
+      <circle cx="600" cy="400" r="80"/>
+      <circle cx="600" cy="400" r="160"/>
+      <circle cx="600" cy="400" r="240"/>
+      <circle cx="600" cy="400" r="320"/>
+    </g>
+    <g transform="translate(600 400)">
+      <circle r="60" fill="none" stroke="#0F1B2D" stroke-width="4"/>
+      <text text-anchor="middle" dominant-baseline="central" font-family="Georgia, serif" font-size="48" fill="#0F1B2D">N</text>
+    </g>
+    <text x="600" y="540" text-anchor="middle" font-family="Georgia, serif" font-size="48" fill="#0F1B2D">Startup State Atlas</text>
+    <text x="600" y="580" text-anchor="middle" font-family="Caveat, cursive" font-size="32" fill="#C2410C">~ wireframes ~</text>
+  </svg>
+</template>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="mark">N</div>
+      Startup State Atlas
+      <small>~ wireframes ~</small>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab is-active" data-tab="hero">Front door</button>
+      <button class="tab" data-tab="intake">Founder intake</button>
+      <button class="tab" data-tab="plan">90-day plan</button>
+      <button class="tab" data-tab="map">Investor map</button>
+      <button class="tab" data-tab="profile">Company profile</button>
+      <button class="tab" data-tab="claim">Claim flow</button>
+      <button class="tab" data-tab="agents">Agent docs</button>
+    </nav>
+  </div>
+</header>
+
+<section class="intro">
+  <h1>Startup State Atlas <span class="scrib">— wireframes</span></h1>
+  <p>Low-fi exploration of the major surfaces. Each tab below shows several distinctly different approaches side-by-side &mdash; the goal is to map out the design space before committing. Comments + redlines welcome on any frame.</p>
+  <div class="legend">
+    <span class="chip"><span class="swatch" style="background:#fff"></span>screen / canvas</span>
+    <span class="chip"><span class="swatch" style="background:var(--stone)"></span>filled surface</span>
+    <span class="chip"><span class="swatch" style="background:var(--ink)"></span>primary ink fill</span>
+    <span class="chip"><span class="swatch" style="background:var(--ember)"></span>ember accent</span>
+    <span class="chip"><span class="swatch" style="background:var(--sage)"></span>verified / done</span>
+    <span class="anno">handwriting = annotation</span>
+  </div>
+</section>
+
+<!-- ============ FRONT DOOR (placeholder, filled next) ============ -->
+<main>
+  <section class="panel is-active" data-panel="hero">
+    <div class="tab-head">
+      <div>
+        <h2>Front door &mdash; one platform, three audiences</h2>
+        <div class="lede">Founders, investors, agents. The hero has to make the pivot obvious in two seconds without feeling like a tri-fold brochure.</div>
+      </div>
+      <div class="pill">7 variants</div>
+    </div>
+    <div id="panel-hero-grid" class="grid wide"></div>
+  </section>
+
+  <section class="panel" data-panel="intake">
+    <div class="tab-head">
+      <div><h2>Founder intake &mdash; "tell us your situation"</h2>
+      <div class="lede">Goal: 5-7 questions, under 90 seconds, produces a Founder Passport. Test against Jordan, Maria, Marcus, Priya, David, Dr. Amir.</div></div>
+      <div class="pill">coming next</div>
+    </div>
+    <div class="grid" id="panel-intake-grid"></div>
+  </section>
+
+  <section class="panel" data-panel="plan">
+    <div class="tab-head">
+      <div><h2>90-day plan &mdash; "do this now / next / later"</h2>
+      <div class="lede">The output is not a list of 40 resources. It's a ranked field manual with reasons, dates, and contact drafts.</div></div>
+      <div class="pill">coming next</div>
+    </div>
+    <div class="grid" id="panel-plan-grid"></div>
+  </section>
+
+  <section class="panel" data-panel="map">
+    <div class="tab-head">
+      <div><h2>Investor map &mdash; ecosystem explorer</h2>
+      <div class="lede">Beautiful enough to project for international investors; useful enough for a founder to find their next customer.</div></div>
+      <div class="pill">coming next</div>
+    </div>
+    <div class="grid wide" id="panel-map-grid"></div>
+  </section>
+
+  <section class="panel" data-panel="profile">
+    <div class="tab-head">
+      <div><h2>Company profile &mdash; "the business is the website"</h2>
+      <div class="lede">Public profile for humans + agent card (.md / .json / API) for everything else.</div></div>
+      <div class="pill">coming next</div>
+    </div>
+    <div class="grid" id="panel-profile-grid"></div>
+  </section>
+
+  <section class="panel" data-panel="claim">
+    <div class="tab-head">
+      <div><h2>Claim flow &mdash; lightweight verification</h2>
+      <div class="lede">Domain email magic-link is the floor. Explore: AI-drafted profile after claim, "update via Claude" handoff.</div></div>
+      <div class="pill">coming next</div>
+    </div>
+    <div class="grid" id="panel-claim-grid"></div>
+  </section>
+
+  <section class="panel" data-panel="agents">
+    <div class="tab-head">
+      <div><h2>Agent docs &mdash; <span style="font-family:var(--mono);font-size:.7em">/agents</span></h2>
+      <div class="lede">A man-page-style doc that makes the API/CLI/MCP/llms.txt legible to non-technical judges.</div></div>
+      <div class="pill">coming next</div>
+    </div>
+    <div class="grid" id="panel-agents-grid"></div>
+  </section>
+</main>
+
+<script src="wireframes/hero.js"></script>
+<script src="wireframes/intake.js"></script>
+<script src="wireframes/plan.js"></script>
+<script src="wireframes/map.js"></script>
+<script src="wireframes/profile.js"></script>
+<script src="wireframes/claim.js"></script>
+<script src="wireframes/agents.js"></script>
+
+<script>
+  // tab switching
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('is-active'));
+    panels.forEach(p => p.classList.remove('is-active'));
+    t.classList.add('is-active');
+    document.querySelector('.panel[data-panel="'+t.dataset.tab+'"]').classList.add('is-active');
+    window.scrollTo({top:0, behavior:'instant'});
+  }));
+</script>
+
+</body>
+</html>

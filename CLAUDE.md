@@ -98,6 +98,18 @@ policy in `AGENTS.md` and `docs/agent-tasks/00-shared-context.md`.
   where N is your worktree index (main=0, wt1=1, wt2=2, wt3=3). Read
   from `.env.local`.
 
+## Design reference
+
+HTML/CSS/JS wireframes from Claude Design live in
+`design/startup-state-atlas-wireframes/`. The primary file is
+`project/Auth.html`; v1 and v2 wireframe sets sit alongside it under
+`project/wireframes/` and `project/wireframes/v2/`. Treat these as
+visual references — recreate them in the real Next.js + Tailwind
+stack rather than copying their internal structure. Read the HTML/CSS
+directly; don't render or screenshot unless asked. See
+`design/startup-state-atlas-wireframes/README.md` for the bundle's
+own handoff notes.
+
 ## Working in a worktree
 
 If you're a parallel Claude Code session spawned in a worktree, **read
