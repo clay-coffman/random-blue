@@ -145,6 +145,60 @@ In production, secrets live on the Worker via
 `wrangler secret put <NAME>`. `.env.example` lists every required
 variable.
 
+## Local authentication testing
+
+Auth uses Better Auth's `emailOTP` plugin (6-digit code, 10-min
+expiry) for sign-up verification, sign-in, and password reset.
+Two dev-only env vars in `.dev.vars` make iterating against
+authenticated routes painless. **NEVER set either in production.**
+
+### Inner loop: skip OTP entirely
+
+```
+AUTH_SKIP_OTP=true
+```
+
+When set, `auth.ts` drops the `emailOTP` plugin and flips
+`emailAndPassword.requireEmailVerification` to `false`. Sign-up
+auto-verifies and drops you on the authenticated page — no
+verify screen, no code to grab. Use this 90% of the time.
+
+### Testing the real OTP flow: route mail to mailpit
+
+```
+MAILPIT_URL=http://localhost:8025
+```
+
+When set, `lib/email.ts` POSTs outgoing email to mailpit's HTTP
+send API instead of Resend or the console fallback. Browse the
+captured inbox at the same URL in your browser.
+
+Mailpit is **shared across all worktrees** — one install on your
+host machine, all three workers' OTPs land in the same inbox:
+
+```bash
+# Docker
+docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit
+# or Homebrew (Linux/macOS)
+brew install mailpit && mailpit
+```
+
+Mailpit serves the send API and the inbox UI on the same port
+(default 8025), so one URL covers both.
+
+### When to use which
+
+- **Building or fixing any non-auth feature** → `AUTH_SKIP_OTP=true`.
+  Faster.
+- **Working on `app/sign-up/*`, `app/sign-in/*`, `app/forgot-password`,
+  `app/reset-password`, OTP edge cases** → unset `AUTH_SKIP_OTP`,
+  set `MAILPIT_URL`. Test the real shape.
+- **Production parity sanity check** → unset both. Falls back to
+  Resend (if `RESEND_API_KEY` set) or `console.log` (if not).
+
+The two flags are independent. Setting both = OTP skipped (the
+plugin isn't loaded, so no email gets sent at all).
+
 ## D1 is per-worktree local
 
 Each worktree has its own SQLite at

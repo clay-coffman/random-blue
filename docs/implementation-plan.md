@@ -650,15 +650,15 @@ Phase 3:  🟡 IN FLIGHT
             Agent 6 — agent-native:  ⬜ NOT STARTED
 Phase 4:  🟡 IN FLIGHT
             Agent 4 — map+profiles:  ⬜ NOT STARTED (wt3 picking up next on `feat/map`)
-            Agent 5 — auth+admin:    PR #20 OPEN (must rebase + renumber 0001 → 0003)
+            Agent 5 — auth+admin:    ✅ DONE (PR #20, 1b4d56b)
 Phase 5a: ⬜ PENDING — production hardening (CI, deploy, secrets, security review)
 Phase 5b: ⬜ PENDING — polish + demo dry-run
 Phase 6:  📝 DOCS-ONLY — scope locked (PR #15); implementation deferred to post-MVP
 ```
 
 **Migration state on `main`:** `0000_flaky_scarlet_spider` (Agent 1)
-+ `0001_brainy_sentinels` + `0002_slow_shotgun` (PR #16). The next
-free index is `0003`. PR #20's `0001_magenta_roughhouse.sql` must
-rebase onto main and regenerate as `0003_*.sql` — recipe in the PR
-#20 comment thread; convention in
-`docs/agent-tasks/00-shared-context.md` § Schema ownership.
++ `0001_brainy_sentinels` + `0002_slow_shotgun` (PR #16) +
+`0003_curious_fat_cobra` (PR #20, renumbered cleanly per the
+recipe in
+`docs/agent-tasks/00-shared-context.md` § Schema ownership). The
+next free index is `0004`.

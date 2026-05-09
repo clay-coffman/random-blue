@@ -25,6 +25,12 @@ function buildAuth(env?: CloudflareEnv) {
     ? drizzle(env.DB as unknown as D1Database)
     : drizzle({} as D1Database);
 
+  // Dev DX: when AUTH_SKIP_OTP=true in .dev.vars, drop the OTP plugin
+  // and disable the email-verification gate so signups land
+  // authenticated immediately. NEVER set in production — see CLAUDE.md
+  // § Local authentication testing.
+  const skipOtp = env?.AUTH_SKIP_OTP === "true";
+
   return betterAuth({
     baseURL:
       env?.BETTER_AUTH_URL ??
@@ -40,7 +46,7 @@ function buildAuth(env?: CloudflareEnv) {
     }),
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: true,
+      requireEmailVerification: !skipOtp,
       minPasswordLength: 12,
     },
     user: {
@@ -71,22 +77,24 @@ function buildAuth(env?: CloudflareEnv) {
         // confirm dialog is the safety net.
       },
     },
-    plugins: [
-      emailOTP({
-        otpLength: 6,
-        expiresIn: 600, // 10 minutes
-        sendVerificationOnSignUp: true,
-        async sendVerificationOTP({ email, otp, type }) {
-          if (type === "forget-password") {
-            await sendPasswordResetEmail(email, otp);
-          } else {
-            // email-verification (signup) and sign-in both use the
-            // verification template.
-            await sendVerificationEmail(email, otp);
-          }
-        },
-      }),
-    ],
+    plugins: skipOtp
+      ? []
+      : [
+          emailOTP({
+            otpLength: 6,
+            expiresIn: 600, // 10 minutes
+            sendVerificationOnSignUp: true,
+            async sendVerificationOTP({ email, otp, type }) {
+              if (type === "forget-password") {
+                await sendPasswordResetEmail(email, otp);
+              } else {
+                // email-verification (signup) and sign-in both use the
+                // verification template.
+                await sendVerificationEmail(email, otp);
+              }
+            },
+          }),
+        ],
   });
 }
 
