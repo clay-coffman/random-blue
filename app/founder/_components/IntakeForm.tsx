@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Chip } from "@/components/brand";
+import { PlanLoadingOverlay } from "@/components/PlanLoadingOverlay";
 import { cn } from "@/lib/utils";
 import {
   parseEnrichResponse,
@@ -209,18 +210,20 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
       }
     }
 
-    try {
-      router.push(`/plan/${resolvedPassportId}`);
-    } finally {
-      // Reset so a back-navigation re-enables the submit button.
-      setSubmitting(false);
-    }
+    // Intentionally do NOT reset `submitting` here — the component
+    // unmounts on navigation, and resetting causes a brief flash of
+    // "Get my plan →" between the API resolving and the new plan
+    // page mounting (the overlay collapses, then the route changes).
+    // Back-navigating to the form re-mounts it with submitting=false.
+    router.push(`/plan/${resolvedPassportId}`);
   }
 
   const isPrefilled = (key: PassportFieldName) => prefilledKeys.has(key);
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6 md:grid-cols-[1.4fr_1fr]">
+    <>
+      {submitting && <PlanLoadingOverlay />}
+      <form onSubmit={handleSubmit} className="grid gap-6 md:grid-cols-[1.4fr_1fr]">
       <div className="flex flex-col gap-6">
         {/* Section: website URL */}
         <FieldGroup
@@ -412,7 +415,8 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
           and the agent API consume.
         </p>
       </aside>
-    </form>
+      </form>
+    </>
   );
 }
 
