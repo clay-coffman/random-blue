@@ -1,7 +1,7 @@
 import { AwsClient } from "aws4fetch";
 import { env } from "./cf";
 
-export const R2_CREDS_MISSING_MSG =
+const R2_CREDS_MISSING_MSG =
   "R2 S3 credentials missing. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY.";
 
 export function hasR2Credentials(): boolean {
