@@ -125,11 +125,20 @@ function VariantAProfile({
   isSaved: boolean;
 }) {
   const jobsCount = card.jobs.length;
+  // Defensive normalization: seed runs through normalizeUrl, but admin
+  // edits via EditorForm don't enforce a protocol prefix. Without this,
+  // a bare `linkedin.com/...` href would resolve relative to the
+  // current `/startups/<slug>` path.
+  const linkedinUrl = card.linkedin
+    ? /^https?:\/\//i.test(card.linkedin)
+      ? card.linkedin
+      : `https://${card.linkedin}`
+    : null;
   // Tab labels track render order in the main column. The Agent Card
   // teaser lives in the right rail, not the main column — so it's
   // omitted from the tab strip (clicking it on desktop would scroll
   // past the sidebar). Same with the right-rail Claim/Related tiles.
-  const sectionLabels = ["Overview", "Facts", "Open roles", "Gallery", "Map"];
+  const sectionLabels = ["Overview", "Facts", "Open roles", "Map"];
   const verification = card.verification.status;
 
   // JSON-LD Organization schema for SEO + agent consumption.
@@ -153,7 +162,7 @@ function VariantAProfile({
     url: card.website ?? undefined,
     description: card.description ?? undefined,
     logo: card.logo_url ?? undefined,
-    sameAs: card.linkedin ? [card.linkedin] : undefined,
+    sameAs: linkedinUrl ? [linkedinUrl] : undefined,
     address:
       card.city || card.county
         ? {
@@ -257,6 +266,16 @@ function VariantAProfile({
               className="inline-flex h-10 min-h-[44px] items-center justify-center gap-2 rounded-pill border-[1.5px] border-ember bg-ember px-4 font-mono text-xs uppercase tracking-wider text-paper transition hover:-translate-y-0.5"
             >
               ↗ Visit website
+            </a>
+          ) : null}
+          {linkedinUrl ? (
+            <a
+              href={linkedinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 min-h-[44px] items-center justify-center gap-2 rounded-pill border-[1.5px] border-ink bg-paper px-4 font-mono text-xs uppercase tracking-wider transition hover:-translate-y-0.5"
+            >
+              ↗ LinkedIn
             </a>
           ) : null}
           {jobsCount > 0 ? (
@@ -386,29 +405,8 @@ function VariantAProfile({
             )}
           </section>
 
-          {/* GALLERY */}
-          <section id="gallery" className="scroll-mt-32">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">
-              Gallery
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[0, 1, 2, 3].map((i) => (
-                <Tile
-                  key={i}
-                  variant="subtle"
-                  shadow="none"
-                  className="flex aspect-square items-center justify-center p-0"
-                >
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-ink-3">
-                    no photo yet
-                  </span>
-                </Tile>
-              ))}
-            </div>
-            <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-ink-3">
-              Photos appear once the owner uploads them via the claim flow.
-            </p>
-          </section>
+          {/* GALLERY — hidden until owner-supplied photo upload ships
+              (no rows in companyPhotos yet; placeholder over-promises). */}
 
           <ScribbleDivider width="med" />
 
