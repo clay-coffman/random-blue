@@ -1,5 +1,11 @@
 # Agent 8 — Investor public surface + watchlists + intro brokerage
 
+> **Status: scope locked, implementation deferred.** Phase 6 docs
+> were merged to `main` ahead of code (PR #15) so Agents 4 and 5
+> could coordinate against the final schema shape. **No Phase 6 code
+> will land until Phase 5 demo lock.** If you are looking for what
+> to build next, see `docs/implementation-plan.md` § Phases 3 / 4.
+
 **Phase 6 — post-MVP.** Not part of the 24-hour hackathon ship.
 
 You build three coordinated surfaces **on top of** Agent 5's

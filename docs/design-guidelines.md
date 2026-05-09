@@ -192,7 +192,7 @@ Every page must render cleanly at **375 / 768 / 1280px** before merge.
   `mcp__playwright__browser_resize` (or any browser device toolbar)
   before opening the PR.
 
-This is restated from `AGENTS.md § Coding Style`; design polish
+This is restated from `CLAUDE.md § Coding Style`; design polish
 doesn't excuse breaking it.
 
 ## What not to do

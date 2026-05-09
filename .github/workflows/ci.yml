@@ -1,0 +1,65 @@
+name: CI
+
+# Lint, typecheck, and tests on every PR. Catches schema/type/test
+# drift before it lands on main. `npm run --if-present test` is a
+# no-op until a `test` script exists in package.json (PR #16 brings
+# vitest); drop --if-present once that lands so missing-test
+# regressions aren't silently swallowed.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'app/**'
+      - 'lib/**'
+      - 'db/**'
+      - 'components/**'
+      - 'schemas/**'
+      - 'tests/**'
+      - 'cli/**'
+      - 'mcp/**'
+      - 'scripts/**'
+      - 'auth.ts'
+      - 'middleware.ts'
+      - 'next.config.ts'
+      - 'drizzle.config.ts'
+      - 'vitest.config.ts'
+      - 'eslint.config.mjs'
+      - 'postcss.config.mjs'
+      - 'open-next.config.ts'
+      - 'wrangler.jsonc'
+      - 'tsconfig.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci.yml'
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run --if-present test

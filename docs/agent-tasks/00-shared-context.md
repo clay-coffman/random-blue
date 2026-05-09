@@ -101,6 +101,15 @@ conflicting code. Don't deviate without checking with the user.
   persona seed (and runs `@better-auth/cli generate` once Agent
   5's `auth.ts` stub is in place); later non-auth additions are
   anyone's. Touching the Better Auth tables — see next bullet.
+  - **Migration numbering during Phase 3-4.** The next available
+    migration number is reserved by the first PR to merge. Before
+    you generate, `git fetch && ls db/migrations/` on `main` (and
+    skim open PRs with `gh pr list --state open`) to see what's
+    pending. If two open PRs both add migrations, the
+    schema-coupled or larger one merges first; the second rebases
+    and renumbers via `mv 000X_*.sql 000Y_*.sql` plus the matching
+    rename in `db/migrations/meta/_journal.json` and snapshot
+    files.
 - **Auth schema ownership.** Agent 5 owns `auth.ts` (the Better
   Auth config) and every UI surface that talks to it (sign-up,
   onboarding, sign-in, settings, claim/upload, admin queue, user

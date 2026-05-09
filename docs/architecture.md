@@ -23,7 +23,7 @@ disagrees with this file, this file wins.
 | Test runners     | **Vitest** (unit), **Playwright** (E2E, scope-permitting)                                |
 | UI               | **Tailwind CSS** + **shadcn/ui** primitives                                              |
 | Lint / format    | ESLint (Next.js defaults) + Prettier (`~/.prettierrc.yaml`, printWidth 80)               |
-| Repo agent infra | Vendored Claude/Codex skills, hooks, and GitHub workflows under `.agents/`, `.claude/`, `.github/` — see `AGENTS.md` |
+| Repo agent infra | Vendored Claude skills, hooks, and GitHub workflows under `.agents/`, `.claude/`, `.github/` — see `CLAUDE.md` |
 
 ## System diagram
 

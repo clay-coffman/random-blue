@@ -270,7 +270,7 @@ company profiles, claim flow, GOEO admin UI, `/agents` docs page —
 must work cleanly at both desktop and mobile widths. Design
 mobile-first; verify at 375 / 768 / 1280px. The demo will show
 phones in the audience, and Utah founders & GOEO staff will open
-this on mobile in the wild. See `AGENTS.md` § Coding Style for the
+this on mobile in the wild. See `CLAUDE.md` § Coding Style for the
 breakpoint policy and test checklist.
 
 ### GOEO admin UI

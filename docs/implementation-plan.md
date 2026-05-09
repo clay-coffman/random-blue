@@ -52,7 +52,7 @@ consume seeded data; they don't need to re-read the CSVs.
 5. **`screens.md`** — sitemap, role gates, wireframe variant pointers
    (only if you own a UI surface).
 
-`AGENTS.md` (root) is the policy doc — read it once at session start;
+`CLAUDE.md` (root) is the policy doc — read it once at session start;
 it doesn't change per agent.
 
 ## Phases at a glance
@@ -60,15 +60,18 @@ it doesn't change per agent.
 ```
 Phase 1  Foundation                           Agent 0           [DONE]
             │
-Phase 2  Data + Brand & Shell  (parallel ✕2)  Agents 1, 7       [READY]
+Phase 2  Data + Brand & Shell  (parallel ✕2)  Agents 1, 7       [DONE]
             │
-Phase 3  Recommend + Nav + Agents-native  (parallel ✕3)  Agents 2, 3, 6
+Phase 3  Recommend + Nav + Agents-native  (parallel ✕3)  Agents 2, 3, 6   [IN FLIGHT]
+            │   3b navigator DONE (PR #17); 3a recommend OPEN (PR #16); 3c not started
             │
-Phase 4  Map + Auth & Admin  (parallel ✕2)    Agents 4, 5
+Phase 4  Map + Auth & Admin  (parallel ✕2)    Agents 4, 5       [IN FLIGHT]
+            │   4b auth+admin OPEN (PR #20); 4a map not started
             │
-Phase 5  Polish + e2e + demo dry-run          (whoever has cycles)
+Phase 5a Production hardening                 (whoever has cycles)
+Phase 5b Polish + e2e + demo dry-run          (whoever has cycles)
             │
-Phase 6  Investor public surface + intros     Agent 8           [POST-MVP]
+Phase 6  Investor public surface + intros     Agent 8           [POST-MVP, scope locked]
 ```
 
 **Phases 1–5 are the hackathon ship.** Phase 6 lands after the
@@ -359,36 +362,62 @@ merge and free up worktrees.
 - **Production enables:** real founder/owner/investor sign-up,
   ongoing GOEO admin operation.
 
-## Phase 5 — Polish, production readiness, e2e, demo dry-run
+## Phase 5 — Production hardening + Polish
 
-Whoever has cycles after Phase 4 merges. Targeted work, not a single
-agent's brief. **This phase doubles as production readiness — we're
-shipping a real product, not just a demo.** Candidate items in
-priority order:
+Whoever has cycles after Phase 4 merges. Split into two tracks
+with different DONE-when criteria. **This is a real ship to
+startup.utah.gov, not just a demo** — Phase 5a's hardening items
+gate any traffic; Phase 5b is craft.
+
+### Phase 5a — Production hardening (preconditions for any traffic)
+
+1. **CI green on `main`.** `lint` + `typecheck` + `test` pass on
+   every PR (workflow at `.github/workflows/ci.yml`). At minimum one
+   Playwright golden path runs against a deploy preview.
+2. **Production deploy verified.** `wrangler deploy` succeeds
+   end-to-end; D1 remote migrated (`npm run db:migrate:remote`); R2
+   bucket provisioned; secrets set via `wrangler secret put`
+   (`ANTHROPIC_API_KEY`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`,
+   `RESEND_API_KEY`, `ATLAS_ADMIN_TOKEN`, `PARALLEL_API_KEY`).
+3. **Smoke test against the deployed Worker URL** — `/`, `/founder`,
+   `/api/v1/resources/recommend`, a company profile, and one auth
+   round-trip (sign up → verify → sign in).
+4. **Auth security review.** Session cookie flags (Secure,
+   HttpOnly, SameSite); CSRF on PATCH endpoints; ownership-check
+   coverage on `/api/v1/companies/[slug]` PATCH; rate-limit on
+   sign-in / OTP endpoints.
+5. **Failure-mode handling for upstream calls.** Anthropic and
+   Parallel.ai timeouts, rate limits, and 5xxs all degrade
+   gracefully (Agent 3 already does this for enrich; verify it for
+   recommend explanations and InvestorBrief too).
+6. **Privacy review on `founder_passports`.** Stores PII (county,
+   stage, communities, free-text goal). Confirm we're OK with the
+   retention model and that share URLs don't leak across users.
+7. **Observability decision recorded.** Sentry vs. Workers built-in
+   only — write the choice down (currently neither is wired).
+
+### Phase 5b — Polish + demo dry-run (craft)
 
 1. **Production-readiness sweep.** Every shipped surface needs:
    working empty state, working error state, loading state, mobile
    layout, basic a11y (semantic HTML + keyboard reachability + alt
    text). The persona buttons make happy-path demos trivial; real
-   users hit the failure paths first. Particular attention to: the
-   enrich endpoint failing (Parallel.ai down, malformed URL,
-   timeout) — the form must always fall back to hand-fill.
-2. **Mobile sweep.** Open every shipped page at 375px and fix
-   horizontal-scroll / tap-target violations. Use
+   users hit the failure paths first.
+2. **Mobile sweep.** Open every shipped page at 375 / 768 / 1280px
+   and fix horizontal-scroll / tap-target violations. Use
    `mcp__playwright__browser_resize` or agent-browser device toolbar.
-3. **Demo dry-run** — run all five demo scenes end-to-end against the
-   deployed Worker. Catch broken share URLs, persona-tile flows, R2
-   doc previews, MCP tool listing.
-3. **Activity ticker wire-up** — Agent 7 stubbed it with three fake
+3. **Demo dry-run** — run all five demo scenes end-to-end against
+   the deployed Worker. Catch broken share URLs, persona-tile flows,
+   R2 doc previews, MCP tool listing.
+4. **Activity ticker wire-up** — Agent 7 stubbed it with three fake
    strings. Real wiring pulls last-N events (claim approvals, new
    passports) from D1.
-4. **InvestorBrief polish** — Agent 4 ships a basic version; tune the
-   prompt and cap citation count.
-5. **Fixture coverage** — ensure every persona produces a
+5. **InvestorBrief polish** — Agent 4 ships a basic version; tune
+   the prompt and cap citation count.
+6. **Fixture coverage** — ensure every persona produces a
    meaningfully-different top-3.
-6. **`/agents` page polish** — code samples, copy-button on curl
+7. **`/agents` page polish** — code samples, copy-button on curl
    blocks, MCP install snippet for Claude Desktop.
-7. **e2e tests** — Playwright golden paths if scope allows.
 8. **Wireframe-variant complement passes** — for screens where a v2
    complement variant adds value (e.g., the printable memo for the
    plan page), implement as an opt-in toggle.
@@ -496,7 +525,7 @@ This file does **not** restate them. Sources of truth:
   Worktree port table
 - **Branch protocol** — `agent-tasks/00-shared-context.md` § Branch
   protocol
-- **Responsive design (375 / 768 / 1280px)** — `AGENTS.md` § Coding
+- **Responsive design (375 / 768 / 1280px)** — `CLAUDE.md` § Coding
   Style
 
 ## Demo gating
@@ -607,14 +636,29 @@ before the 24-hour mark.
 ## Status snapshot (update as phases complete)
 
 ```
-Phase 1: ✅ DONE  (PR #6, 2025-XX-XX)
-Phase 2: ⬜ PENDING — Agent 1 (data), Agent 7 (brand-shell)
-Phase 3: ⬜ PENDING — blocked on Phase 2
-Phase 4: ⬜ PENDING — blocked on Phase 2
-Phase 5: ⬜ PENDING — blocked on Phase 4
-Phase 6: ⬜ POST-MVP — does not gate the hackathon ship; pick up after demo
+Phase 1:  ✅ DONE  (PR #6, 2026-05-08)
+Phase 2:  ✅ DONE  (Agent 1: PR #10/#13; Agent 7: PR #11)
+Phase 3:  🟡 IN FLIGHT
+            Agent 2 — recommend:     PR #16 OPEN (needs rebase; migration 0001 collides with PR #20)
+            Agent 3 — navigator:     ✅ DONE (PR #17, 513ae26)
+            Agent 6 — agent-native:  ⬜ NOT STARTED
+Phase 4:  🟡 IN FLIGHT
+            Agent 4 — map+profiles:  ⬜ NOT STARTED
+            Agent 5 — auth+admin:    PR #20 OPEN (migration 0001 collides with PR #16)
+Phase 5a: ⬜ PENDING — production hardening (CI, deploy, secrets, security review)
+Phase 5b: ⬜ PENDING — polish + demo dry-run
+Phase 6:  📝 DOCS-ONLY — scope locked (PR #15); implementation deferred to post-MVP
 ```
 
-When you merge a PR, flip its status to ✅ here in the same commit
-(or in the immediate follow-up). Future agents read this to know
+**Migration collision pending:** PR #16 ships **two** migrations
+(`0001_brainy_sentinels.sql` + `0002_slow_shotgun.sql`); PR #20
+ships one (`0001_magenta_roughhouse.sql`). Whichever PR merges
+first keeps its indexes; the other rebases and renumbers to the
+**next free index** — rename the SQL file(s), update
+`db/migrations/meta/_journal.json`, rename each snapshot.
+Concretely: if PR #16 lands first, PR #20's `0001` → `0003`. If
+PR #20 lands first, PR #16's `0001`/`0002` → `0002`/`0003`.
+
+When you merge a PR, flip its status here in the same commit (or
+in the immediate follow-up). Future agents read this to know
 what's free to start.
