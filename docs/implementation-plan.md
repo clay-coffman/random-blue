@@ -97,11 +97,13 @@ check each one for current status before assuming.
 | #46 | Header rewrite — B2 (mobile sign-in CTA), B6 (auth-state branching), B10 (sign-out CTA + UserMenu) | UNSTABLE | — |
 | #52 | Phase 6 — Agent 8 — investor public surface (`/investors`, `/investors/<slug>` + `.md` + `.json`, `/me/saved`, `/me/intros`, `/admin/intros`, `/admin/investors`, intro-brokerage emails). Migration `0006_military_scarlet_spider`. | UNSTABLE | — |
 | #53 | Middleware cookie-prefix fix — pass `cookiePrefix` to `getSessionCookie` so authenticated users aren't bounced from every gated route | OPEN | #49 |
+| #66 | Admin resource affinity editor + R2 dev preview proxy + seed password ≥12 chars — closes P5 / D1 / D2 from `docs/e2e-admin-2026-05-09.md` | OPEN | — |
 
 Between #44, #45, #46 — **9 of the 11** e2e bugs close. The remaining
 two (B3, B4) are not yet PR'd; see _Open issues_ below. PR #52 ships
 the post-launch investor surface against `main`; admin-token /
-verification flow is testable from `/admin/investors`.
+verification flow is testable from `/admin/investors`. PR #66 closes
+P5 / D1 / D2 from the parallel admin-walkthrough doc.
 
 ---
 

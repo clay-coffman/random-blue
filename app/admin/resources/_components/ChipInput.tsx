@@ -19,6 +19,13 @@ interface Props {
   // For fixed mode: how to compare user-typed entries to options. Defaults
   // to case-insensitive.
   caseInsensitive?: boolean;
+  // FormControl injects these via cloneElement. In free-form mode they
+  // belong on the inner <input> so FormLabel htmlFor / aria-describedby /
+  // aria-invalid attach to the actual focus target. Fixed mode has no
+  // input so the wrapper div carries them.
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
 }
 
 export function ChipInput({
@@ -31,6 +38,9 @@ export function ChipInput({
   disabled = false,
   className = "",
   caseInsensitive = true,
+  id,
+  "aria-describedby": ariaDescribedBy,
+  "aria-invalid": ariaInvalid,
 }: Props) {
   const [draft, setDraft] = useState("");
 
@@ -69,9 +79,21 @@ export function ChipInput({
     onChange(value.filter((v) => v !== item));
   }
 
+  // For fixed mode (no inner input), keep FormControl's a11y wiring on
+  // the wrapper. For free-form, hand it off to the actual <input> below.
+  const wrapperA11y =
+    mode === "fixed"
+      ? {
+          id,
+          "aria-describedby": ariaDescribedBy,
+          "aria-invalid": ariaInvalid,
+        }
+      : {};
+
   return (
     <div className={`space-y-2 ${className}`}>
       <div
+        {...wrapperA11y}
         className={`flex min-h-[44px] flex-wrap items-center gap-1.5 rounded-tile border-[1.5px] px-2 py-1.5 ${
           disabled ? "border-topo bg-paper-2 opacity-60" : "border-ink bg-paper"
         }`}
@@ -103,6 +125,9 @@ export function ChipInput({
           mode === "free-form" ? (
             <input
               type="text"
+              id={id}
+              aria-describedby={ariaDescribedBy}
+              aria-invalid={ariaInvalid}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
