@@ -108,7 +108,10 @@ export default async function AdminSubmissionReviewPage({
       <ScribbleDivider />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card label="Claimant">
+        <Card
+          label="Claimant"
+          caption="Domain check compares the submitter's email host against the company website host. One signal among several."
+        >
           <Row label="Email" value={userEmail ?? "—"} />
           <Row
             label="Domain match"
@@ -117,8 +120,10 @@ export default async function AdminSubmissionReviewPage({
                 ok={domainMatch}
                 detail={
                   websiteHost
-                    ? `submitter @${submitterDomain ?? "?"} · site ${websiteHost}`
-                    : "company has no website"
+                    ? domainMatch
+                      ? `Submitter email domain (@${submitterDomain}) matches the company website domain (${websiteHost}).`
+                      : `Submitter email domain (@${submitterDomain ?? "?"}) does not match the company website domain (${websiteHost}).`
+                    : "Company has no website on file, so no domain comparison is possible."
                 }
               />
             }
@@ -200,9 +205,11 @@ export default async function AdminSubmissionReviewPage({
 function Card({
   label,
   children,
+  caption,
 }: {
   label: string;
   children: React.ReactNode;
+  caption?: React.ReactNode;
 }) {
   return (
     <div className="rounded-tile border-[1.5px] border-topo bg-paper p-4">
@@ -210,6 +217,11 @@ function Card({
         {label}
       </p>
       <dl className="mt-2 grid gap-2">{children}</dl>
+      {caption ? (
+        <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-ink-3">
+          {caption}
+        </p>
+      ) : null}
     </div>
   );
 }

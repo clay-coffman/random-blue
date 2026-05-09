@@ -199,9 +199,6 @@ export default async function AdminDashboard() {
         <section>
           <header className="flex items-baseline justify-between">
             <h2 className="font-serif text-xl">Recent agent edits</h2>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-ink-3">
-              audit log →
-            </span>
           </header>
           <ul className="mt-3 grid gap-2">
             {edits.length === 0 ? (
@@ -245,32 +242,10 @@ export default async function AdminDashboard() {
         </section>
       </div>
 
-      {/* Coverage gaps strip — placeholder per Auth.html */}
-      <ScribbleDivider />
-      <section>
-        <h2 className="font-serif text-xl">Coverage gaps</h2>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Washington Co.", desc: "2 ag resources · low" },
-            { label: "Veteran tag", desc: "4 resources · stale" },
-            { label: "Energy sector", desc: "7 cos · 0 hiring" },
-            { label: "Rural & women", desc: "↑ submission ready" },
-          ].map((g) => (
-            <li
-              key={g.label}
-              className="rounded-tile border border-topo bg-paper-2 p-3"
-            >
-              <p className="font-mono text-[10px] uppercase tracking-wider text-ink-3">
-                {g.label}
-              </p>
-              <p className="mt-1 text-sm">{g.desc}</p>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-2 text-xs text-ink-3">
-          Phase 5 wires real coverage queries here.
-        </p>
-      </section>
+      {/* Coverage gaps section deferred until Phase 5 wires real
+          aggregation queries (counties × resources, tag staleness,
+          sector hiring). Hardcoded placeholder removed to avoid
+          misleading admins in production. */}
     </div>
   );
 }
