@@ -153,6 +153,7 @@ export function fromWireRecommendResponse(
 ): RecommendResult {
   return {
     passportId: w.passport_id,
+    narrative: w.narrative,
     recommendations: w.recommendations.map(fromWireRecommendedResource),
     generatedAt: w.generated_at,
   };
@@ -163,6 +164,7 @@ export function toWireRecommendResponse(
 ): RecommendResponseWire {
   return {
     passport_id: r.passportId,
+    narrative: r.narrative,
     recommendations: r.recommendations.map(toWireRecommendedResource),
     generated_at: r.generatedAt,
   };

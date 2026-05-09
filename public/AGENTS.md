@@ -82,6 +82,7 @@ Response:
 ```json
 {
   "passport_id": "fp_…",
+  "narrative": "You're at paying-customers stage, but most Utah women-focused funding pipelines are tagged for growth-stage — that's adjacent enough to apply, not a perfect fit. The SBA and SBDC are statewide and used to B2B SaaS founders; Women's Business Center of Utah and LiaLaunch are network plays for warm intros, not capital sources.",
   "generated_at": "2026-05-09T00:00:00Z",
   "recommendations": [
     {
@@ -90,7 +91,7 @@ Response:
       "score": 78,
       "bucket": "now",
       "reasons": ["Tagged funding (matches your goal: raise_seed_round)"],
-      "because": "Because the SBA is statewide …",
+      "because": "Tagged funding — matches your Seed round goal",
       "action_text": "",
       "kind": "funding",
       "source_url": "https://www.sba.gov",
@@ -99,6 +100,10 @@ Response:
   ]
 }
 ```
+
+`narrative` is plan-scoped synthesis (60–100 words). `because` is a
+humanized one-liner per rec — the strongest scoring reason translated
+to natural language, never snake_case.
 
 ## Error envelope
 

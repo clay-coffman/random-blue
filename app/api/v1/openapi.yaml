@@ -926,7 +926,11 @@ components:
           items: { type: string }
         because:
           type: string
-          description: LLM "Because…" sentence; empty string on Anthropic timeout / parse failure.
+          description: |
+            Humanized one-liner — for now/next this is the strongest
+            scoring reason translated to natural language; for ignore
+            it's the negative `explainSkip` output. Always non-empty
+            for actionable rows. Never contains snake_case enums.
         action_text:
           type: string
           description: Suggested next action; empty string when none.
@@ -938,11 +942,20 @@ components:
 
     RecommendResponse:
       type: object
-      required: [passport_id, recommendations, generated_at]
+      required: [passport_id, narrative, recommendations, generated_at]
       properties:
         passport_id:
           type: string
           pattern: "^fp_[a-zA-Z0-9_-]+$"
+        narrative:
+          type: string
+          description: |
+            Plan-scoped synthesis paragraph (60–100 words). Hedges
+            adjacency in plain English, names specific orgs, uses
+            the founder's chosen labels. Falls back to a deterministic
+            templated paragraph when Anthropic fails, so this is
+            non-empty whenever there is at least one positive
+            recommendation; "" only when there are no recommendations.
         recommendations:
           type: array
           items: { $ref: "#/components/schemas/RecommendedResource" }

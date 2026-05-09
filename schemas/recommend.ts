@@ -28,7 +28,10 @@ export const RecommendedResource = z.object({
   score: z.number(),
   bucket: Bucket,
   reasons: z.array(z.string()),
-  // LLM "Because…" sentence; empty string when fallback (Anthropic timeout / parse fail).
+  // Humanized one-liner — for now/next this is the strongest scoring
+  // reason translated to natural language; for ignore it's the negative
+  // explainSkip output. Always non-empty for actionable rows. Never
+  // contains snake_case enums.
   because: z.string(),
   // Suggested next action; empty string when none.
   action_text: z.string(),
@@ -42,6 +45,13 @@ export type RecommendedResource = z.infer<typeof RecommendedResource>;
 
 export const RecommendResponse = z.object({
   passport_id: z.string(),
+  // Plan-scoped synthesis paragraph (60–100 words) from
+  // `synthesizeNarrative`. Hedges adjacency in plain English, names
+  // specific orgs, uses founder-chosen labels. Falls back to a
+  // deterministic templated paragraph when Anthropic fails so this is
+  // always non-empty when there are positive recs; "" only when there
+  // are no recommendations at all.
+  narrative: z.string(),
   recommendations: z.array(RecommendedResource),
   // ISO 8601 — used by the front-end for cache-staleness display.
   generated_at: z.string(),

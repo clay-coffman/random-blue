@@ -487,7 +487,48 @@ export function recommendMock(
 
   return {
     passportId,
+    narrative: mockNarrative(input, recommendations),
     recommendations,
     generatedAt: new Date().toISOString(),
   };
+}
+
+// Templated synthesis — mirrors `deterministicNarrative` in
+// `lib/recommend-explain.ts` but works against the camelCase mock
+// types. Mechanical, but never empty and never snake_case.
+function mockNarrative(
+  input: FounderPassportInput,
+  recs: RecommendedResource[],
+): string {
+  const positive = recs.filter((r) => r.bucket !== "ignore");
+  if (positive.length === 0) return "";
+
+  const profileBits: string[] = [];
+  const industry = labelFor(INDUSTRIES, input.industry);
+  const stage = labelFor(STAGES, input.stage);
+  const goal = labelFor(GOALS, input.goal);
+  if (industry) profileBits.push(industry);
+  if (stage) profileBits.push(`${stage.toLowerCase()} stage`);
+  if (goal) profileBits.push(`focused on ${goal.toLowerCase()}`);
+  const profile =
+    profileBits.length > 0
+      ? `your profile (${profileBits.join(", ")})`
+      : "your profile";
+
+  const communityClause =
+    input.communities.length > 0
+      ? ` and ${input.communities
+          .map((c) => (labelFor(COMMUNITY_TAGS, c) ?? c).toLowerCase())
+          .join(" / ")} communities`
+      : "";
+
+  const firstBatch = positive.slice(0, 3).map((r) => r.title);
+  const restBatch = positive.slice(3, 6).map((r) => r.title);
+
+  return (
+    `Based on ${profile}${communityClause}, the strongest matches are ${firstBatch.join(", ")}` +
+    (restBatch.length > 0
+      ? `, with ${restBatch.join(", ")} to follow.`
+      : ".")
+  );
 }

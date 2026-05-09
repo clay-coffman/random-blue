@@ -140,3 +140,69 @@ export const labelFor = (
   options: readonly Option[],
   value: string | undefined,
 ): string | undefined => options.find((o) => o.value === value)?.label;
+
+// ─── Schema-keyed labels (for prose, not for the form) ───────────────
+//
+// The form-facing `STAGES` / `GOALS` lists above use a smaller, more
+// approachable vocabulary. The schema enums in `schemas/founder-passport.ts`
+// (and the persona seeds in `db/seed/personas.ts`) use a wider
+// vocabulary — `paying_customers`, `raise_seed_round`, etc. The maps
+// below give every schema value a human label so `recommend-explain` can
+// build prose without leaking snake_case into the response.
+import type {
+  FounderGoal,
+  FounderStage,
+  FounderUrgency,
+} from "@/schemas/founder-passport";
+
+export const STAGE_LABELS: Record<FounderStage, string> = {
+  idea: "Idea",
+  pre_seed: "Pre-seed",
+  mvp: "MVP / building",
+  paying_customers: "Paying customers",
+  growth: "Growth",
+  mature: "Mature",
+};
+
+export const GOAL_LABELS: Record<FounderGoal, string> = {
+  start_business: "Starting a business",
+  raise_seed_round: "Seed round",
+  raise_growth_round: "Growth round",
+  find_customers: "Finding customers",
+  hire: "Hiring",
+  export: "Exporting",
+  commercialize_research: "Commercializing research",
+  find_workspace: "Finding workspace",
+  find_mentors: "Finding mentors",
+  scale_business: "Scaling",
+};
+
+export const URGENCY_LABELS: Record<FounderUrgency, string> = {
+  this_week: "This week",
+  this_month: "This month",
+  this_quarter: "This quarter",
+  next_quarter: "Next quarter",
+  this_year: "This year",
+};
+
+const isStage = (v: string | undefined): v is FounderStage =>
+  !!v && v in STAGE_LABELS;
+const isGoal = (v: string | undefined): v is FounderGoal =>
+  !!v && v in GOAL_LABELS;
+const isUrgency = (v: string | undefined): v is FounderUrgency =>
+  !!v && v in URGENCY_LABELS;
+
+// Resolve a label across both the form vocabulary (e.g. form "early")
+// and the schema vocabulary (e.g. seed "paying_customers"). Falls back
+// to the raw value if neither knows it.
+export const stageLabel = (v: string | undefined): string =>
+  (isStage(v) ? STAGE_LABELS[v] : labelFor(STAGES, v)) ?? v ?? "";
+export const goalLabel = (v: string | undefined): string =>
+  (isGoal(v) ? GOAL_LABELS[v] : labelFor(GOALS, v)) ?? v ?? "";
+export const urgencyLabel = (v: string | undefined): string =>
+  (isUrgency(v) ? URGENCY_LABELS[v] : labelFor(URGENCIES, v)) ?? v ?? "";
+export const industryLabel = (v: string | undefined): string =>
+  labelFor(INDUSTRIES, v) ?? v ?? "";
+export const communityLabel = (v: string): string =>
+  labelFor(COMMUNITY_TAGS, v) ?? v;
+export const needLabel = (v: string): string => labelFor(NEEDS, v) ?? v;

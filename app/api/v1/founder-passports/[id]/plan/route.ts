@@ -30,6 +30,7 @@ export async function GET(
         status: 404,
       });
     }
+    const narrative = passport[0].narrativeText ?? "";
 
     const rows = await d
       .select({
@@ -53,8 +54,9 @@ export async function GET(
         score: r.rec.score,
         bucket: bucketParsed.data,
         reasons: safeParseJson<string[]>(r.rec.reasonsJson, []),
-        // `actionText` column carries the LLM "Because…" sentence (see
-        // recommend POST handler).
+        // `actionText` column carries the per-rec humanized `because`
+        // (see recommend POST handler — humanizeReason output for
+        // now/next, explainSkip output for ignore).
         because: r.rec.actionText ?? "",
         action_text: "",
         kind: r.res.kind ?? undefined,
@@ -65,6 +67,7 @@ export async function GET(
 
     const payload: RecommendResponseWire = {
       passport_id: id,
+      narrative,
       recommendations: recs,
       generated_at: new Date().toISOString(),
     };

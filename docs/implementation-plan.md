@@ -75,10 +75,10 @@ companies, 213 resources, 6 personas. First superadmin minted via
 | 0003 | `curious_fat_cobra` | PR #20 |
 | 0004 | `striped_ulik` | PR #36 — `rate_limit` table for Better Auth's `storage: "database"` |
 | 0005 | `even_medusa` | PR #38 — `saved_searches` + `search_alert_deliveries` |
+| 0006 | `military_scarlet_spider` | PR #52 — public investor columns + `saved_companies` + `intro_requests` |
+| 0007 | `sloppy_paper_doll` | feat/recommend-narrative — `founder_passports.narrative_text` |
 
-Next free index: **0007** (PR #52 / `feat/investor-public` reserves
-0006 — `military_scarlet_spider`, public investor columns + `saved_companies`
-+ `intro_requests`).
+Next free index: **0008**.
 
 ---
 

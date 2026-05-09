@@ -78,6 +78,21 @@ export function ResultsView({ passportId, input, result }: Props) {
         </div>
       </header>
 
+      {/* Plan-scoped synthesis from the recommend endpoint. Falls back
+         to deterministic prose if Anthropic timed out — never renders
+         empty when there are positive recs. Older saved plans (no
+         narrative in sessionStorage) just skip this block. */}
+      {result.narrative && (
+        <Tile variant="subtle" className="mt-8">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-ember">
+            ↓ WHERE TO FOCUS
+          </p>
+          <p className="mt-3 font-serif text-lg leading-relaxed text-ink-1 sm:text-xl">
+            {result.narrative}
+          </p>
+        </Tile>
+      )}
+
       {/* Buckets */}
       <section className="mt-8 grid gap-6 lg:grid-cols-3">
         <BucketColumn
@@ -274,9 +289,6 @@ function RecommendationCard({
         </div>
         <ScoreBadge score={resource.score} />
       </div>
-      <p className="mt-3 text-sm leading-relaxed text-ink-2">
-        {resource.because}
-      </p>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-topo pt-3">
         <details className="text-xs text-ink-3">
           <summary className="cursor-pointer font-mono uppercase tracking-wider">
