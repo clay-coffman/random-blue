@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Tile, Chip, ScribbleDivider } from "@/components/brand";
 import {
   canSeeInvestor,
@@ -103,6 +103,7 @@ export default async function InvestorProfilePage({ params }: PageProps) {
         and(
           eq(introRequests.requesterUserId, viewerUserId),
           eq(introRequests.targetInvestorId, result.card.id),
+          isNull(introRequests.targetCompanyId),
           eq(introRequests.status, "pending"),
         ),
       )

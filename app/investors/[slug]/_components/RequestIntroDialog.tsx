@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type Props = {
@@ -21,6 +22,7 @@ export function RequestIntroDialog({
   targetName,
   pendingIntroId = null,
 }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -33,7 +35,6 @@ export function RequestIntroDialog({
     return (
       <div
         role="status"
-        aria-live="polite"
         className="block w-full rounded-tile border-[1.5px] border-sage bg-sage-tint px-4 py-3 font-mono text-xs uppercase tracking-wider text-sage sm:w-[440px]"
       >
         ✓ Request sent. We&apos;ll email you when GOEO reviews it.{" "}
@@ -49,14 +50,14 @@ export function RequestIntroDialog({
 
   if (status === "duplicate" || (pendingIntroId && status === "idle")) {
     return (
-      <Link
-        href={QUEUE_HREF}
-        role="status"
-        aria-live="polite"
-        className="inline-flex h-10 min-h-[44px] w-full items-center justify-center rounded-pill border-[1.5px] border-ember/40 bg-ember-tint px-4 font-mono text-xs uppercase tracking-wider text-ink-2 transition hover:bg-ember-tint/80 sm:w-auto"
-      >
-        Pending review · view in your queue →
-      </Link>
+      <div role="status" className="w-full sm:w-auto">
+        <Link
+          href={QUEUE_HREF}
+          className="inline-flex h-10 min-h-[44px] w-full items-center justify-center rounded-pill border-[1.5px] border-ember/40 bg-ember-tint px-4 font-mono text-xs uppercase tracking-wider text-ink-2 transition hover:bg-ember-tint/80 sm:w-auto"
+        >
+          Pending review · view in your queue →
+        </Link>
+      </div>
     );
   }
 
@@ -90,6 +91,10 @@ export function RequestIntroDialog({
       if (res.status === 409) {
         setStatus("duplicate");
         setBusy(false);
+        // Refresh so any sibling dialog instance on the same page
+        // (e.g. hero rail + Contact tile) re-renders against the
+        // server-side pre-empt and flips to the same pending pill.
+        router.refresh();
         return;
       }
       if (!res.ok) {

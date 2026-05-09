@@ -2,14 +2,19 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Tile, Chip, ScribbleDivider } from "@/components/brand";
 import { sectorChipClass, sectorDisplayName } from "@/lib/sectors";
 import { parseBucket } from "@/lib/employee-bucket";
 import { companyCard, type CompanyCard } from "@/lib/company-card";
 import { cn } from "@/lib/utils";
 import { db } from "@/lib/db";
-import { introRequests, investorProfiles, savedCompanies } from "@/db/schema";
+import {
+  companies,
+  introRequests,
+  investorProfiles,
+  savedCompanies,
+} from "@/db/schema";
 import { getApiSession } from "@/lib/auth-utils";
 import { ProfileTabs } from "./_components/ProfileTabs";
 import { MiniMap } from "./_components/MiniMap";
@@ -103,21 +108,31 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
     }
   }
 
-  // Pre-empt the duplicate-pending case for the intro dialog.
+  // Pre-empt the duplicate-pending case for the intro dialog. Skip
+  // the lookup when the viewer is the company claimer — the API
+  // rejects self-targeted intros, so the row can't exist.
   let pendingIntroId: string | null = null;
   if (session?.user.id) {
-    const [existing] = await db()
-      .select({ id: introRequests.id })
-      .from(introRequests)
-      .where(
-        and(
-          eq(introRequests.requesterUserId, session.user.id),
-          eq(introRequests.targetCompanyId, result.card.id),
-          eq(introRequests.status, "pending"),
-        ),
-      )
+    const [claim] = await db()
+      .select({ claimedByUserId: companies.claimedByUserId })
+      .from(companies)
+      .where(eq(companies.id, result.card.id))
       .limit(1);
-    pendingIntroId = existing?.id ?? null;
+    if (claim?.claimedByUserId !== session.user.id) {
+      const [existing] = await db()
+        .select({ id: introRequests.id })
+        .from(introRequests)
+        .where(
+          and(
+            eq(introRequests.requesterUserId, session.user.id),
+            eq(introRequests.targetCompanyId, result.card.id),
+            isNull(introRequests.targetInvestorId),
+            eq(introRequests.status, "pending"),
+          ),
+        )
+        .limit(1);
+      pendingIntroId = existing?.id ?? null;
+    }
   }
 
   return (
