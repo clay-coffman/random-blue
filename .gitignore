@@ -1,6 +1,13 @@
 # Per-session agent transient state
 .claude/scheduled_tasks.lock
 
+# Engagement-specific notes (sales pitches, demo scripts, talking
+# points, meeting prep). The repo is public; engineering docs live in
+# docs/, anything in docs/_internal/ stays out of the public surface.
+# Add new sales/communication docs to docs/_internal/, not docs/.
+docs/_internal/
+docs/talking-points.md
+
 # MCP config — keep local or symlinked from a trusted local source
 .mcp.json
 
