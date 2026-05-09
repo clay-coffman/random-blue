@@ -30,3 +30,23 @@ RESEND_API_KEY=
 R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
+
+# ---------------------------------------------------------------------
+# Local-dev auth DX (NEVER set these in production).
+# Full guidance: CLAUDE.md § Local authentication testing.
+# ---------------------------------------------------------------------
+#
+# Skip OTP entirely. Signups auto-verify and land on the authenticated
+# page with no second prompt. Best for inner-loop work.
+# AUTH_SKIP_OTP=true
+#
+# Mailpit transport. Routes outgoing email to mailpit's HTTP send API;
+# the same port serves the inbox UI in your browser.
+#
+# Per-worktree port: 8025 + N (main=0 → 8025, wt1 → 8026, etc.). Each
+# worktree gets its own mailpit instance so OTPs don't cross streams:
+#   mailpit --listen 0.0.0.0:$((8025+N)) --smtp 0.0.0.0:$((1025+N))
+#   # or with docker, repeat per worktree:
+#   docker run -d --name mailpit-wt$N \
+#     -p $((1025+N)):1025 -p $((8025+N)):8025 axllent/mailpit
+# MAILPIT_URL=http://localhost:8025

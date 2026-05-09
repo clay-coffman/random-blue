@@ -89,8 +89,10 @@ Create a new git worktree with its own SQLite-backed local D1, its own
    read by `env()`). Same heredoc pattern, same protect-main reason.
 
    - If `../startup-state-atlas/.dev.vars` exists in the main
-     checkout, copy it verbatim, then rewrite the `BETTER_AUTH_URL`
-     line so its port matches this worktree's `PORT` (`3000+N`).
+     checkout, copy it verbatim, then rewrite **both** per-worktree
+     URLs:
+     - `BETTER_AUTH_URL` → `http://localhost:$((3000+N))`
+     - `MAILPIT_URL` → `http://localhost:$((8025+N))`
    - If main has no `.dev.vars` yet, copy `.dev.vars.example` and
      warn the user that lib/ code won't have working secrets until
      they fill it in (they should do it in main, then re-run
@@ -99,10 +101,14 @@ Create a new git worktree with its own SQLite-backed local D1, its own
    Example (assuming main has a populated `.dev.vars`):
 
    ```bash
-   sed "s|^BETTER_AUTH_URL=.*|BETTER_AUTH_URL=http://localhost:$((3000+N))|" \
+   sed -e "s|^BETTER_AUTH_URL=.*|BETTER_AUTH_URL=http://localhost:$((3000+N))|" \
+       -e "s|^MAILPIT_URL=.*|MAILPIT_URL=http://localhost:$((8025+N))|" \
      ../startup-state-atlas/.dev.vars \
      > ../startup-state-atlas-wt<N>/.dev.vars
    ```
+
+   See `CLAUDE.md` § Local authentication testing for the mailpit
+   port formula and why each worktree gets its own instance.
 
 6. **Symlink shared local config files** from the main checkout, only
    if they exist in main:

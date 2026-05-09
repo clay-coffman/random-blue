@@ -4,9 +4,28 @@ import { env } from "./cf";
 const FROM = "Startup State Atlas <noreply@startup.utah.gov>";
 
 async function send(to: string, subject: string, html: string) {
+  // Dev: if MAILPIT_URL is set, POST to mailpit's HTTP send API. Mailpit
+  // serves both the send endpoint and the inbox UI on the same port
+  // (default 8025), so MAILPIT_URL=http://localhost:8025 also tells the
+  // operator where to read messages. NEVER set MAILPIT_URL in production.
+  // See CLAUDE.md § Local authentication testing.
+  const mailpitUrl = env().MAILPIT_URL;
+  if (mailpitUrl) {
+    await fetch(`${mailpitUrl}/api/v1/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        From: { Email: "noreply@startup-state-atlas.local" },
+        To: [{ Email: to }],
+        Subject: subject,
+        HTML: html,
+      }),
+    });
+    return;
+  }
   const apiKey = env().RESEND_API_KEY;
   if (!apiKey) {
-    // Dev fallback — keeps OTP flows usable without Resend wired up.
+    // Dev fallback — keeps OTP flows usable without Resend or mailpit.
     // The 6-digit code is the only thing operators actually need to
     // grab in dev; the full HTML body is logged for completeness.
     console.log(

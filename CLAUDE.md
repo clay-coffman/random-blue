@@ -145,6 +145,70 @@ In production, secrets live on the Worker via
 `wrangler secret put <NAME>`. `.env.example` lists every required
 variable.
 
+## Local authentication testing
+
+Auth uses Better Auth's `emailOTP` plugin (6-digit code, 10-min
+expiry) for sign-up verification, sign-in, and password reset.
+Two dev-only env vars in `.dev.vars` make iterating against
+authenticated routes painless. **NEVER set either in production.**
+
+### Inner loop: skip OTP entirely
+
+```
+AUTH_SKIP_OTP=true
+```
+
+When set, `auth.ts` drops the `emailOTP` plugin and flips
+`emailAndPassword.requireEmailVerification` to `false`. Sign-up
+auto-verifies and drops you on the authenticated page — no
+verify screen, no code to grab. Use this 90% of the time.
+
+### Testing the real OTP flow: route mail to mailpit
+
+```
+MAILPIT_URL=http://localhost:802(5+N)
+```
+
+When set, `lib/email.ts` POSTs outgoing email to mailpit's HTTP
+send API instead of Resend or the console fallback. Browse the
+captured inbox at the same URL in your browser. Mailpit serves the
+send API and the inbox UI on the same port.
+
+**One mailpit per worktree, ports follow the worktree formula.**
+Same shape as `PORT` and `WRANGLER_PORT`: `MAILPIT_HTTP = 8025 + N`,
+`MAILPIT_SMTP = 1025 + N`. So `wt1` → `MAILPIT_URL=http://localhost:8026`,
+`wt2` → `8027`, `wt3` → `8028`. Each worktree's `.dev.vars` already
+has the right value (`create-worktree` and `refresh-worktrees`
+seed it).
+
+Start mailpit once per worktree, then leave it running:
+
+```bash
+# Native binary (preferred — one process per worktree, easy to kill)
+mailpit --listen 0.0.0.0:$((8025+N)) --smtp 0.0.0.0:$((1025+N))
+
+# Or Docker
+docker run -d --name mailpit-wt$N \
+  -p $((1025+N)):1025 -p $((8025+N)):8025 axllent/mailpit
+```
+
+Each worktree's OTPs land in *its own* inbox. wt1's signup
+verification doesn't pollute wt2's testing — important when several
+agents are exercising auth flows in parallel.
+
+### When to use which
+
+- **Building or fixing any non-auth feature** → `AUTH_SKIP_OTP=true`.
+  Faster.
+- **Working on `app/sign-up/*`, `app/sign-in/*`, `app/forgot-password`,
+  `app/reset-password`, OTP edge cases** → unset `AUTH_SKIP_OTP`,
+  set `MAILPIT_URL`. Test the real shape.
+- **Production parity sanity check** → unset both. Falls back to
+  Resend (if `RESEND_API_KEY` set) or `console.log` (if not).
+
+The two flags are independent. Setting both = OTP skipped (the
+plugin isn't loaded, so no email gets sent at all).
+
 ## D1 is per-worktree local
 
 Each worktree has its own SQLite at

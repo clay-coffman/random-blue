@@ -7,7 +7,7 @@ allowed-tools:
   Bash(npm run dev*), Bash(npm run build*), Bash(npm run seed*), Bash(git *),
   Bash(curl *), Bash(lsof *), Bash(sleep *), Bash(docker *), Bash(doppler *),
   Bash(agent-browser *), Bash(npx agent-browser *), Bash(grep *), Bash($AB *),
-  Bash(AB="agent-browser*), Bash(npm run dev:read-otp *), Read, Glob, Grep
+  Bash(AB="agent-browser*), Read, Glob, Grep
 ---
 
 # UI Testing
@@ -122,9 +122,15 @@ If the feature under test requires authentication:
    feature's expected tier/role. If your project does not seed test users,
    create them via the seed script before testing.
 4. Submit the login form using refs from the snapshot.
-5. If the project uses an OTP / magic-link flow, retrieve the code from your
-   local mail catcher (e.g. Mailpit) — many projects expose this via an npm
-   script such as `npm run dev:read-otp -- <email>`.
+5. If the project uses an OTP flow, you have two options for this repo:
+   - **Skip it.** Set `AUTH_SKIP_OTP=true` in `.dev.vars` and restart the
+     dev server. Sign-up auto-verifies; no OTP screen renders. Best for
+     non-auth feature testing. Full details: `CLAUDE.md` § Local
+     authentication testing.
+   - **Test the real flow.** Set `MAILPIT_URL=http://localhost:8025` in
+     `.dev.vars` (mailpit must be running on the host), then read the
+     6-digit code from `http://localhost:8025` in a normal browser tab
+     and type it into the verify screen.
 6. On the verify page, fill the code field with the OTP.
 7. Submit and verify redirect to the post-login destination.
 

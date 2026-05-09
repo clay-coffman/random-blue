@@ -11,5 +11,9 @@ declare namespace Cloudflare {
     R2_ACCOUNT_ID: string;
     R2_ACCESS_KEY_ID: string;
     R2_SECRET_ACCESS_KEY: string;
+    // Dev-only — NEVER set in production. See CLAUDE.md
+    // § Local authentication testing.
+    AUTH_SKIP_OTP?: string;
+    MAILPIT_URL?: string;
   }
 }
