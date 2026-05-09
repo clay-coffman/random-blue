@@ -476,10 +476,10 @@ components:
       name: X-Atlas-Admin-Token
       description: |
         Service-account-style token validated against
-        `env.ATLAS_ADMIN_TOKEN`. The CLI (`startup-state`), the local
-        stdio MCP server (`startup-state-mcp`), and external machine
-        clients use this header for write operations. Bypasses
-        Better Auth and assumes a privileged caller.
+        `env.ATLAS_ADMIN_TOKEN`. The local CLI (`npm run cli` from a
+        checkout), the local stdio MCP server (`npm run mcp`), and
+        external machine clients use this header for write operations.
+        Bypasses Better Auth and assumes a privileged caller.
 
   schemas:
     ApiError:

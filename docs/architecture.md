@@ -65,9 +65,10 @@ disagrees with this file, this file wins.
         └────────────┘                       │  enrichment)     │
                                              └──────────────────┘
 
-Side surfaces (same package, different bin):
-- cli/index.ts → `startup-state` bin (talks to the Worker via HTTPS)
-- mcp/server.ts → `startup-state-mcp` bin (stdio MCP for Claude Desktop)
+Side surfaces (same package, run from a checkout):
+- cli/index.ts → `npm run cli -- <args>` (talks to the Worker via HTTPS)
+- mcp/server.ts → `npm run mcp` (stdio MCP for Claude Desktop)
+- app/api/mcp/route.ts → stateless Streamable-HTTP MCP at `/api/mcp`
 ```
 
 ## Repo layout (target — Agent 0 creates the app skeleton)
@@ -158,9 +159,9 @@ startup-state-atlas/
 ├── types/
 │   └── api.ts                    # zod-derived TS types for every endpoint
 ├── cli/
-│   └── index.ts                  # `startup-state` bin entry (Agent 6)
+│   └── index.ts                  # `npm run cli` entry (Agent 6)
 ├── mcp/
-│   └── server.ts                 # `startup-state-mcp` bin entry (Agent 6)
+│   └── server.ts                 # `npm run mcp` stdio MCP entry (Agent 6)
 ├── public/
 │   ├── AGENTS.md                 # END-USER-FACING agent docs (Agent 6)
 │   └── llms.txt                  # /llms.txt (Agent 6)

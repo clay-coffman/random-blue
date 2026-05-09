@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { like, or } from "drizzle-orm";
+import { or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { resources, companies } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
-import { stripLikeWildcards } from "@/lib/sql";
+import { escapeLikeWildcards } from "@/lib/sql";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +49,11 @@ export async function GET(req: Request) {
   }
 
   const out: SearchResult[] = [];
-  const safeQ = stripLikeWildcards(q);
+  // Escape `%` / `_` / `\` so user input matches literally (the
+  // companies route uses the same pattern). Drizzle's `like()`
+  // doesn't expose the `ESCAPE` clause, so build the fragment by
+  // hand — value is still parameterised via `${term}`.
+  const term = `%${escapeLikeWildcards(q)}%`;
 
   if (type === "resources" || type === "all") {
     const rRows = await db()
@@ -62,8 +66,8 @@ export async function GET(req: Request) {
       .from(resources)
       .where(
         or(
-          like(resources.title, `%${safeQ}%`),
-          like(resources.description, `%${safeQ}%`),
+          sql`${resources.title} LIKE ${term} ESCAPE '\\'`,
+          sql`${resources.description} LIKE ${term} ESCAPE '\\'`,
         ),
       )
       .limit(limit);
@@ -93,9 +97,9 @@ export async function GET(req: Request) {
       .from(companies)
       .where(
         or(
-          like(companies.name, `%${safeQ}%`),
-          like(companies.slug, `%${safeQ}%`),
-          like(companies.website, `%${safeQ}%`),
+          sql`${companies.name} LIKE ${term} ESCAPE '\\'`,
+          sql`${companies.slug} LIKE ${term} ESCAPE '\\'`,
+          sql`${companies.website} LIKE ${term} ESCAPE '\\'`,
         ),
       )
       .limit(limit);

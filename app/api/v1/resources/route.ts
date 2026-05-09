@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { like, or } from "drizzle-orm";
+import { or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { resources } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
 import { getApiSession, hasMachineToken, isAdminRole } from "@/lib/auth-utils";
-import { stripLikeWildcards } from "@/lib/sql";
+import { escapeLikeWildcards } from "@/lib/sql";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +18,6 @@ export async function GET(req: Request) {
     Number(url.searchParams.get("limit") ?? "50") || 50,
   );
 
-  const safeQ = stripLikeWildcards(q);
-
   const baseQuery = db()
     .select({
       id: resources.id,
@@ -31,12 +29,16 @@ export async function GET(req: Request) {
     })
     .from(resources);
 
-  const rows = safeQ
+  // Escape `%` / `_` / `\` so user input matches literally — same
+  // pattern as the search and companies routes.
+  const term = q ? `%${escapeLikeWildcards(q)}%` : "";
+
+  const rows = q
     ? await baseQuery
         .where(
           or(
-            like(resources.title, `%${safeQ}%`),
-            like(resources.description, `%${safeQ}%`),
+            sql`${resources.title} LIKE ${term} ESCAPE '\\'`,
+            sql`${resources.description} LIKE ${term} ESCAPE '\\'`,
           ),
         )
         .limit(limit)

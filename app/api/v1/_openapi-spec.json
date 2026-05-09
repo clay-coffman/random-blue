@@ -732,7 +732,7 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-Atlas-Admin-Token",
-        "description": "Service-account-style token validated against\n`env.ATLAS_ADMIN_TOKEN`. The CLI (`startup-state`), the local\nstdio MCP server (`startup-state-mcp`), and external machine\nclients use this header for write operations. Bypasses\nBetter Auth and assumes a privileged caller.\n"
+        "description": "Service-account-style token validated against\n`env.ATLAS_ADMIN_TOKEN`. The local CLI (`npm run cli` from a\ncheckout), the local stdio MCP server (`npm run mcp`), and\nexternal machine clients use this header for write operations.\nBypasses Better Auth and assumes a privileged caller.\n"
       }
     },
     "schemas": {
