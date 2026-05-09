@@ -226,7 +226,7 @@ function McpPanel() {
         Remote MCP — paste into Claude Desktop / Claude Code / Cursor
       </h3>
       <p className="text-sm text-ink-3">
-        Drop this into your MCP client's config (Claude Desktop:{" "}
+        Drop this into your MCP client&apos;s config (Claude Desktop:{" "}
         <code className="font-mono">claude_desktop_config.json</code>; Claude
         Code: <code className="font-mono">.mcp.json</code> at your project
         root). Restart the client.
