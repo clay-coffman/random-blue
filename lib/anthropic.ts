@@ -4,7 +4,13 @@ import { env } from './cf';
 export const ANTHROPIC_MODEL = 'claude-opus-4-7' as const;
 
 export function anthropic(): Anthropic {
-  return new Anthropic({ apiKey: env().ANTHROPIC_API_KEY });
+  // Pass globalThis.fetch explicitly so the SDK uses the Workers-
+  // native fetch instead of trying to auto-detect a Node http client
+  // (which fails on Workers with "Connection error").
+  return new Anthropic({
+    apiKey: env().ANTHROPIC_API_KEY,
+    fetch: globalThis.fetch.bind(globalThis),
+  });
 }
 
 // Wrapper that defaults to the project model and enables prompt caching on the

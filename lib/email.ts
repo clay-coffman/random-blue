@@ -1,7 +1,13 @@
 import { Resend } from "resend";
 import { env } from "./cf";
 
-const FROM = "Startup State Atlas <noreply@startup.utah.gov>";
+// TODO(phase-5b): flip to `noreply@startup.utah.gov` once GOEO
+// verifies that domain in Resend (DNS records). Until then we send
+// from `startupstateatlas.dev` — a domain we own end-to-end, verified
+// via Resend's DKIM + SPF + DMARC records on Cloudflare DNS. This
+// works for any recipient (Resend's `onboarding@resend.dev` only
+// delivers to the account holder's address).
+const FROM = "Startup State Atlas <noreply@startupstateatlas.dev>";
 
 async function send(to: string, subject: string, html: string) {
   // Dev: if MAILPIT_URL is set, POST to mailpit's HTTP send API. Mailpit

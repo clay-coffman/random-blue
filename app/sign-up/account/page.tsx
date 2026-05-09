@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -46,6 +46,14 @@ function passwordStrength(pw: string): { score: 0 | 1 | 2 | 3; label: string } {
 }
 
 export default function SignUpAccountPage() {
+  return (
+    <Suspense fallback={null}>
+      <AccountForm />
+    </Suspense>
+  );
+}
+
+function AccountForm() {
   const router = useRouter();
   const params = useSearchParams();
   const role = Role.safeParse(params.get("role") ?? "founder").data ?? "founder";

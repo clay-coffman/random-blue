@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,6 +29,16 @@ const Schema = z.object({
 type FormValues = z.infer<typeof Schema>;
 
 export default function SignInPage() {
+  // useSearchParams() opts the page out of static prerendering; wrap
+  // in Suspense so Next can still produce the loading shell at build.
+  return (
+    <Suspense fallback={null}>
+      <SignInForm />
+    </Suspense>
+  );
+}
+
+function SignInForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));

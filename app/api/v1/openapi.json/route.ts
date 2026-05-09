@@ -3,7 +3,6 @@ import spec from "../_openapi-spec.json";
 
 // Static spec — no D1 / env access needed. Runs on the edge, same
 // runtime as the rest of /api/v1/.
-export const runtime = "edge";
 
 export function GET() {
   return NextResponse.json(spec, {

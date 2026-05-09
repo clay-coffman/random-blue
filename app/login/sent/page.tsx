@@ -2,9 +2,18 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
 
 export default function LoginSentPage() {
+  return (
+    <Suspense fallback={null}>
+      <SentBody />
+    </Suspense>
+  );
+}
+
+function SentBody() {
   const params = useSearchParams();
   const email = params.get("email") ?? "the address you entered";
 

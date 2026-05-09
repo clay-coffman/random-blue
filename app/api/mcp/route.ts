@@ -21,10 +21,11 @@ import { registerTools } from "@/mcp/shared/tools";
 import { registerResources } from "@/mcp/shared/resources";
 import { registerPrompts } from "@/mcp/shared/prompts";
 
-// Edge runtime: the MCP protocol uses Web-Standard Request/Response
-// objects, no `node:fs` / `node:http` access is needed. Stateless mode
-// means no DO/KV; each request spins up a fresh server + transport.
-export const runtime = "edge";
+// On OpenNext-Cloudflare the entire app bundles as one Worker — the
+// route-level `runtime = "edge"` annotation isn't needed (Workers IS
+// the edge runtime) and OpenNext's bundler refuses to ship this route
+// alongside the default function when it's marked edge. Stateless
+// transport: each request spins up a fresh server + transport.
 export const dynamic = "force-dynamic";
 
 async function handleMcpRequest(req: Request): Promise<Response> {

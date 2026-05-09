@@ -24,7 +24,6 @@ import type {
   RecommendedResourceWire,
 } from "@/types/api";
 
-export const runtime = "edge";
 // Note: `maxDuration` (Vercel Functions config) is intentionally omitted —
 // the deploy target is Cloudflare Workers, where it has no effect. The
 // real long-tail caps are the AbortController timeouts in
