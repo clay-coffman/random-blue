@@ -20,13 +20,20 @@ Create a new git worktree with its own SQLite-backed local D1, its own
 
 ## Env isolation model
 
-- **Shared secrets** (`ANTHROPIC_API_KEY`, `BETTER_AUTH_SECRET`,
-  `RESEND_API_KEY`, `ATLAS_ADMIN_TOKEN`) come from `.env.local`.
-  `stripe projects` populates a few of these on first setup; the rest
-  the user pastes in. Per-worktree `.env.local` files do NOT need to
-  carry the same secret values — copy from the main checkout.
-- **`.env.local` per-worktree collisions:** only `PORT` and
-  `WRANGLER_PORT` differ between worktrees. Everything else is shared.
+- **Two env files, two purposes** (see `CLAUDE.md` § Hard rules):
+  - `.env.local` — `process.env` consumers (Next.js dev, drizzle-kit,
+    wrangler CLI). Carries `PORT`, `WRANGLER_PORT`,
+    `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
+    `D1_DATABASE_ID`. **No provider secrets.**
+  - `.dev.vars` — `env()` consumers (anything in `lib/*` reading via
+    the Cloudflare binding helper, populated in dev by
+    `initOpenNextCloudflareForDev()`). Carries `ANTHROPIC_API_KEY`,
+    `PARALLEL_API_KEY`, `ATLAS_ADMIN_TOKEN`, `BETTER_AUTH_SECRET`,
+    `BETTER_AUTH_URL`, `RESEND_API_KEY`. If a secret only lives in
+    `.env.local`, lib code can't see it.
+- **Per-worktree differences:** `PORT` and `WRANGLER_PORT` in
+  `.env.local`, plus the port suffix on `BETTER_AUTH_URL` in
+  `.dev.vars`. Everything else mirrors the main checkout.
 - **Per-worktree D1:** `wrangler d1 ... --local` and `wrangler dev`
   read/write `.wrangler/state/v3/d1/<binding-name>.sqlite` inside the
   current worktree. Different worktrees → different SQLite files. No
@@ -58,26 +65,46 @@ Create a new git worktree with its own SQLite-backed local D1, its own
    If the branch already exists, drop `-b`.
 
 4. **Generate `.env.local`** in the new worktree with per-worktree
-   port overrides. Use `cat > … << EOF` from inside the new worktree
-   so the `protect-main` hook (which keys off the source checkout's
-   branch) doesn't fire:
+   port overrides. Use `cat > … << EOF` (heredoc) instead of Edit /
+   Write — the `protect-main` hook keys off the source checkout's
+   branch and would block both, even though `.env.local` is
+   gitignored:
 
    ```bash
    cat > ../startup-state-atlas-wt<N>/.env.local << EOF
    # Per-worktree overrides for startup-state-atlas-wt<N> (N=<N>).
-   # Shared secrets (ANTHROPIC_API_KEY, BETTER_AUTH_SECRET, RESEND_API_KEY,
-   # ATLAS_ADMIN_TOKEN) live in this file — copy them from the main
-   # checkout's .env.local if you have one. Do NOT commit.
+   # Secrets read by lib/ code via env() live in .dev.vars, not here.
+   # Do NOT commit.
    PORT=$((3000 + N))
    WRANGLER_PORT=$((8787 + N))
    EOF
    ```
 
-   If `../startup-state-atlas/.env.local` already exists in the main
-   checkout, also copy its non-port lines into the new worktree's
-   `.env.local` (preserving the per-worktree port values above).
+   If `../startup-state-atlas/.env.local` exists in the main checkout,
+   also copy its non-port lines (e.g. `CLOUDFLARE_API_TOKEN`,
+   `CLOUDFLARE_ACCOUNT_ID`, `D1_DATABASE_ID`) into the new worktree's
+   `.env.local`, preserving the per-worktree port values above.
 
-5. **Symlink shared local config files** from the main checkout, only
+5. **Generate `.dev.vars`** in the new worktree (provider secrets
+   read by `env()`). Same heredoc pattern, same protect-main reason.
+
+   - If `../startup-state-atlas/.dev.vars` exists in the main
+     checkout, copy it verbatim, then rewrite the `BETTER_AUTH_URL`
+     line so its port matches this worktree's `PORT` (`3000+N`).
+   - If main has no `.dev.vars` yet, copy `.dev.vars.example` and
+     warn the user that lib/ code won't have working secrets until
+     they fill it in (they should do it in main, then re-run
+     `/refresh-worktrees` to propagate).
+
+   Example (assuming main has a populated `.dev.vars`):
+
+   ```bash
+   sed "s|^BETTER_AUTH_URL=.*|BETTER_AUTH_URL=http://localhost:$((3000+N))|" \
+     ../startup-state-atlas/.dev.vars \
+     > ../startup-state-atlas-wt<N>/.dev.vars
+   ```
+
+6. **Symlink shared local config files** from the main checkout, only
    if they exist in main:
 
    ```bash
@@ -90,13 +117,13 @@ Create a new git worktree with its own SQLite-backed local D1, its own
    done
    ```
 
-6. **Install dependencies:**
+7. **Install dependencies:**
 
    ```bash
    cd ../startup-state-atlas-wt<N> && npm install
    ```
 
-7. **(Conditional) Initialize the local D1.** If `db/migrations/` has
+8. **(Conditional) Initialize the local D1.** If `db/migrations/` has
    any `.sql` files (i.e. Agent 1 has landed):
 
    ```bash
@@ -107,10 +134,12 @@ Create a new git worktree with its own SQLite-backed local D1, its own
    Otherwise skip — Agent 0 / Agent 1 will set up the schema later in
    this worktree's lifecycle.
 
-8. **Report:**
+9. **Report:**
    - Worktree path: `../startup-state-atlas-wt<N>`
    - Branch: `<branch-name>` (forked from `main`)
    - Index: `N=<N>` → `PORT=<3000+N>`, `WRANGLER_PORT=<8787+N>`
+   - `.dev.vars` status (copied from main / fell back to example /
+     main has none — user action required)
    - Symlinks created (if any)
    - Whether `db:migrate:local` + `seed` ran (skipped vs success)
    - Suggested next: `cd ../startup-state-atlas-wt<N> && npm run dev`
