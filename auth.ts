@@ -45,7 +45,8 @@ function buildAuth(env?: CloudflareEnv) {
       const h = new URL(baseURL).hostname;
       isLocalhost = h === "localhost" || h === "127.0.0.1" || h === "::1";
     } catch {
-      isLocalhost = false;
+      // Malformed URL — leave isLocalhost=false so the boot-check below
+      // refuses, instead of silently treating it as dev.
     }
   }
 

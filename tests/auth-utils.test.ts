@@ -22,10 +22,10 @@ import {
   authorizeWrite,
 } from "@/lib/auth-utils";
 
-const URL = "https://startup.utah.gov/api/v1/companies/foo";
+const TEST_URL = "https://startup.utah.gov/api/v1/companies/foo";
 
 function req(headers: Record<string, string> = {}): Request {
-  return new Request(URL, { headers });
+  return new Request(TEST_URL, { headers });
 }
 
 beforeEach(() => {
@@ -105,6 +105,26 @@ describe("authorizeWrite", () => {
       }),
     );
     expect(r.kind).toBe("session");
+  });
+
+  it("locks in session-first ordering: cross-origin session + valid machine token still denies as csrf", async () => {
+    // Defends against a future refactor that swaps the auth order.
+    // If machine-token check ran first, this would return kind=machine
+    // and bypass the same-origin gate — bad.
+    sessionResult.user = {
+      id: "u1",
+      email: "a@b.com",
+      name: "A",
+      role: "founder",
+    };
+    envResult.ATLAS_ADMIN_TOKEN = "secret-token";
+    const r = await authorizeWrite(
+      req({
+        "sec-fetch-site": "cross-site",
+        "x-atlas-admin-token": "secret-token",
+      }),
+    );
+    expect(r).toEqual({ kind: "denied", reason: "csrf" });
   });
 });
 
