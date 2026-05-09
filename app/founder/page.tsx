@@ -43,7 +43,7 @@ export default async function FounderPage({ searchParams }: PageProps) {
       <SectionHeader
         kicker="FOUNDER PASSPORT"
         kickerTone="ember"
-        title="Tell us who you're building."
+        title="Tell us what you're building."
         sub="Six questions. We'll match your situation against every state-vetted resource and return a ranked 90-day plan."
       />
 
