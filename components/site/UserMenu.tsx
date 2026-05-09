@@ -46,8 +46,16 @@ export function UserMenu({ name, email, role, planHref }: Props) {
     if (signingOut) return;
     setSigningOut(true);
     setSignOutError(null);
+    // Better Auth's React client returns { data, error }; it does
+    // not throw on HTTP-level failures (CSRF mismatch, rate limit,
+    // 5xx). The try/catch only covers network/runtime exceptions.
     try {
-      await authClient.signOut();
+      const { error } = await authClient.signOut();
+      if (error) {
+        setSignOutError(error.message ?? "Could not sign out. Try again.");
+        setSigningOut(false);
+        return;
+      }
       router.push("/");
       router.refresh();
     } catch (err) {
@@ -122,7 +130,11 @@ export function UserMenu({ name, email, role, planHref }: Props) {
         <DropdownMenuItem
           variant="destructive"
           disabled={signingOut}
-          onClick={() => {
+          // Base UI closes the menu unless the click is prevented.
+          // Keep it open through the async signOut so the user sees
+          // the "Signing out…" label and any error alert below.
+          onClick={(event) => {
+            event.preventDefault();
             void handleSignOut();
           }}
           className="px-2 py-1.5 font-sans text-sm"

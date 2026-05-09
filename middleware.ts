@@ -7,6 +7,10 @@ import { safeNext } from "@/lib/url";
 // never matches the actual cookie ("atlas.session_token" /
 // "__Host-atlas.session_token"), and middleware reads every authed
 // request as unauth.
+//
+// Keep this in sync with auth.ts § advanced.cookiePrefix — both
+// branches must agree on when "__Host-atlas" applies, otherwise
+// authed users silently bounce to /sign-in.
 function cookiePrefix(req: NextRequest): string {
   return req.nextUrl.protocol === "https:" ? "__Host-atlas" : "atlas";
 }

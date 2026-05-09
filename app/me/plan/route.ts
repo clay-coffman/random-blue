@@ -5,8 +5,6 @@ import { getAuth } from "@/auth";
 import { db } from "@/lib/db";
 import { founderPassports } from "@/db/schema";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(): Promise<never> {
   const session = await getAuth().api.getSession({ headers: await headers() });
   if (!session?.user) redirect("/sign-in?next=/me/plan");
