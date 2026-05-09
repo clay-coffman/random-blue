@@ -31,6 +31,11 @@ const defaultPort = mode === "preview" ? 8787 : 3000;
 const fileVal = envLocal[portKey];
 const shellVal = process.env[portKey];
 
+// The npm `dev` / `preview` scripts do `next dev --port ${PORT:-3000}` /
+// `... --port ${WRANGLER_PORT:-8787}` — pure bash expansion, which only
+// sees shell-exported env, not values that live solely in .env.local.
+// So shellVal is what `next dev` will actually bind; the preflight has
+// to probe that, not fileVal.
 if (fileVal && shellVal && fileVal !== shellVal) {
   console.error(
     `✗ ${portKey} mismatch: shell has ${shellVal}, .env.local has ${fileVal}.`,
@@ -44,7 +49,20 @@ if (fileVal && shellVal && fileVal !== shellVal) {
   process.exit(1);
 }
 
-const effectiveStr = shellVal ?? fileVal ?? String(defaultPort);
+if (fileVal && !shellVal) {
+  console.error(
+    `✗ ${portKey} is set in .env.local (=${fileVal}) but not exported to the shell.`,
+  );
+  console.error(
+    `  next dev / wrangler preview only see shell env for the --port arg, so they would bind ${defaultPort} instead of ${fileVal}.`,
+  );
+  console.error(
+    `  Run \`export ${portKey}=${fileVal}\` (or source the worktree's env) before \`npm run ${mode}\`.`,
+  );
+  process.exit(1);
+}
+
+const effectiveStr = shellVal ?? String(defaultPort);
 const effective = Number(effectiveStr);
 if (!Number.isInteger(effective) || effective <= 0 || effective > 65535) {
   console.error(
@@ -76,8 +94,13 @@ if (probeError) {
 if (mode === "dev") {
   const bauUrl = devVars.BETTER_AUTH_URL;
   if (bauUrl) {
-    const m = bauUrl.match(/:(\d+)(?:\/|$)/);
-    const bauPort = m ? Number(m[1]) : NaN;
+    let bauPort = NaN;
+    try {
+      const parsed = new URL(bauUrl);
+      if (parsed.port) bauPort = Number(parsed.port);
+    } catch {
+      // Invalid URL — skip the warn rather than fail the preflight.
+    }
     if (Number.isInteger(bauPort) && bauPort !== effective) {
       console.warn(
         `! BETTER_AUTH_URL in .dev.vars is ${bauUrl} but next dev will bind :${effective}.`,
