@@ -135,3 +135,58 @@ echo "<new-value>" | wrangler secret put <NAME>
 
 See `docs/operator-runbook.md` for the full ops loop (claim review,
 admin invites, debugging incidents, etc.).
+
+## 2026-05-09 (later) — custom domain + preview gate
+
+**Live URL flipped to:** `https://startupstateatlas.dev` (and
+`https://www.startupstateatlas.dev`). `wrangler.jsonc` now declares
+`routes` with `custom_domain: true` so Cloudflare manages DNS + SSL
+automatically. The previous workers.dev URL stops serving because
+`workers_dev` defaults off when a Wrangler config carries
+custom-domain routes — the custom domain is now the only entry
+point.
+
+`BETTER_AUTH_URL` Workers secret rotated to
+`https://startupstateatlas.dev`.
+
+**Preview password gate.** A site-wide password gate sits in front
+of every Next route + every API handler while we're pre-launch.
+Driven entirely by the `SITE_PASSWORD` Workers secret — drop the
+secret + redeploy and the gate vanishes:
+
+```bash
+wrangler secret delete SITE_PASSWORD
+npm run deploy
+```
+
+Implementation:
+
+- `lib/site-gate.ts` — sha256 helper, cookie name + max-age,
+  `siteGatePassword()` reads `process.env.SITE_PASSWORD`,
+  `isGateAllowed(pathname)` for the bypass list.
+- `app/gate/page.tsx` — minimal centered form, server component,
+  `robots: { index: false, follow: false }`.
+- `app/api/gate/route.ts` — POST validates with `timingSafeEqual`,
+  sets `atlas_gate` cookie = `sha256Hex(SITE_PASSWORD)`, redirects
+  to the original `next` target (same-origin only).
+- `middleware.ts` runs the gate FIRST (matcher widened to
+  `/((?!_next/static|_next/image|favicon.ico).*)`); the auth gate
+  for protected routes still fires after.
+
+Cookie design: value is `SHA-256(current SITE_PASSWORD)`. Rotating
+the password invalidates every existing cookie automatically — no
+session store, no separate JWT secret. `HttpOnly`, `Secure`,
+`SameSite=Lax`, 30-day max-age.
+
+Caveat: Cloudflare's `ASSETS` binding serves `/public/*` BEFORE
+middleware runs, so `/llms.txt`, `/AGENTS.md`, `/favicon.ico` are
+not gated. The actual app surfaces (every Next route + every API
+handler, including `/api/v1/*` and `/api/mcp`) all are.
+
+The current preview password lives outside the repo (rotate via
+`wrangler secret put SITE_PASSWORD`).
+
+Bonus fix: `eslint.config.mjs` now also ignores `.open-next/**`
+(generated build output that ESLint shouldn't lint). Without this
+fix any lint run after a local `npm run deploy` fails on 1400+
+errors in compiled JS.
