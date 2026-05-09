@@ -267,3 +267,190 @@ the front-end can quietly fall back to manual fill.
 - `generated_at` is RFC 3339 / ISO 8601.
 - `kind` is the primary topic, lowercased — same vocabulary as
   `resource_topics.topic` rows.
+
+---
+
+## Agent 4 — companies + agent cards
+
+**Owner:** Agent 4 (`feat/map`).
+**Status:** shipping.
+**Source of truth:** `lib/company-card.ts` (shared formatter for
+`/startups/{slug}` HTML, the markdown / JSON agent cards, and the
+JSON payload from `/api/v1/companies/{slug}`).
+
+### `GET /api/v1/companies`
+
+List + filter companies. Backs the `/map` view AND the
+`/onboarding/owner` company-search step (which needs `q`, `limit`,
+and the `status` field to surface claimed-vs-pending badges).
+
+**Query params (all optional):**
+
+| name | type | notes |
+| --- | --- | --- |
+| `sector` | string | exact match against `companies.sector` |
+| `stage` | string | exact match against `companies.stage` |
+| `county` | string | matches `company_locations.county` |
+| `city` | string | matches `company_locations.city` |
+| `min_employees` | int | min lower bound of the band |
+| `max_employees` | int | max upper bound of the band |
+| `hiring_status` | `"true" \| "false"` | |
+| `q` | string | LIKE `%term%` on name / slug / website / description / sector |
+| `limit` | int | default 500, max 500 |
+
+**Response 200:**
+
+```json
+{
+  "companies": [
+    {
+      "id": "co_…",
+      "slug": "crew",
+      "name": "Crew",
+      "sector": "FinTech",
+      "stage": "seed",
+      "employee_count": "2-10",
+      "hiring_status": false,
+      "lat": 40.39,
+      "lng": -111.85,
+      "logo_url": null,
+      "website": "https://www.trycrew.com",
+      "summary": "Crew is a neobank for families…",
+      "county": "Utah",
+      "city": "Lehi",
+      "claimed_by_user_id": null,
+      "status": "unclaimed"
+    }
+  ],
+  "total": 1
+}
+```
+
+`status` is `"claimed" | "pending" | "unclaimed"` derived from
+`claimed_by_user_id` plus a join to `business_ownership_submissions`
+(status='pending'). Map UI ignores it; owner onboarding uses it.
+
+### `POST /api/v1/companies`
+
+Admin / machine-token-only company create. Used by `/admin/companies`
+and CLI/MCP tooling. Owned by **Agent 5** (auth/admin).
+
+**Request:**
+
+```json
+{ "slug": "acme", "name": "Acme", "website": "https://acme.test", … }
+```
+
+**Response 201:** `{ "id": "co_…", "slug": "acme" }`.
+
+### `GET /api/v1/companies/{slug}`
+
+Single company. Same shape as `GET /startups/{slug}/route.json`.
+See "Company card shape" below.
+
+### `PATCH /api/v1/companies/{slug}`
+
+Owned by **Agent 5** (`feat/auth-claim-admin`). Three auth modes:
+owner session (whitelist), admin session (no whitelist), machine
+token (no whitelist). Writes a `profile_updates` audit row on every
+successful PATCH, capturing `source_client` (`owner` / `staff` /
+`machine` / custom via `X-Source-Client` header).
+
+### `DELETE /api/v1/companies/{slug}`
+
+Owned by **Agent 5**. Admin / machine token only. Returns `204`.
+
+### `POST /api/v1/companies/brief`
+
+Source-bound LLM cluster summary for an investor. Always returns
+200 with `degraded: true` on Anthropic upstream failure.
+
+**Request:**
+
+```json
+{
+  "filter": {
+    "sector": "FinTech",
+    "stage": "seed",
+    "county": "Salt Lake",
+    "hiring": "true",
+    "q": ""
+  },
+  "slugs": ["crew", "swyf", "elements"]
+}
+```
+
+`slugs` is required and capped at 80 server-side. `filter` is
+descriptive only — used to compose `filter_summary`; the cluster
+reasoning runs against the slugs.
+
+**Response 200:**
+
+```json
+{
+  "filter_summary": "Utah seed-stage FinTech, Salt Lake County, hiring.",
+  "total_in_view": 3,
+  "clusters": [
+    {
+      "title": "Consumer & family banking",
+      "count": 2,
+      "slugs": ["crew", "swyf"],
+      "summary": "Neobanks targeting families and underserved consumers."
+    }
+  ],
+  "hiring_summary": "All three are actively hiring.",
+  "degraded": false
+}
+```
+
+### `GET /startups/{slug}/route.md`
+
+Markdown agent card. `Content-Type: text/markdown; charset=utf-8`,
+`Cache-Control: public, max-age=60`. Body is whatever
+`formatCompanyCardMarkdown()` produces — hero, facts, links,
+location, team, open roles, plus a footer that lists the four
+canonical URLs (HTML, .md, .json, /api/v1).
+
+### `GET /startups/{slug}/route.json`
+
+JSON agent card. Same shape as `/api/v1/companies/{slug}` plus an
+`agent_card` object pointing to the canonical URLs.
+
+### Company card shape
+
+`lib/company-card.ts` `toWireCompanyCard()` emits:
+
+```json
+{
+  "id": "co_…",
+  "slug": "crew",
+  "name": "Crew",
+  "website": "https://www.trycrew.com",
+  "description": "…",
+  "sector": "FinTech",
+  "stage": "seed",
+  "employee_count": "2-10",
+  "hiring_status": false,
+  "founding_year": null,
+  "linkedin": "https://www.linkedin.com/company/trycrew",
+  "logo_url": null,
+  "founder_team": [{ "name": "…", "title": "…", "linkedin": "…" }],
+  "address_text": "2000 Ashton Boulevard, Lehi, UT",
+  "lat": 40.39,
+  "lng": -111.85,
+  "locations": [{ "county": "Utah", "city": "Lehi" }],
+  "jobs": [
+    { "id": 1, "title": "Engineer", "url": "…", "posted_at": "2026-01-…" }
+  ],
+  "verified_at": null,
+  "claimed_at": null,
+  "claimed": false,
+  "last_updated_by": null,
+  "last_updated_at": null,
+  "agent_card": {
+    "markdown_url": "/startups/crew/route.md",
+    "json_url": "/startups/crew/route.json",
+    "api_url": "/api/v1/companies/crew"
+  }
+}
+```
