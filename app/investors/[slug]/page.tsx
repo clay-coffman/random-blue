@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { and, eq } from "drizzle-orm";
 import { Tile, Chip, ScribbleDivider } from "@/components/brand";
 import {
   canSeeInvestor,
@@ -9,6 +10,8 @@ import {
   type InvestorPublicCard,
 } from "@/lib/investor-card";
 import { getApiSession } from "@/lib/auth-utils";
+import { db } from "@/lib/db";
+import { introRequests } from "@/db/schema";
 import { RequestIntroDialog } from "./_components/RequestIntroDialog";
 
 type PageProps = { params: Promise<{ slug: string }> };
@@ -84,16 +87,51 @@ export default async function InvestorProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  return <InvestorProfile card={result.card} signedIn={!!session} />;
+  const viewerUserId = session?.user.id ?? null;
+  const isOwner = !!(viewerUserId && viewerUserId === result.row.userId);
+
+  // Pre-empt the duplicate-pending case: if this signed-in non-owner
+  // viewer already has a pending request to this investor, show a
+  // "Pending review" pill with a queue link instead of letting them
+  // open the dialog and bounce off a 409.
+  let pendingIntroId: string | null = null;
+  if (viewerUserId && !isOwner) {
+    const [existing] = await db()
+      .select({ id: introRequests.id })
+      .from(introRequests)
+      .where(
+        and(
+          eq(introRequests.requesterUserId, viewerUserId),
+          eq(introRequests.targetInvestorId, result.card.id),
+          eq(introRequests.status, "pending"),
+        ),
+      )
+      .limit(1);
+    pendingIntroId = existing?.id ?? null;
+  }
+
+  return (
+    <InvestorProfile
+      card={result.card}
+      signedIn={!!session}
+      isOwner={isOwner}
+      pendingIntroId={pendingIntroId}
+    />
+  );
 }
 
 function InvestorProfile({
   card,
   signedIn,
+  isOwner,
+  pendingIntroId,
 }: {
   card: InvestorPublicCard;
   signedIn: boolean;
+  isOwner: boolean;
+  pendingIntroId: string | null;
 }) {
+  const editHref = `/investors/${card.slug}/edit`;
   const verified = card.verification.status === "verified";
   const checkSize = formatCheckSize(card.check_size_min, card.check_size_max);
 
@@ -144,11 +182,19 @@ function InvestorProfile({
         </div>
 
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-          {signedIn ? (
+          {isOwner ? (
+            <Link
+              href={editHref}
+              className="inline-flex h-10 min-h-[44px] items-center justify-center gap-2 rounded-pill border-[1.5px] border-ember bg-ember px-4 font-mono text-xs uppercase tracking-wider text-paper transition hover:-translate-y-0.5"
+            >
+              Edit profile →
+            </Link>
+          ) : signedIn ? (
             <RequestIntroDialog
               targetType="investor"
               targetId={card.id}
               targetName={card.display_name}
+              pendingIntroId={pendingIntroId}
             />
           ) : (
             <Link
@@ -226,27 +272,47 @@ function InvestorProfile({
               Contact
             </p>
             <Tile variant="subtle" shadow="none" className="mt-3 p-4">
-              <p className="font-serif text-base leading-relaxed text-ink-2">
-                Direct contact info for {card.display_name} is not published.
-                To reach out, send an intro request through GOEO. The team
-                reviews each request and, if accepted, connects both parties
-                by email.
-              </p>
-              {signedIn ? (
-                <div className="mt-4">
-                  <RequestIntroDialog
-                    targetType="investor"
-                    targetId={card.id}
-                    targetName={card.display_name}
-                  />
-                </div>
+              {isOwner ? (
+                <>
+                  <p className="font-serif text-base leading-relaxed text-ink-2">
+                    This is what other signed-in users see. Direct contact
+                    info isn&apos;t published — intros are routed through
+                    GOEO. Edit your public profile to change what appears
+                    here.
+                  </p>
+                  <Link
+                    href={editHref}
+                    className="mt-4 inline-flex h-10 min-h-[44px] items-center justify-center rounded-pill bg-ember px-4 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:-translate-y-0.5"
+                  >
+                    Edit profile →
+                  </Link>
+                </>
               ) : (
-                <Link
-                  href={`/sign-in?next=/investors/${card.slug}`}
-                  className="mt-4 inline-flex h-10 min-h-[44px] items-center justify-center rounded-pill bg-ember px-4 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:-translate-y-0.5"
-                >
-                  Sign in to request →
-                </Link>
+                <>
+                  <p className="font-serif text-base leading-relaxed text-ink-2">
+                    Direct contact info for {card.display_name} is not
+                    published. To reach out, send an intro request through
+                    GOEO. The team reviews each request and, if accepted,
+                    connects both parties by email.
+                  </p>
+                  {signedIn ? (
+                    <div className="mt-4">
+                      <RequestIntroDialog
+                        targetType="investor"
+                        targetId={card.id}
+                        targetName={card.display_name}
+                        pendingIntroId={pendingIntroId}
+                      />
+                    </div>
+                  ) : (
+                    <Link
+                      href={`/sign-in?next=/investors/${card.slug}`}
+                      className="mt-4 inline-flex h-10 min-h-[44px] items-center justify-center rounded-pill bg-ember px-4 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:-translate-y-0.5"
+                    >
+                      Sign in to request →
+                    </Link>
+                  )}
+                </>
               )}
             </Tile>
           </section>

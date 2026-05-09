@@ -9,7 +9,7 @@ import { parseBucket } from "@/lib/employee-bucket";
 import { companyCard, type CompanyCard } from "@/lib/company-card";
 import { cn } from "@/lib/utils";
 import { db } from "@/lib/db";
-import { investorProfiles, savedCompanies } from "@/db/schema";
+import { introRequests, investorProfiles, savedCompanies } from "@/db/schema";
 import { getApiSession } from "@/lib/auth-utils";
 import { ProfileTabs } from "./_components/ProfileTabs";
 import { MiniMap } from "./_components/MiniMap";
@@ -103,12 +103,30 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
     }
   }
 
+  // Pre-empt the duplicate-pending case for the intro dialog.
+  let pendingIntroId: string | null = null;
+  if (session?.user.id) {
+    const [existing] = await db()
+      .select({ id: introRequests.id })
+      .from(introRequests)
+      .where(
+        and(
+          eq(introRequests.requesterUserId, session.user.id),
+          eq(introRequests.targetCompanyId, result.card.id),
+          eq(introRequests.status, "pending"),
+        ),
+      )
+      .limit(1);
+    pendingIntroId = existing?.id ?? null;
+  }
+
   return (
     <VariantAProfile
       card={result.card}
       signedIn={!!session}
       isInvestor={isInvestor}
       isSaved={isSaved}
+      pendingIntroId={pendingIntroId}
     />
   );
 }
@@ -118,11 +136,13 @@ function VariantAProfile({
   signedIn,
   isInvestor,
   isSaved,
+  pendingIntroId,
 }: {
   card: CompanyCard;
   signedIn: boolean;
   isInvestor: boolean;
   isSaved: boolean;
+  pendingIntroId: string | null;
 }) {
   const jobsCount = card.jobs.length;
   // Tab labels track render order in the main column. The Agent Card
@@ -274,6 +294,7 @@ function VariantAProfile({
             <RequestIntroButton
               companyId={card.id}
               companyName={card.name}
+              pendingIntroId={pendingIntroId}
             />
           ) : null}
           <Link
