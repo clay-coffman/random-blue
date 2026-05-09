@@ -1,7 +1,7 @@
 // Pre-warm the persona plans by hitting POST /api/v1/resources/recommend
 // for each persona id. Populates `founder_passports.narrative_text` and
 // `recommendations` rows so the demo's first click on a persona renders
-// from cache (<100ms) instead of waiting on a fresh Claude call (~3-6s
+// from cache (<100ms) instead of waiting on a fresh Claude call (~5-7s
 // with sonnet).
 //
 // Usage:
@@ -10,9 +10,18 @@
 //     npm run warm-personas                            # prod
 //
 // Idempotent: each call deletes and reinserts the persona's recs.
+//
+// The recommend endpoint is per-IP rate-limited to 5/60s
+// (RECOMMEND_LIMIT in wrangler.jsonc). To finish all six personas
+// from one IP we sleep ~13s between calls — total runtime ~70-100s.
 
-const PERSONAS = ["jordan", "maria", "marcus", "priya", "david", "amir"];
+import { personas } from "@/lib/personas";
+
+const PERSONA_IDS = personas.map((p) => p.id);
 const BASE = process.env.ATLAS_BASE_URL ?? "http://localhost:3000";
+// 60s window / 5 req limit = 12s/req; +1s buffer so retries / clock skew
+// don't push us over the edge on the 5th call.
+const PACE_MS = 13_000;
 
 async function warm(persona: string) {
   const url = `${BASE}/api/v1/resources/recommend`;
@@ -42,14 +51,19 @@ async function warm(persona: string) {
   return true;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function main() {
-  console.log(`Warming personas against ${BASE} ...`);
+  console.log(
+    `Warming ${PERSONA_IDS.length} personas against ${BASE} (pacing ${PACE_MS}ms between calls) ...`,
+  );
   let okCount = 0;
-  for (const p of PERSONAS) {
-    if (await warm(p)) okCount++;
+  for (let i = 0; i < PERSONA_IDS.length; i++) {
+    if (await warm(PERSONA_IDS[i])) okCount++;
+    if (i < PERSONA_IDS.length - 1) await sleep(PACE_MS);
   }
-  console.log(`\nDone: ${okCount}/${PERSONAS.length} succeeded.`);
-  if (okCount < PERSONAS.length) process.exit(1);
+  console.log(`\nDone: ${okCount}/${PERSONA_IDS.length} succeeded.`);
+  if (okCount < PERSONA_IDS.length) process.exit(1);
 }
 
 main().catch((err) => {

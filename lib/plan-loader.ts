@@ -39,10 +39,27 @@ export type CachedPlan = {
 };
 
 /**
+ * Thrown by `loadCachedPlan` when a passport row exists but its
+ * persisted enum columns (`stage`, `goal`) are not in the schema's
+ * vocabulary. The recommend POST raises a 500 in this case; callers
+ * should treat this as a server-side data-integrity bug, not a
+ * "missing" passport.
+ */
+export class PassportCorruptError extends Error {
+  constructor(public readonly id: string, public readonly fields: string[]) {
+    super(
+      `Stored passport ${id} has invalid ${fields.join("/")}; needs manual repair.`,
+    );
+    this.name = "PassportCorruptError";
+  }
+}
+
+/**
  * Load a passport plus its cached recommendations from D1. Returns
- * `null` if the passport does not exist. `result.recommendations`
- * is empty when the passport exists but has never been run through
- * /recommend (e.g. a freshly-seeded persona).
+ * `null` if the passport does not exist. Throws `PassportCorruptError`
+ * if the row exists but its required enum columns are out-of-vocab.
+ * `result.recommendations` is empty when the passport exists but has
+ * never been run through /recommend (e.g. a freshly-seeded persona).
  */
 export async function loadCachedPlan(id: string): Promise<CachedPlan | null> {
   const d = db();
@@ -57,7 +74,20 @@ export async function loadCachedPlan(id: string): Promise<CachedPlan | null> {
 
   const stage = FounderStage.safeParse(row.stage);
   const goal = FounderGoal.safeParse(row.goal);
-  if (!stage.success || !goal.success) return null;
+  if (!stage.success || !goal.success) {
+    const bad: string[] = [];
+    if (!stage.success) bad.push(`stage=${JSON.stringify(row.stage)}`);
+    if (!goal.success) bad.push(`goal=${JSON.stringify(row.goal)}`);
+    console.error(
+      `[plan-loader] passport ${id} has invalid enum columns: ${bad.join(", ")}`,
+    );
+    throw new PassportCorruptError(
+      id,
+      [stage.success ? null : "stage", goal.success ? null : "goal"].filter(
+        (s): s is string => s !== null,
+      ),
+    );
+  }
   const urgency = row.urgency ? FounderUrgency.safeParse(row.urgency) : null;
 
   const passport: FounderPassportInput = {
