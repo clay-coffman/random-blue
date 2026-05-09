@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { Tile, Chip } from "@/components/brand";
 import { db } from "@/lib/db";
 import {
@@ -44,30 +44,55 @@ export default async function MySavedPage() {
     county: string | null;
   };
 
-  const rows: Row[] = investor
-    ? ((await db()
+  let rows: Row[] = [];
+  if (investor) {
+    // Saved-companies join, no location yet — we fetch locations
+    // separately and pick the first per company. company_locations has
+    // no UNIQUE on company_id, so a leftJoin would multiply rows for any
+    // company with multiple locations.
+    const base = await db()
+      .select({
+        id: savedCompanies.id,
+        note: savedCompanies.note,
+        savedAt: savedCompanies.savedAt,
+        companyId: companies.id,
+        companySlug: companies.slug,
+        companyName: companies.name,
+        companySector: companies.sector,
+        companyStage: companies.stage,
+        companyLogoUrl: companies.logoUrl,
+      })
+      .from(savedCompanies)
+      .innerJoin(companies, eq(savedCompanies.companyId, companies.id))
+      .where(eq(savedCompanies.investorId, investor.id))
+      .orderBy(desc(savedCompanies.savedAt));
+
+    const companyIds = base.map((b) => b.companyId);
+    const locByCompany = new Map<string, { city: string | null; county: string | null }>();
+    if (companyIds.length > 0) {
+      const locRows = await db()
         .select({
-          id: savedCompanies.id,
-          note: savedCompanies.note,
-          savedAt: savedCompanies.savedAt,
-          companyId: companies.id,
-          companySlug: companies.slug,
-          companyName: companies.name,
-          companySector: companies.sector,
-          companyStage: companies.stage,
-          companyLogoUrl: companies.logoUrl,
+          companyId: companyLocations.companyId,
           city: companyLocations.city,
           county: companyLocations.county,
+          rowId: companyLocations.id,
         })
-        .from(savedCompanies)
-        .innerJoin(companies, eq(savedCompanies.companyId, companies.id))
-        .leftJoin(
-          companyLocations,
-          eq(companyLocations.companyId, companies.id),
-        )
-        .where(eq(savedCompanies.investorId, investor.id))
-        .orderBy(desc(savedCompanies.savedAt))) as Row[])
-    : [];
+        .from(companyLocations)
+        .where(inArray(companyLocations.companyId, companyIds));
+      // Pick the lowest id per company so we get a stable choice.
+      for (const r of locRows.sort((a, b) => a.rowId - b.rowId)) {
+        if (!locByCompany.has(r.companyId)) {
+          locByCompany.set(r.companyId, { city: r.city, county: r.county });
+        }
+      }
+    }
+
+    rows = base.map((b) => ({
+      ...b,
+      city: locByCompany.get(b.companyId)?.city ?? null,
+      county: locByCompany.get(b.companyId)?.county ?? null,
+    }));
+  }
 
   return (
     <div className="mx-auto max-w-[1480px] px-4 pb-20 pt-6 sm:px-7 sm:pt-8">

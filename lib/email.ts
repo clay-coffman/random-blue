@@ -23,6 +23,15 @@ function escapeHtml(s: string): string {
   );
 }
 
+// Defense-in-depth for header injection. Display names are validated
+// at the schema boundary (max 120 chars, no length-by-line constraint),
+// so a malicious actor could embed `\r\n` and inject extra headers if
+// the downstream mailer ever concatenated raw. Stripping CRLF before
+// the subject interpolation is cheap.
+function stripCrlf(s: string): string {
+  return s.replace(/[\r\n]+/g, " ").trim();
+}
+
 function paragraphs(s: string): string {
   return s
     .split(/\n+/)
@@ -162,7 +171,7 @@ export async function sendIntroPendingEmail(args: {
     "Your intro request is queued",
     `<h2>Intro request received</h2>
      <p>Hi ${escapeHtml(args.name)},</p>
-     <p>Your intro request to <strong>${escapeHtml(args.targetName)}</strong> has been received and is queued for GOEO review.</p>
+     <p>Your intro request to <strong>${escapeHtml(stripCrlf(args.targetName))}</strong> has been received and is queued for GOEO review.</p>
      <p>We'll email you when there's an update — usually within a few business days.</p>
      <p>— Utah GOED</p>`,
   );
@@ -186,7 +195,7 @@ export async function sendIntroAcceptedEmail(args: {
     : "";
   await send(
     args.to,
-    `Intro accepted: ${args.otherName}`,
+    `Intro accepted: ${stripCrlf(args.otherName)}`,
     `<h2>GOEO has connected you</h2>
      <p>Hi ${escapeHtml(args.recipientName)},</p>
      <p>The GOEO team reviewed and accepted an intro request between you and <strong>${escapeHtml(args.otherName)}</strong>.</p>
@@ -237,7 +246,7 @@ export async function sendIntroIntroducedEmail(args: {
     : "";
   await send(
     args.to,
-    `Intro made: ${args.targetName}`,
+    `Intro made: ${stripCrlf(args.targetName)}`,
     `<h2>Introduction made</h2>
      <p>Hi ${escapeHtml(args.name)},</p>
      <p>The GOEO team has introduced you to <strong>${escapeHtml(args.targetName)}</strong> directly. Watch for a separate email from us connecting both parties.</p>

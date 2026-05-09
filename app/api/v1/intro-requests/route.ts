@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   companies,
@@ -49,11 +49,18 @@ export async function POST(req: Request) {
         displayName: investorProfiles.displayName,
         firmName: investorProfiles.firmName,
         userId: investorProfiles.userId,
+        verificationStatus: investorProfiles.verificationStatus,
       })
       .from(investorProfiles)
       .where(eq(investorProfiles.id, body.target.id))
       .limit(1);
-    if (!inv || !inv.slug) {
+    // Gate intros on verified investors only — unverified profiles are
+    // owner-previewable, not a public intro target.
+    if (
+      !inv ||
+      !inv.slug ||
+      inv.verificationStatus !== "verified"
+    ) {
       return errorResponse("not_found", "Investor not found.", 404);
     }
     if (inv.userId === sessionUser.id) {
@@ -87,6 +94,35 @@ export async function POST(req: Request) {
     }
     targetCompanyId = co.id;
     targetName = co.name;
+  }
+
+  // Per-(requester, target) duplicate guard. Don't allow stacking
+  // pending requests at the same target — admin would see noise and
+  // recipients would get a low-effort harassment channel after accept.
+  // We collapse to one pending per (requester, target) pair; once
+  // admin moves the prior request to a terminal state, a new request
+  // is allowed.
+  const dupConditions = [
+    eq(introRequests.requesterUserId, sessionUser.id),
+    eq(introRequests.status, "pending"),
+    targetInvestorId
+      ? eq(introRequests.targetInvestorId, targetInvestorId)
+      : isNull(introRequests.targetInvestorId),
+    targetCompanyId
+      ? eq(introRequests.targetCompanyId, targetCompanyId)
+      : isNull(introRequests.targetCompanyId),
+  ];
+  const [existing] = await db()
+    .select({ id: introRequests.id })
+    .from(introRequests)
+    .where(and(...dupConditions))
+    .limit(1);
+  if (existing) {
+    return errorResponse(
+      "conflict",
+      "You already have a pending intro request to this target.",
+      409,
+    );
   }
 
   const [{ id }] = await db()

@@ -40,6 +40,6 @@ ALTER TABLE `investor_profiles` ADD `website` text;--> statement-breakpoint
 ALTER TABLE `investor_profiles` ADD `linkedin` text;--> statement-breakpoint
 ALTER TABLE `investor_profiles` ADD `verification_status` text DEFAULT 'unverified' NOT NULL;--> statement-breakpoint
 ALTER TABLE `investor_profiles` ADD `verified_at` integer;--> statement-breakpoint
-ALTER TABLE `investor_profiles` ADD `last_updated_by` text REFERENCES user(id);--> statement-breakpoint
+ALTER TABLE `investor_profiles` ADD `last_updated_by` text REFERENCES user(id) ON DELETE SET NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX `investor_profiles_slug_idx` ON `investor_profiles` (`slug`);--> statement-breakpoint
 CREATE INDEX `investor_profiles_verification_idx` ON `investor_profiles` (`verification_status`);

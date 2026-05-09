@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   companies,
@@ -168,19 +168,6 @@ export async function PATCH(
     return errorResponse("forbidden", "Admin role required.", 403);
   }
 
-  const bundle = await loadIntroBundle(id);
-  if (!bundle) return errorResponse("not_found", "Intro not found.", 404);
-
-  // Concurrent-action guard: only `pending` intros are actionable.
-  // Two admins could otherwise double-fire emails.
-  if (bundle.row.status !== "pending") {
-    return errorResponse(
-      "conflict",
-      `Intro already ${bundle.row.status}.`,
-      409,
-    );
-  }
-
   const raw = await req.json().catch(() => null);
   const parsed = IntroRequestPatchSchema.safeParse(raw);
   if (!parsed.success) {
@@ -193,8 +180,13 @@ export async function PATCH(
   }
   const { status, admin_notes } = parsed.data;
 
+  // Concurrent-action guard: scope the UPDATE to status='pending' and
+  // check the returning row count. Two admins clicking Accept
+  // near-simultaneously will both pass an in-memory status check,
+  // but only one UPDATE matches because the WHERE includes the
+  // current status. The loser gets 409.
   const now = new Date();
-  await db()
+  const updated = await db()
     .update(introRequests)
     .set({
       status,
@@ -202,9 +194,28 @@ export async function PATCH(
       reviewedByUserId: auth.user.id,
       reviewedAt: now,
     })
-    .where(eq(introRequests.id, id));
+    .where(
+      and(eq(introRequests.id, id), eq(introRequests.status, "pending")),
+    )
+    .returning({ id: introRequests.id });
+  if (updated.length === 0) {
+    // Either the row vanished (404) or it was already actioned (409).
+    const exists = await db()
+      .select({ status: introRequests.status })
+      .from(introRequests)
+      .where(eq(introRequests.id, id))
+      .limit(1);
+    if (exists.length === 0) {
+      return errorResponse("not_found", "Intro not found.", 404);
+    }
+    return errorResponse(
+      "conflict",
+      `Intro already ${exists[0].status}.`,
+      409,
+    );
+  }
 
-  // Refresh.
+  // Refresh — load full bundle for email dispatch.
   const refreshed = await loadIntroBundle(id);
   if (!refreshed) {
     return errorResponse("internal", "Intro vanished after update.", 500);

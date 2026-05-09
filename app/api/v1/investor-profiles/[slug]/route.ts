@@ -3,21 +3,37 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { investorProfiles } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
-import { authorizeWrite, isAdminRole } from "@/lib/auth-utils";
-import { investorCard } from "@/lib/investor-card";
+import {
+  authorizeWrite,
+  getApiSession,
+  isAdminRole,
+} from "@/lib/auth-utils";
+import { canSeeInvestor, investorCard } from "@/lib/investor-card";
 import { InvestorPublicPatchSchema } from "@/schemas/investor-public";
 
 export const dynamic = "force-dynamic";
 
-// Public GET — returns the same card as /investors/:slug.json. Email
-// is never included.
+// GET — returns the public card. Verified profiles are anonymous-
+// readable; unverified profiles 404 unless the caller is the owner or
+// an admin (so owners can preview before submitting for verification).
+// Email is never included.
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await ctx.params;
   const result = await investorCard(slug);
   if (!result) {
+    return errorResponse("not_found", "Investor not found.", 404);
+  }
+  const session = await getApiSession(req);
+  if (
+    !canSeeInvestor(
+      result.row,
+      session?.user.id ?? null,
+      session?.user.role ?? null,
+    )
+  ) {
     return errorResponse("not_found", "Investor not found.", 404);
   }
   return NextResponse.json(result.card);

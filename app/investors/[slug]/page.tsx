@@ -3,7 +3,11 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Tile, Chip, ScribbleDivider } from "@/components/brand";
-import { investorCard, type InvestorPublicCard } from "@/lib/investor-card";
+import {
+  canSeeInvestor,
+  investorCard,
+  type InvestorPublicCard,
+} from "@/lib/investor-card";
 import { getApiSession } from "@/lib/auth-utils";
 import { RequestIntroDialog } from "./_components/RequestIntroDialog";
 
@@ -60,8 +64,6 @@ export default async function InvestorProfilePage({ params }: PageProps) {
   const result = await investorCard(slug);
   if (!result) notFound();
 
-  const card = result.card;
-
   // Read session — anon visitors see "sign in to request intro";
   // signed-in users get the dialog.
   const headerStore = await headers();
@@ -70,7 +72,19 @@ export default async function InvestorProfilePage({ params }: PageProps) {
   });
   const session = await getApiSession(fakeReq);
 
-  return <InvestorProfile card={card} signedIn={!!session} />;
+  // Visibility gate: unverified profiles are owner-previewable +
+  // admin viewable, but not anonymous-readable.
+  if (
+    !canSeeInvestor(
+      result.row,
+      session?.user.id ?? null,
+      session?.user.role ?? null,
+    )
+  ) {
+    notFound();
+  }
+
+  return <InvestorProfile card={result.card} signedIn={!!session} />;
 }
 
 function InvestorProfile({

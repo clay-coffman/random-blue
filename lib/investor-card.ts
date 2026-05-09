@@ -114,6 +114,24 @@ function rowToCard(row: InvestorProfileRow): InvestorPublicCard {
 }
 
 /**
+ * Visibility check: unverified profiles are owner-previewable + admin
+ * viewable, but not anonymous-readable. Verified profiles are public.
+ *
+ * Pass viewer context (user id + role) when known; pass `null`s when
+ * the request is anonymous.
+ */
+export function canSeeInvestor(
+  row: Pick<InvestorProfileRow, "userId" | "verificationStatus">,
+  viewerUserId: string | null,
+  viewerRole: string | null,
+): boolean {
+  if (row.verificationStatus === "verified") return true;
+  if (viewerRole === "goeo_admin" || viewerRole === "superadmin") return true;
+  if (viewerUserId && row.userId === viewerUserId) return true;
+  return false;
+}
+
+/**
  * Load a single investor profile by slug and shape into the canonical
  * public card. Returns null if the slug is unknown OR if the row has
  * no slug (i.e. unpublished).
@@ -135,27 +153,48 @@ export async function investorCard(
  * If the row has no slug, generate one from display_name (or firm_name)
  * via the shared slugify, append -2/-3/… on collision, persist, and
  * return the chosen slug. If the row already has a slug, return it.
+ *
+ * Race-safe: two concurrent calls (e.g. two browser tabs hitting
+ * /me/investor) can each see candidate `pelion` free in their probe.
+ * The UNIQUE index on `slug` keeps the DB consistent — the loser's
+ * UPDATE throws SQLITE_CONSTRAINT, we catch it and retry. After a
+ * successful UPDATE, re-read the row to honor whatever slug another
+ * concurrent call may have already assigned to this same user.
  */
 export async function ensureInvestorSlug(row: InvestorProfileRow): Promise<string> {
   if (row.slug) return row.slug;
   const seed = row.displayName ?? row.firmName ?? "investor";
   const base = slugify(seed) || "investor";
-  let candidate = base;
-  let n = 2;
-  while (true) {
-    const existing = await db()
+  for (let n = 1; n <= 50; n++) {
+    const candidate = n === 1 ? base : `${base}-${n}`;
+    const taken = await db()
       .select({ id: investorProfiles.id })
       .from(investorProfiles)
       .where(eq(investorProfiles.slug, candidate))
       .limit(1);
-    if (existing.length === 0) break;
-    candidate = `${base}-${n++}`;
+    if (taken.length > 0) continue;
+
+    try {
+      await db()
+        .update(investorProfiles)
+        .set({ slug: candidate })
+        .where(eq(investorProfiles.id, row.id));
+      const [refreshed] = await db()
+        .select({ slug: investorProfiles.slug })
+        .from(investorProfiles)
+        .where(eq(investorProfiles.id, row.id))
+        .limit(1);
+      return refreshed?.slug ?? candidate;
+    } catch (err) {
+      if (/UNIQUE/i.test(err instanceof Error ? err.message : String(err))) {
+        continue;
+      }
+      throw err;
+    }
   }
-  await db()
-    .update(investorProfiles)
-    .set({ slug: candidate })
-    .where(eq(investorProfiles.id, row.id));
-  return candidate;
+  throw new Error(
+    `Could not allocate a slug for investor ${row.id} after 50 tries`,
+  );
 }
 
 function formatCheckSize(min: number | null, max: number | null): string | null {
