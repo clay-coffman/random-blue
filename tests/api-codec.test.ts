@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { toWirePassportInput } from "@/lib/api-codec";
+import { GOALS, STAGES } from "@/lib/intake-options";
+import {
+  FounderGoal,
+  FounderStage,
+} from "@/schemas/founder-passport";
 import type { FounderPassportInput } from "@/types/passport";
 
 // `toWirePassportInput` is a pure transform — no fetch, no DB, no LLM.
@@ -69,13 +74,18 @@ describe("toWirePassportInput — vocabulary translation", () => {
     ).toBe("find_mentors");
   });
 
-  it("passes unknown values through (lets server zod fail loudly)", () => {
-    // An unrecognized stage shouldn't be silently coerced — the server's
+  it("passes unknown values through for both stage and goal (lets server zod fail loudly)", () => {
+    // An unrecognized value shouldn't be silently coerced — the server's
     // zod validation will reject it with a clear error, which is more
-    // useful than mapping to some default.
+    // useful than mapping to some default. Asserted on both axes so an
+    // asymmetric refactor of toSchemaStage / toSchemaGoal would be
+    // caught by tests.
     expect(toWirePassportInput({ ...base, stage: "fictional" }).stage).toBe(
       "fictional",
     );
+    expect(
+      toWirePassportInput({ ...base, goal: "fictional_goal" }).goal,
+    ).toBe("fictional_goal");
   });
 
   it("preserves undefined stage / goal", () => {
@@ -91,4 +101,27 @@ describe("toWirePassportInput — vocabulary translation", () => {
     expect(out.communities).toEqual(["women"]);
     expect(out.needs).toEqual(["capital"]);
   });
+});
+
+// Drift guards — every form-facing dropdown value must translate to a
+// valid schema enum. If anyone adds a new value to STAGES or GOALS in
+// `lib/intake-options.ts` without updating FORM_TO_SCHEMA_*, these
+// fail loudly at test time instead of silently 400ing in prod (the
+// exact bug this PR fixes). Symmetric coverage to the renamed-goal
+// assertions above; protects identity mappings (start_business →
+// start_business, etc.) too.
+describe("toWirePassportInput — drift guards", () => {
+  for (const opt of STAGES) {
+    it(`form stage "${opt.value}" maps to a valid FounderStage`, () => {
+      const wire = toWirePassportInput({ ...base, stage: opt.value });
+      expect(FounderStage.options).toContain(wire.stage);
+    });
+  }
+
+  for (const opt of GOALS) {
+    it(`form goal "${opt.value}" maps to a valid FounderGoal`, () => {
+      const wire = toWirePassportInput({ ...base, goal: opt.value });
+      expect(FounderGoal.options).toContain(wire.goal);
+    });
+  }
 });
