@@ -23,11 +23,13 @@ See `CLAUDE.md` § Source data for the file list and field notes.
 | Phase 3b — Navigator UI | Agent 3 — `/founder` intake, `/plan/:id` results, share link | PR #17 |
 | Phase 4a — Map + Profiles | Agent 4 — ecosystem map (MapLibre), company profiles, agent card routes | PR #24 (initial); PR #28 (view modes, dual-pane reveal, dominant-sector cluster colors, scroll-spy tabs, mobile drawer) |
 | Phase 4b — Auth + Admin | Agent 5 — Better Auth, OTP, onboarding, claim flow, GOEO admin | PR #20 |
+| Phase 5 — Saved-search alerts (T3) | "Save search" on map, daily/weekly cadence, GitHub Actions cron driver, signed unsubscribe — built post-launch in response to judge feedback | (this PR) |
 
 Migration state on `main`: `0000_flaky_scarlet_spider` (Agent 1) +
 `0001_brainy_sentinels` + `0002_slow_shotgun` (PR #16) +
-`0003_curious_fat_cobra` (PR #20, renumbered cleanly). Next free
-index is `0004`.
+`0003_curious_fat_cobra` (PR #20, renumbered cleanly) +
+`0004_hot_sinister_six` (saved_searches + search_alert_deliveries).
+Next free index is `0005`.
 
 ---
 

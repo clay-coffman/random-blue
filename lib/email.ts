@@ -57,6 +57,60 @@ export async function sendPasswordResetEmail(email: string, otp: string) {
   );
 }
 
+export async function sendSavedSearchAlertEmail(opts: {
+  to: string;
+  searchName: string;
+  manageUrl: string;
+  unsubscribeUrl: string;
+  newCompanies: {
+    name: string;
+    slug: string;
+    sector: string | null;
+    city: string | null;
+    summary: string | null;
+  }[];
+}) {
+  const { to, searchName, manageUrl, unsubscribeUrl, newCompanies } = opts;
+  const baseUrl = (env().BETTER_AUTH_URL ?? "https://startup.utah.gov").replace(
+    /\/$/,
+    "",
+  );
+  const items = newCompanies
+    .map((c) => {
+      const meta = [c.sector, c.city].filter(Boolean).join(" · ");
+      const desc = c.summary ? `<br><span style="color:#555">${escapeHtml(c.summary)}</span>` : "";
+      return `<li style="margin:0 0 12px">
+        <a href="${baseUrl}/companies/${encodeURIComponent(c.slug)}" style="font-weight:600;color:#c2410c;text-decoration:none">${escapeHtml(c.name)}</a>
+        ${meta ? `<br><span style="color:#777;font-size:13px">${escapeHtml(meta)}</span>` : ""}
+        ${desc}
+      </li>`;
+    })
+    .join("");
+  const count = newCompanies.length;
+  const subject = `${count} new ${count === 1 ? "company matches" : "companies match"} "${searchName}"`;
+  await send(
+    to,
+    subject,
+    `<h2 style="font-family:Georgia,serif">New matches for ${escapeHtml(searchName)}</h2>
+     <p>${count} new ${count === 1 ? "company matches" : "companies match"} this saved search since the last run.</p>
+     <ul style="padding-left:18px;font-family:Helvetica,Arial,sans-serif">${items}</ul>
+     <p style="margin-top:24px;font-size:12px;color:#777">
+       <a href="${manageUrl}" style="color:#777">Manage saved searches</a>
+       &nbsp;·&nbsp;
+       <a href="${unsubscribeUrl}" style="color:#777">Stop these alerts</a>
+     </p>`,
+  );
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function sendAdminInviteEmail(email: string, link: string) {
   await send(
     email,

@@ -314,6 +314,53 @@ export const investorProfiles = sqliteTable(
   (t) => [uniqueIndex("investor_profiles_user_idx").on(t.userId)],
 );
 
+// ─── Saved searches (T3 saved-search alerts) ────────────────────────
+
+export const savedSearches = sqliteTable(
+  "saved_searches",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => newId("ss")),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    filtersJson: text("filters_json").notNull(),
+    cadence: text("cadence").default("daily").notNull(),
+    lastRunAt: integer("last_run_at", { mode: "timestamp_ms" }),
+    lastMatchIdsJson: text("last_match_ids_json"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .$defaultFn(now)
+      .notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .$defaultFn(now)
+      .$onUpdate(now)
+      .notNull(),
+  },
+  (t) => [
+    index("saved_searches_user_idx").on(t.userId),
+    index("saved_searches_cadence_idx").on(t.cadence),
+  ],
+);
+
+export const searchAlertDeliveries = sqliteTable(
+  "search_alert_deliveries",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => newId("sad")),
+    savedSearchId: text("saved_search_id")
+      .notNull()
+      .references(() => savedSearches.id, { onDelete: "cascade" }),
+    newMatchIdsJson: text("new_match_ids_json").notNull(),
+    sentAt: integer("sent_at", { mode: "timestamp_ms" })
+      .$defaultFn(now)
+      .notNull(),
+  },
+  (t) => [index("search_alert_deliveries_search_idx").on(t.savedSearchId)],
+);
+
 // ─── Admin invites ───────────────────────────────────────────────────
 
 export const adminInvites = sqliteTable(

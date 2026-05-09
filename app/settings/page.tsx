@@ -14,6 +14,7 @@ import { ProfileSection } from "./_sections/ProfileSection";
 import { SecuritySection } from "./_sections/SecuritySection";
 import { InvestorSection } from "./_sections/InvestorSection";
 import { DangerZone } from "./_sections/DangerZone";
+import { NotificationsSection } from "./_sections/NotificationsSection";
 import {
   InvestorTypeEnum,
   StageEnum,
@@ -202,9 +203,7 @@ export default async function SettingsPage() {
 
         <section id="notifications" className="scroll-mt-20">
           <SectionLabel>↓ Notifications</SectionLabel>
-          <p className="rounded-tile border border-dashed border-topo bg-paper-2 p-4 text-sm text-ink-3">
-            Coming in Phase 5. Email digests + in-product alerts.
-          </p>
+          <NotificationsSection />
         </section>
 
         <section id="tokens" className="scroll-mt-20">
