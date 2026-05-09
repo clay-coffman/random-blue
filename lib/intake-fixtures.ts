@@ -1,10 +1,10 @@
 // Founder-passport fixtures used by the persona quick-test buttons and
-// the local recommend mock. Field values intentionally mirror
-// `db/seed/personas.ts` so the round-trip from button click → form
-// → mock recommend is consistent with the seeded data Agent 2's real
-// scoring will see.
+// the local recommend mock. Field values mirror `db/seed/personas.ts`
+// exactly so the round-trip from button click → form → mock recommend
+// is consistent with the seeded passport Agent 2's real scoring will
+// see.
 
-import type { FounderPassportInput } from "@/types/api";
+import type { FounderPassportInput } from "@/types/passport";
 import { personas } from "@/lib/personas";
 
 export type PersonaId = (typeof personas)[number]["id"];
@@ -18,8 +18,8 @@ export const personaFixtures: Record<PersonaId, FounderPassportInput> = {
     communities: ["student"],
     goal: "start_business",
     urgency: "this_month",
-    business_size: "solo",
-    needs: ["mentorship", "capital", "customers"],
+    businessSize: "solo",
+    needs: ["mentorship", "pitch_events", "community"],
     constraints: ["first_time_founder"],
   },
   maria: {
@@ -30,8 +30,8 @@ export const personaFixtures: Record<PersonaId, FounderPassportInput> = {
     communities: ["rural", "women"],
     goal: "scale_business",
     urgency: "this_quarter",
-    business_size: "small",
-    needs: ["capital", "operations"],
+    businessSize: "small",
+    needs: ["growth_capital", "operations", "rural_resources"],
     constraints: ["rural_location"],
   },
   marcus: {
@@ -42,8 +42,8 @@ export const personaFixtures: Record<PersonaId, FounderPassportInput> = {
     communities: ["veteran"],
     goal: "build_business",
     urgency: "this_quarter",
-    business_size: "small",
-    needs: ["capital", "facility", "mentorship"],
+    businessSize: "small",
+    needs: ["working_capital", "facility", "veteran_resources"],
     constraints: ["capex_intensive"],
   },
   priya: {
@@ -54,9 +54,9 @@ export const personaFixtures: Record<PersonaId, FounderPassportInput> = {
     communities: ["women"],
     goal: "raise_capital",
     urgency: "this_month",
-    business_size: "small",
-    needs: ["capital", "mentorship"],
-    constraints: ["paying_customers"],
+    businessSize: "small",
+    needs: ["angel_investors", "venture_capital", "pitch_prep"],
+    constraints: ["paying_customers", "18_months_in"],
   },
   david: {
     county: "Utah",
@@ -66,8 +66,8 @@ export const personaFixtures: Record<PersonaId, FounderPassportInput> = {
     communities: [],
     goal: "expand_internationally",
     urgency: "this_year",
-    business_size: "medium",
-    needs: ["regulatory", "customers", "operations"],
+    businessSize: "medium",
+    needs: ["export_assistance", "international_partners", "regulatory"],
     constraints: ["fda_cleared", "regulated_industry"],
   },
   amir: {
@@ -78,8 +78,8 @@ export const personaFixtures: Record<PersonaId, FounderPassportInput> = {
     communities: ["researcher"],
     goal: "commercialize_research",
     urgency: "this_quarter",
-    business_size: "solo",
-    needs: ["tech_transfer", "capital", "mentorship"],
+    businessSize: "solo",
+    needs: ["tech_transfer", "ip_legal", "non_dilutive_capital"],
     constraints: ["first_time_founder", "phd_research"],
   },
 };

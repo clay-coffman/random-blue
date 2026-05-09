@@ -7,18 +7,25 @@
 // uses real `r_*` IDs from `docs/source_data/Resources List - Builder
 // Day - Sheet1.csv` so deep links survive the merge.
 
+import {
+  GOALS,
+  INDUSTRIES,
+  NEEDS,
+  STAGES,
+  labelFor,
+} from "@/lib/intake-options";
 import type {
   FounderPassportInput,
-  RecommendResponse,
+  RecommendResult,
   RecommendedResource,
-} from "@/types/api";
+} from "@/types/passport";
 
 type Catalogue = {
-  resource_id: string;
+  resourceId: string;
   title: string;
   kind: string;
-  source_url: string;
-  contact_email?: string;
+  sourceUrl: string;
+  contactEmail?: string;
   matches: {
     industries?: string[];
     communities?: string[];
@@ -30,13 +37,42 @@ type Catalogue = {
   };
 };
 
+// Granular → coarse need synonyms so a fixture seeded with
+// `["angel_investors", "venture_capital"]` still matches a resource
+// tagged `["capital"]`. One-way: granular implies coarse, but coarse
+// does NOT pull in unrelated granular needs (e.g. "mentorship" should
+// not silently mean "wants to expand internationally").
+const GRANULAR_TO_COARSE: Record<string, string> = {
+  angel_investors: "capital",
+  venture_capital: "capital",
+  growth_capital: "capital",
+  working_capital: "capital",
+  non_dilutive_capital: "capital",
+  pitch_prep: "mentorship",
+  community: "mentorship",
+  rural_resources: "operations",
+  ip_legal: "operations",
+  veteran_resources: "mentorship",
+  international_partners: "customers",
+  export_assistance: "regulatory",
+};
+
+const expandNeeds = (needs: string[]): Set<string> => {
+  const out = new Set<string>(needs);
+  for (const n of needs) {
+    const coarse = GRANULAR_TO_COARSE[n];
+    if (coarse) out.add(coarse);
+  }
+  return out;
+};
+
 const catalogue: Catalogue[] = [
   {
-    resource_id: "r_2606",
+    resourceId: "r_2606",
     title: "Pelion Ventures",
     kind: "Capital — venture capital",
-    source_url: "https://pelionvp.com/",
-    contact_email: "info@pelionvp.com",
+    sourceUrl: "https://pelionvp.com/",
+    contactEmail: "info@pelionvp.com",
     matches: {
       industries: ["b2b_saas", "fintech"],
       needs: ["capital"],
@@ -46,11 +82,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2614",
+    resourceId: "r_2614",
     title: "Salt Lake Angels",
     kind: "Capital — angel group",
-    source_url: "https://slcangels.org/",
-    contact_email: "support@slcangels.org",
+    sourceUrl: "https://slcangels.org/",
+    contactEmail: "support@slcangels.org",
     matches: {
       industries: ["b2b_saas", "consumer_tech", "general"],
       needs: ["capital"],
@@ -60,11 +96,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2611",
+    resourceId: "r_2611",
     title: "Kickstart Fund",
     kind: "Capital — seed VC",
-    source_url: "https://www.kickstartfund.com/",
-    contact_email: "info@kickstartfund.com",
+    sourceUrl: "https://www.kickstartfund.com/",
+    contactEmail: "info@kickstartfund.com",
     matches: {
       industries: ["b2b_saas", "consumer_tech"],
       needs: ["capital"],
@@ -74,11 +110,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2596",
+    resourceId: "r_2596",
     title: "Mercato Partners",
     kind: "Capital — growth equity",
-    source_url: "https://www.mercatopartners.com/",
-    contact_email: "admin@mercatopartners.com",
+    sourceUrl: "https://www.mercatopartners.com/",
+    contactEmail: "admin@mercatopartners.com",
     matches: {
       industries: ["b2b_saas", "consumer_packaged_goods", "hospitality"],
       needs: ["capital"],
@@ -88,10 +124,10 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2585",
+    resourceId: "r_2585",
     title: "Utah Microloan Fund (UMLF)",
     kind: "Capital — microloans + training",
-    source_url: "https://www.utahmicroloanfund.org/",
+    sourceUrl: "https://www.utahmicroloanfund.org/",
     matches: {
       communities: ["women", "multicultural", "new_american", "rural"],
       needs: ["capital"],
@@ -101,11 +137,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2618",
+    resourceId: "r_2618",
     title: "Wildcat MicroFund",
     kind: "Capital — milestone grants",
-    source_url: "https://www.weber.edu/wildcat-microfund/",
-    contact_email: "wildcatmicrofund@weber.edu",
+    sourceUrl: "https://www.weber.edu/wildcat-microfund/",
+    contactEmail: "wildcatmicrofund@weber.edu",
     matches: {
       needs: ["capital"],
       goals: ["start_business", "build_business"],
@@ -114,11 +150,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2647",
+    resourceId: "r_2647",
     title: "Small Business Development Center (SBDC)",
     kind: "Mentorship — confidential consulting",
-    source_url: "https://utahsbdc.org/",
-    contact_email: "mike.finnerty@usu.edu",
+    sourceUrl: "https://utahsbdc.org/",
+    contactEmail: "mike.finnerty@usu.edu",
     matches: {
       communities: [
         "women",
@@ -140,11 +176,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2582",
+    resourceId: "r_2582",
     title: "University of Utah Lassonde Entrepreneur Institute",
     kind: "Community — student programs + grants",
-    source_url: "https://lassonde.utah.edu/",
-    contact_email: "lassonde@utah.edu",
+    sourceUrl: "https://lassonde.utah.edu/",
+    contactEmail: "lassonde@utah.edu",
     matches: {
       communities: ["student", "researcher"],
       needs: ["mentorship", "capital", "facility"],
@@ -159,11 +195,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2651",
+    resourceId: "r_2651",
     title: "A Bolder Way Forward",
     kind: "Community — women founders initiative",
-    source_url: "https://www.usu.edu/uwlp/abwf/",
-    contact_email: "uwlp@usu.edu",
+    sourceUrl: "https://www.usu.edu/uwlp/abwf/",
+    contactEmail: "uwlp@usu.edu",
     matches: {
       communities: ["women"],
       needs: ["mentorship", "operations"],
@@ -173,11 +209,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2682",
+    resourceId: "r_2682",
     title: "Utah Center for Rural Development",
     kind: "Capital + community — rural grants",
-    source_url: "https://business.utah.gov/rural/",
-    contact_email: "business@utah.gov",
+    sourceUrl: "https://business.utah.gov/rural/",
+    contactEmail: "business@utah.gov",
     matches: {
       communities: ["rural"],
       needs: ["capital", "operations"],
@@ -187,11 +223,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2590",
+    resourceId: "r_2590",
     title: "Utah Department of Agriculture & Food",
     kind: "Capital + regulatory — ag programs",
-    source_url: "https://ag.utah.gov/",
-    contact_email: "agriculture@utah.gov",
+    sourceUrl: "https://ag.utah.gov/",
+    contactEmail: "agriculture@utah.gov",
     matches: {
       industries: ["agriculture"],
       needs: ["capital", "regulatory"],
@@ -201,11 +237,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2656",
+    resourceId: "r_2656",
     title: "STRIVE — Veteran Entrepreneur Training",
     kind: "Mentorship — 6-week program",
-    source_url: "https://utahvbrc.org/strive",
-    contact_email: "vbrc@slcc.edu",
+    sourceUrl: "https://utahvbrc.org/strive",
+    contactEmail: "vbrc@slcc.edu",
     matches: {
       communities: ["veteran"],
       needs: ["mentorship", "capital"],
@@ -215,11 +251,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2642",
+    resourceId: "r_2642",
     title: "Veteran-Owned Business Registration Utah",
     kind: "Community — registry + visibility",
-    source_url: "https://vbr.veterans.utah.gov/s/",
-    contact_email: "vbrc@slcc.edu",
+    sourceUrl: "https://vbr.veterans.utah.gov/s/",
+    contactEmail: "vbrc@slcc.edu",
     matches: {
       communities: ["veteran"],
       needs: ["customers", "operations"],
@@ -229,11 +265,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2612",
+    resourceId: "r_2612",
     title: "World Trade Center Utah",
     kind: "International — export support",
-    source_url: "https://www.wtcutah.com/",
-    contact_email: "info@wtcutah.com",
+    sourceUrl: "https://www.wtcutah.com/",
+    contactEmail: "info@wtcutah.com",
     matches: {
       needs: ["customers", "operations", "regulatory"],
       goals: ["expand_internationally"],
@@ -242,11 +278,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_3666",
+    resourceId: "r_3666",
     title: "U.S. Commercial Service",
     kind: "International — federal export",
-    source_url: "https://www.trade.gov/utah-salt-lake-city",
-    contact_email: "Daniel.Bruner@trade.gov",
+    sourceUrl: "https://www.trade.gov/utah-salt-lake-city",
+    contactEmail: "Daniel.Bruner@trade.gov",
     matches: {
       needs: ["regulatory", "customers"],
       goals: ["expand_internationally"],
@@ -255,11 +291,11 @@ const catalogue: Catalogue[] = [
     },
   },
   {
-    resource_id: "r_2675",
+    resourceId: "r_2675",
     title: "Utah Pacific Islander Chamber of Commerce",
     kind: "Community — multicultural founders",
-    source_url: "https://www.upichamber.org/",
-    contact_email: "admin@upichamber.org",
+    sourceUrl: "https://www.upichamber.org/",
+    contactEmail: "admin@upichamber.org",
     matches: {
       communities: ["multicultural"],
       needs: ["mentorship", "capital", "customers"],
@@ -270,10 +306,14 @@ const catalogue: Catalogue[] = [
   },
 ];
 
-const overlap = (a: string[] | undefined, b: string[] | undefined): number => {
-  if (!a?.length || !b?.length) return 0;
+const overlap = (a: string[] | undefined, b: Iterable<string>): string[] => {
+  if (!a?.length) return [];
   const set = new Set(a);
-  return b.filter((x) => set.has(x)).length;
+  const hits: string[] = [];
+  for (const x of b) {
+    if (set.has(x)) hits.push(x);
+  }
+  return hits;
 };
 
 function score(
@@ -283,10 +323,11 @@ function score(
   let s = 0;
   const reasons: string[] = [];
   const m = candidate.matches;
+  const needsSet = expandNeeds(input.needs);
 
   if (m.stages?.length && input.stage && m.stages.includes(input.stage)) {
     s += 25;
-    reasons.push(`Matches stage: ${input.stage}`);
+    reasons.push(`Matches your stage: ${labelFor(STAGES, input.stage)}`);
   }
   if (
     m.industries?.length &&
@@ -294,69 +335,64 @@ function score(
     m.industries.includes(input.industry)
   ) {
     s += 15;
-    reasons.push(`Matches industry: ${input.industry}`);
+    reasons.push(
+      `Industry fit: ${labelFor(INDUSTRIES, input.industry) ?? input.industry}`,
+    );
   } else if (
     m.industries?.length &&
     m.industries.length <= 2 &&
     input.industry &&
     !m.industries.includes(input.industry)
   ) {
-    // Industry-specific resource, founder is in a different sector.
     s -= 25;
-    reasons.push(
-      `Industry-specific to ${m.industries.join(" / ")}.`,
-    );
+    const labels = m.industries
+      .map((i) => labelFor(INDUSTRIES, i) ?? i)
+      .join(" / ");
+    reasons.push(`Industry-specific to ${labels}.`);
   }
-  const goalHits = m.goals?.length && input.goal && m.goals.includes(input.goal)
-    ? 1
-    : 0;
-  if (goalHits) {
+
+  if (m.goals?.length && input.goal && m.goals.includes(input.goal)) {
     s += 20;
-    reasons.push(`Matches your goal: ${input.goal}`);
-  }
-  const needHits = overlap(m.needs, input.needs);
-  if (needHits > 0) {
-    s += 10 * needHits;
     reasons.push(
-      `Covers ${needHits} need${needHits === 1 ? "" : "s"}: ${input.needs
-        .filter((n) => m.needs?.includes(n))
-        .join(", ")}`,
+      `Aligned with your goal: ${labelFor(GOALS, input.goal) ?? input.goal}`,
     );
   }
+
+  const needHits = overlap(m.needs, needsSet);
+  if (needHits.length > 0) {
+    s += 10 * needHits.length;
+    const needLabels = needHits
+      .map((n) => labelFor(NEEDS, n) ?? n)
+      .join(", ");
+    reasons.push(
+      `Covers what you need: ${needLabels.toLowerCase()}.`,
+    );
+  }
+
   const communityHits = overlap(m.communities, input.communities);
-  if (communityHits > 0) {
-    s += 10 * communityHits;
+  if (communityHits.length > 0) {
+    s += 10 * communityHits.length;
     reasons.push(
-      `Built for: ${input.communities
-        .filter((c) => m.communities?.includes(c))
-        .join(", ")}`,
+      `Built for: ${communityHits.join(", ")} founders.`,
     );
-  } else if (
-    m.communities?.length &&
-    m.communities.length <= 2
-  ) {
-    // Resource is explicitly community-gated (e.g. veteran-only,
-    // women-only) and the founder isn't in that community.
+  } else if (m.communities?.length && m.communities.length <= 2) {
     s -= 100;
     reasons.push(
-      `Built for ${m.communities.join(" / ")} — that's not you.`,
+      `Built for ${m.communities.join(" / ")} founders — that's not your profile.`,
     );
   }
-  if (
-    m.statewide ||
-    (input.county && m.counties?.includes(input.county))
-  ) {
+
+  if (m.statewide || (input.county && m.counties?.includes(input.county))) {
     s += 10;
     reasons.push(
       m.statewide
-        ? "Available statewide"
-        : `Serves ${input.county} County`,
+        ? "Available statewide."
+        : `Serves ${input.county} County.`,
     );
   } else if (m.counties?.length && input.county) {
-    // out-of-area
     s -= 15;
     reasons.push(
-      `Limited to ${m.counties.join(", ")} (you're in ${input.county})`,
+      `Limited to ${m.counties.join(", ")} (you're in ${input.county}).`,
     );
   }
 
@@ -368,15 +404,12 @@ const because = (
   candidate: Catalogue,
   reasons: string[],
 ): string => {
-  const persona =
-    input.communities[0] ||
-    input.industry ||
-    input.stage ||
-    "Utah founder";
-  return `Because you're a ${persona.replace(/_/g, " ")}${
-    input.goal ? ` focused on ${input.goal.replace(/_/g, " ")}` : ""
-  }, ${candidate.title} is one of the closest fits in the state's portfolio${
-    reasons.length ? ` — ${reasons[0].toLowerCase()}.` : "."
+  const focus =
+    labelFor(GOALS, input.goal)?.toLowerCase() ?? "what you're building";
+  const stage =
+    labelFor(STAGES, input.stage)?.toLowerCase() ?? "where you are";
+  return `Because you're focused on ${focus} at the "${stage}" stage, ${candidate.title} is one of the closest fits in the state's portfolio${
+    reasons.length ? ` — ${reasons[0].toLowerCase()}` : "."
   }`;
 };
 
@@ -387,7 +420,7 @@ const actionFor = (
   const goal = input.goal;
   if (candidate.matches.needs?.includes("capital")) {
     return goal === "raise_capital"
-      ? `Email ${candidate.contact_email ?? "the team"} with a one-page pitch.`
+      ? `Email ${candidate.contactEmail ?? "the team"} with a one-page pitch.`
       : "Apply or check current open programs.";
   }
   if (candidate.matches.needs?.includes("mentorship")) {
@@ -402,7 +435,7 @@ const actionFor = (
 export function recommendMock(
   input: FounderPassportInput,
   passportId: string,
-): RecommendResponse {
+): RecommendResult {
   const scored = catalogue.map((c) => {
     const { score: s, reasons } = score(input, c);
     return { c, score: s, reasons };
@@ -417,7 +450,7 @@ export function recommendMock(
     else bucket = "ignore";
 
     return {
-      resource_id: row.c.resource_id,
+      resourceId: row.c.resourceId,
       title: row.c.title,
       score: Math.max(0, Math.min(100, Math.round(row.score))),
       bucket,
@@ -425,16 +458,16 @@ export function recommendMock(
         ? row.reasons
         : ["No strong field match — listed for completeness."],
       because: because(input, row.c, row.reasons),
-      action_text: actionFor(row.c, input),
+      actionText: actionFor(row.c, input),
       kind: row.c.kind,
-      source_url: row.c.source_url,
-      contact_email: row.c.contact_email,
+      sourceUrl: row.c.sourceUrl,
+      contactEmail: row.c.contactEmail,
     };
   });
 
   return {
-    passport_id: passportId,
+    passportId,
     recommendations,
-    generated_at: new Date().toISOString(),
+    generatedAt: new Date().toISOString(),
   };
 }

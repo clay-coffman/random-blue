@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SectionHeader } from "@/components/brand";
 import { isPersonaId, personaFixtures } from "@/lib/intake-fixtures";
 import { personaById } from "@/lib/personas";
+import type { FounderPassportInput } from "@/types/passport";
 import { IntakeForm } from "./_components/IntakeForm";
 import { PersonaButtons } from "./_components/PersonaButtons";
 
@@ -20,7 +21,9 @@ export default async function FounderPage({ searchParams }: PageProps) {
   const rawPersona = Array.isArray(sp.persona) ? sp.persona[0] : sp.persona;
   const personaId =
     rawPersona && isPersonaId(rawPersona) ? rawPersona : undefined;
-  const initial = personaId ? personaFixtures[personaId] : undefined;
+  const initial: FounderPassportInput | undefined = personaId
+    ? personaFixtures[personaId]
+    : undefined;
   const persona = personaId ? personaById(personaId) : undefined;
 
   return (

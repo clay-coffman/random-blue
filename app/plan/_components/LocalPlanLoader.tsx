@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Tile } from "@/components/brand";
-import type { FounderPassportInput, RecommendResponse } from "@/types/api";
+import type { FounderPassportInput, RecommendResult } from "@/types/passport";
 import { ResultsView } from "./ResultsView";
 
 type Props = { passportId: string };
 
 type Stash = {
   input: FounderPassportInput;
-  response: RecommendResponse;
+  result: RecommendResult;
 };
 
 export function LocalPlanLoader({ passportId }: Props) {
@@ -28,7 +28,7 @@ export function LocalPlanLoader({ passportId }: Props) {
         return;
       }
       const parsed = JSON.parse(raw) as Stash;
-      if (!parsed?.response?.recommendations) {
+      if (!parsed?.result?.recommendations) {
         setState({ kind: "missing" });
         return;
       }
@@ -82,7 +82,7 @@ export function LocalPlanLoader({ passportId }: Props) {
     <ResultsView
       passportId={passportId}
       input={state.data.input}
-      response={state.data.response}
+      result={state.data.result}
     />
   );
 }

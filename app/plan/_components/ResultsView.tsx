@@ -1,33 +1,36 @@
 import Link from "next/link";
 import { Chip, ScribbleDivider, Tile } from "@/components/brand";
-import { labelFor, GOALS, STAGES, INDUSTRIES } from "@/lib/intake-options";
+import {
+  COMMUNITY_TAGS,
+  GOALS,
+  INDUSTRIES,
+  STAGES,
+  labelFor,
+} from "@/lib/intake-options";
 import { personaIdFromPassport } from "@/lib/intake-fixtures";
 import { personaById } from "@/lib/personas";
 import type {
   FounderPassportInput,
-  RecommendResponse,
+  RecommendResult,
   RecommendedResource,
-} from "@/types/api";
+} from "@/types/passport";
 import { ShareLink } from "./ShareLink";
 
 type Props = {
   passportId: string;
   input: FounderPassportInput;
-  response: RecommendResponse;
+  result: RecommendResult;
 };
 
-const ucfirst = (s: string): string =>
-  s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");
-
-export function ResultsView({ passportId, input, response }: Props) {
+export function ResultsView({ passportId, input, result }: Props) {
   const personaId = personaIdFromPassport(passportId);
   const persona = personaId ? personaById(personaId) : undefined;
 
-  const now = response.recommendations.filter((r) => r.bucket === "now").slice(0, 3);
-  const next = response.recommendations
+  const now = result.recommendations.filter((r) => r.bucket === "now").slice(0, 3);
+  const next = result.recommendations
     .filter((r) => r.bucket === "next")
     .slice(0, 4);
-  const ignore = response.recommendations.filter((r) => r.bucket === "ignore");
+  const ignore = result.recommendations.filter((r) => r.bucket === "ignore");
 
   const headline = buildHeadline(persona?.displayName.split(",")[0], input);
 
@@ -58,7 +61,7 @@ export function ResultsView({ passportId, input, response }: Props) {
               {input.county && <Chip>{input.county} County</Chip>}
               {input.communities.map((c) => (
                 <Chip key={c} tone="stone">
-                  {ucfirst(c)}
+                  {labelFor(COMMUNITY_TAGS, c) ?? c}
                 </Chip>
               ))}
             </div>
@@ -176,7 +179,7 @@ function BucketColumn({
       </div>
       <ul className="flex flex-col gap-3">
         {items.map((r, i) => (
-          <li key={r.resource_id}>
+          <li key={r.resourceId}>
             <RecommendationCard
               resource={r}
               highlight={highlightFirst && i === 0}
@@ -217,7 +220,7 @@ function IgnoreColumn({ items }: { items: RecommendedResource[] }) {
         <ul className="mt-4 flex flex-col gap-2">
           {items.map((r) => (
             <li
-              key={r.resource_id}
+              key={r.resourceId}
               className="flex items-start gap-2 border-b border-dashed border-topo pb-2 last:border-0"
             >
               <span aria-hidden className="mt-1 font-mono text-xs text-ink-3">
@@ -287,21 +290,21 @@ function RecommendationCard({
 }
 
 function ResourceCta({ resource }: { resource: RecommendedResource }) {
-  if (resource.source_url) {
+  if (resource.sourceUrl) {
     return (
       <a
-        href={resource.source_url}
+        href={resource.sourceUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="font-mono text-[11px] font-bold uppercase tracking-wider text-ember hover:underline"
       >
-        {resource.action_text} →
+        {resource.actionText} →
       </a>
     );
   }
   return (
     <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-ember">
-      {resource.action_text}
+      {resource.actionText}
     </span>
   );
 }

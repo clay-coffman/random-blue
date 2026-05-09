@@ -5,23 +5,26 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Chip } from "@/components/brand";
 import { cn } from "@/lib/utils";
 import {
+  parseEnrichResponse,
+  toWirePassportInput,
+  fromWireRecommendResponse,
+  type PassportFieldName,
+} from "@/lib/api-codec";
+import {
   BUSINESS_SIZES,
   COMMUNITY_TAGS,
   COUNTIES,
+  FORM_NEEDS,
   GOALS,
   INDUSTRIES,
-  NEEDS,
   STAGES,
   URGENCIES,
   type Option,
 } from "@/lib/intake-options";
 import { isPersonaId, passportIdFor } from "@/lib/intake-fixtures";
 import { recommendMock } from "@/lib/recommend-mock";
-import type {
-  EnrichResponse,
-  FounderPassportInput,
-  RecommendResponse,
-} from "@/types/api";
+import type { RecommendResponseWire } from "@/types/api";
+import type { FounderPassportInput } from "@/types/passport";
 import { LiveJsonPreview } from "./LiveJsonPreview";
 
 type IntakeFormProps = {
@@ -32,12 +35,11 @@ type IntakeFormProps = {
 type EnrichState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "success"; filled: string[] }
-  | { status: "degraded" }
-  | { status: "error"; message: string };
+  | { status: "success"; filled: PassportFieldName[] }
+  | { status: "degraded" };
 
 const emptyPassport = (): FounderPassportInput => ({
-  website_url: "",
+  websiteUrl: "",
   county: undefined,
   city: "",
   stage: undefined,
@@ -45,7 +47,7 @@ const emptyPassport = (): FounderPassportInput => ({
   communities: [],
   goal: undefined,
   urgency: undefined,
-  business_size: undefined,
+  businessSize: undefined,
   needs: [],
   constraints: [],
 });
@@ -63,8 +65,9 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
   }));
   const [enrich, setEnrich] = useState<EnrichState>({ status: "idle" });
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | undefined>();
-  const [prefilledKeys, setPrefilledKeys] = useState<Set<string>>(new Set());
+  const [prefilledKeys, setPrefilledKeys] = useState<Set<PassportFieldName>>(
+    new Set(),
+  );
 
   // Reset when persona changes via the URL.
   const initialKey = JSON.stringify({ initial, personaId });
@@ -75,6 +78,7 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
       setPassport({ ...emptyPassport(), ...(initial ?? {}) });
       setEnrich({ status: "idle" });
       setPrefilledKeys(new Set());
+      setSubmitting(false);
     }
   }, [initial, initialKey]);
 
@@ -103,7 +107,7 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
     });
   };
 
-  const clearPrefillChip = (field: string) => {
+  const clearPrefillChip = (field: PassportFieldName) => {
     setPrefilledKeys((s) => {
       const next = new Set(s);
       next.delete(field);
@@ -112,7 +116,7 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
   };
 
   async function runEnrich() {
-    const url = passport.website_url?.trim();
+    const url = passport.websiteUrl?.trim();
     if (!url) return;
     setEnrich({ status: "loading" });
     const controller = new AbortController();
@@ -124,89 +128,93 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
         body: JSON.stringify({ website_url: url }),
         signal: controller.signal,
       });
-      clearTimeout(timeout);
       if (!res.ok) {
         setEnrich({ status: "degraded" });
         return;
       }
-      const data = (await res.json()) as EnrichResponse;
-      if (data.degraded || !data.fields?.length) {
+      const raw = await res.json();
+      const parsed = parseEnrichResponse(raw);
+      if (!parsed || parsed.degraded || parsed.fields.length === 0) {
         setEnrich({ status: "degraded" });
         return;
       }
-      const filled: string[] = [];
+      const filled: PassportFieldName[] = [];
       setPassport((p) => {
         const next = { ...p };
-        for (const f of data.fields) {
-          const k = f.name as keyof FounderPassportInput;
-          if (k === "website_url") continue;
+        for (const f of parsed.fields) {
+          const k = f.name as PassportFieldName;
+          // The codec already validated value type per field.
           if (k === "communities" || k === "needs" || k === "constraints") {
-            if (Array.isArray(f.value)) {
-              next[k] = f.value as string[];
-              filled.push(k);
-            }
-          } else if (typeof f.value === "string") {
-            (next as Record<string, unknown>)[k as string] = f.value;
-            filled.push(k as string);
+            next[k] = f.value as string[];
+          } else if (k === "websiteUrl") {
+            next.websiteUrl = f.value as string;
+          } else {
+            next[k] = f.value as string;
           }
+          filled.push(k);
         }
         return next;
       });
       setPrefilledKeys(new Set(filled));
       setEnrich({ status: "success", filled });
     } catch {
-      clearTimeout(timeout);
       setEnrich({ status: "degraded" });
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    setSubmitError(undefined);
 
-    const body = JSON.stringify(passport);
-    let response: RecommendResponse | undefined;
-    let passportId: string | undefined;
+    let result: ReturnType<typeof recommendMock> | undefined;
+    let resolvedPassportId: string | undefined;
 
     try {
       const res = await fetch("/api/v1/resources/recommend", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body,
+        body: JSON.stringify(toWirePassportInput(passport)),
       });
       if (res.ok) {
-        response = (await res.json()) as RecommendResponse;
-        passportId = response.passport_id;
+        const wire = (await res.json()) as RecommendResponseWire;
+        result = fromWireRecommendResponse(wire);
+        resolvedPassportId = result.passportId;
       }
     } catch {
       // network or DNS failure — fall through to mock
     }
 
-    if (!response || !passportId) {
+    if (!result || !resolvedPassportId) {
       // Agent 2 endpoint missing — synthesise locally.
-      passportId =
+      resolvedPassportId =
         personaId && isPersonaId(personaId)
           ? passportIdFor(personaId)
           : localPassportId();
-      response = recommendMock(passport, passportId);
+      result = recommendMock(passport, resolvedPassportId);
     }
 
     if (typeof window !== "undefined") {
       try {
         sessionStorage.setItem(
-          SESSION_KEY(passportId),
-          JSON.stringify({ input: passport, response }),
+          SESSION_KEY(resolvedPassportId),
+          JSON.stringify({ input: passport, result }),
         );
       } catch {
         // sessionStorage may be unavailable (private mode) — non-fatal
       }
     }
 
-    router.push(`/plan/${passportId}`);
+    try {
+      router.push(`/plan/${resolvedPassportId}`);
+    } finally {
+      // Reset so a back-navigation re-enables the submit button.
+      setSubmitting(false);
+    }
   }
 
-  const isPrefilled = (key: string) => prefilledKeys.has(key);
+  const isPrefilled = (key: PassportFieldName) => prefilledKeys.has(key);
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-6 md:grid-cols-[1.4fr_1fr]">
@@ -222,8 +230,8 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
               type="url"
               inputMode="url"
               placeholder="https://your-business.com"
-              value={passport.website_url ?? ""}
-              onChange={(e) => update("website_url", e.target.value)}
+              value={passport.websiteUrl ?? ""}
+              onChange={(e) => update("websiteUrl", e.target.value)}
               className="h-11 w-full rounded-tile border-[1.5px] border-ink bg-paper px-3 font-mono text-sm placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-ember/40"
               aria-describedby="enrich-status"
             />
@@ -231,7 +239,7 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
               type="button"
               onClick={runEnrich}
               disabled={
-                !passport.website_url?.trim() || enrich.status === "loading"
+                !passport.websiteUrl?.trim() || enrich.status === "loading"
               }
               className="inline-flex h-11 items-center justify-center rounded-tile border-[1.5px] border-ink bg-paper-2 px-4 font-mono text-[11px] uppercase tracking-wider transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -240,18 +248,17 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
           </div>
           <p
             id="enrich-status"
-            className="mt-2 min-h-[1.25rem] font-hand text-sm text-ink-3"
+            role="status"
             aria-live="polite"
+            className="mt-2 min-h-[1.25rem] font-hand text-sm text-ink-3"
           >
-            {enrich.status === "loading" &&
-              "Reading your site… you can keep typing."}
+            {enrich.status === "loading" && "Reading your site…"}
             {enrich.status === "success" &&
               `Filled ${enrich.filled.length} field${
                 enrich.filled.length === 1 ? "" : "s"
-              } from your site. Edit anything that's off.`}
+              }. Edit anything that's off.`}
             {enrich.status === "degraded" &&
               "Couldn't read that site — fill in below."}
-            {enrich.status === "error" && enrich.message}
           </p>
         </FieldGroup>
 
@@ -350,6 +357,7 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
             />
             <RadioField
               label="Urgency"
+              name="urgency"
               value={passport.urgency}
               options={URGENCIES}
               onChange={(v) => update("urgency", v)}
@@ -362,15 +370,15 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
           <div className="grid gap-3">
             <SelectField
               label="Business size / revenue stage"
-              value={passport.business_size}
+              value={passport.businessSize}
               options={BUSINESS_SIZES}
-              onChange={(v) => update("business_size", v)}
+              onChange={(v) => update("businessSize", v)}
               placeholder="Pick a size"
             />
             <div>
               <Label>What do you want? (pick any)</Label>
               <ChipMultiSelect
-                options={NEEDS}
+                options={FORM_NEEDS}
                 selected={passport.needs}
                 onToggle={(v) => toggleArrayValue("needs", v)}
                 prefilled={isPrefilled("needs")}
@@ -392,11 +400,6 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
             {submitting ? "Writing your plan…" : "Get my plan →"}
           </button>
         </div>
-        {submitError && (
-          <p className="text-sm text-danger" role="alert">
-            {submitError}
-          </p>
-        )}
       </div>
 
       <aside className="md:sticky md:top-24 md:h-fit">
@@ -448,16 +451,63 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 function PrefilledChip({ onClear }: { onClear?: () => void }) {
+  // `onMouseDown` short-circuits the wrapping label's click-to-focus
+  // behavior so dismissing the chip doesn't also focus/open the field.
   return (
     <button
       type="button"
-      onClick={onClear}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClear?.();
+      }}
       className="ml-2 inline-flex items-center gap-1 rounded-pill border-[1.5px] border-ember bg-ember-tint px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-ember"
+      aria-label="dismiss prefilled marker"
     >
       filled from your site ✕
     </button>
   );
 }
+
+function FieldShell({
+  label,
+  required,
+  prefilled,
+  onClearChip,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  prefilled?: boolean;
+  onClearChip?: () => void;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="block">
+      <div className="flex items-center">
+        <label htmlFor={htmlFor}>
+          <Label>
+            <span className="inline-flex items-center">
+              {label}
+              {required && <span className="ml-1 text-ember">*</span>}
+            </span>
+          </Label>
+        </label>
+        {prefilled && <PrefilledChip onClear={onClearChip} />}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const slugify = (s: string) =>
+  s.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase();
 
 function TextField({
   label,
@@ -474,22 +524,23 @@ function TextField({
   prefilled?: boolean;
   onClearChip?: () => void;
 }) {
+  const id = `tf-${slugify(label)}`;
   return (
-    <label className="block">
-      <Label>
-        <span className="inline-flex items-center">
-          {label}
-          {prefilled && <PrefilledChip onClear={onClearChip} />}
-        </span>
-      </Label>
+    <FieldShell
+      label={label}
+      htmlFor={id}
+      prefilled={prefilled}
+      onClearChip={onClearChip}
+    >
       <input
+        id={id}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className="h-11 w-full rounded-tile border-[1.5px] border-ink bg-paper px-3 text-sm placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-ember/40"
       />
-    </label>
+    </FieldShell>
   );
 }
 
@@ -512,17 +563,18 @@ function SelectField({
   required?: boolean;
   onClearChip?: () => void;
 }) {
+  const id = `sf-${slugify(label)}`;
   return (
-    <label className="block">
-      <Label>
-        <span className="inline-flex items-center">
-          {label}
-          {required && <span className="ml-1 text-ember">*</span>}
-          {prefilled && <PrefilledChip onClear={onClearChip} />}
-        </span>
-      </Label>
+    <FieldShell
+      label={label}
+      htmlFor={id}
+      required={required}
+      prefilled={prefilled}
+      onClearChip={onClearChip}
+    >
       <div className="relative">
         <select
+          id={id}
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           required={required}
@@ -544,17 +596,19 @@ function SelectField({
           ▾
         </span>
       </div>
-    </label>
+    </FieldShell>
   );
 }
 
 function RadioField({
   label,
+  name,
   value,
   options,
   onChange,
 }: {
   label: string;
+  name: string;
   value: string | undefined;
   options: Option[];
   onChange: (v: string) => void;
@@ -577,7 +631,7 @@ function RadioField({
             >
               <input
                 type="radio"
-                name={`urgency-${label}`}
+                name={name}
                 value={o.value}
                 checked={checked}
                 onChange={() => onChange(o.value)}
@@ -643,14 +697,13 @@ function ChipMultiSelect({
       {prefilled && (
         <div className="mt-2">
           <Chip tone="ember-tint" size="sm">
-            filled from your site
             <button
               type="button"
               onClick={onClearChip}
               aria-label="dismiss prefilled marker"
-              className="ml-1"
+              className="inline-flex items-center gap-1"
             >
-              ✕
+              filled from your site ✕
             </button>
           </Chip>
         </div>

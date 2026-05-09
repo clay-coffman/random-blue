@@ -1,6 +1,8 @@
 "use client";
 
-import type { FounderPassportInput } from "@/types/api";
+import { toWirePassportInput } from "@/lib/api-codec";
+import type { FounderPassportInputWire } from "@/types/api";
+import type { FounderPassportInput } from "@/types/passport";
 
 type Props = {
   passport: FounderPassportInput;
@@ -14,8 +16,12 @@ const isEmpty = (v: unknown): boolean => {
 };
 
 export function LiveJsonPreview({ passport, className }: Props) {
+  // Render the wire shape (snake_case) — this is what flows to /api/v1
+  // and what agents will see, so previewing the snake form makes the
+  // agent-native story legible.
+  const wire = toWirePassportInput(passport);
   const entries = (
-    Object.entries(passport) as [keyof FounderPassportInput, unknown][]
+    Object.entries(wire) as [keyof FounderPassportInputWire, unknown][]
   ).filter(([, v]) => !isEmpty(v));
 
   return (

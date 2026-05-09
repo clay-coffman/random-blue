@@ -98,7 +98,14 @@ export const COMMUNITY_TAGS: Option[] = [
   { value: "new_american", label: "New American / immigrant" },
 ];
 
+// NEEDS covers both the form's coarse vocabulary (`capital`,
+// `customers`, …) and the granular values seeded in
+// `db/seed/personas.ts` (`angel_investors`, `growth_capital`,
+// `pitch_events`, `working_capital`, `tech_transfer`, …). Both flow to
+// the recommend matcher; coarse values are easier for free-form intake,
+// granular values let persona quick-tests round-trip the seed exactly.
 export const NEEDS: Option[] = [
+  // Coarse, form-friendly buckets.
   { value: "capital", label: "Capital — angel, VC, grants" },
   { value: "customers", label: "Customers — intros, pilots, contracts" },
   { value: "talent", label: "Hiring / talent" },
@@ -107,7 +114,27 @@ export const NEEDS: Option[] = [
   { value: "operations", label: "Operating support (legal, bookkeeping, ops)" },
   { value: "facility", label: "Workspace / facility" },
   { value: "tech_transfer", label: "Tech transfer / commercialization" },
+  // Granular values used by the seed personas. Hidden from the chip
+  // multi-select but kept in the lookup so labels resolve.
+  { value: "angel_investors", label: "Angel investors" },
+  { value: "venture_capital", label: "Venture capital" },
+  { value: "growth_capital", label: "Growth capital" },
+  { value: "working_capital", label: "Working capital" },
+  { value: "non_dilutive_capital", label: "Non-dilutive capital / grants" },
+  { value: "pitch_events", label: "Pitch events" },
+  { value: "pitch_prep", label: "Pitch prep" },
+  { value: "community", label: "Founder community" },
+  { value: "rural_resources", label: "Rural-focused resources" },
+  { value: "veteran_resources", label: "Veteran-focused resources" },
+  { value: "export_assistance", label: "Export assistance" },
+  { value: "international_partners", label: "International partners" },
+  { value: "ip_legal", label: "IP / legal counsel" },
 ];
+
+// Subset of NEEDS shown as chips on the intake form. Values not in this
+// list are still valid (the seed uses them), they just aren't exposed
+// for free-form selection.
+export const FORM_NEEDS: Option[] = NEEDS.slice(0, 8);
 
 export const labelFor = (
   options: readonly Option[],

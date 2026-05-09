@@ -1,13 +1,16 @@
-// API contracts for the Founder Navigator.
+// Wire-format (snake_case) contracts for the Founder Navigator.
 //
-// These types are scaffolded from `docs/architecture.md` § Data flow A
-// and `docs/requirements.md`. Agent 2 owns this file going forward and
-// may tighten the types when their endpoints land. Wire format is
-// snake_case; the front-end consumes these shapes verbatim.
+// These types describe what crosses the network — request and response
+// bodies on `/api/v1/...`. Internal TS code uses camelCase types from
+// `types/passport.ts`; convert at the boundary via `lib/api-codec.ts`.
+//
+// Scaffolded from `docs/architecture.md` § Data flow A and
+// `docs/requirements.md`. Agent 2 owns this file going forward and may
+// tighten the types when their endpoints land.
 
 export type Bucket = "now" | "next" | "ignore";
 
-export type FounderPassportInput = {
+export type FounderPassportInputWire = {
   website_url?: string;
   county?: string;
   city?: string;
@@ -21,16 +24,16 @@ export type FounderPassportInput = {
   constraints: string[];
 };
 
-export type FounderPassport = FounderPassportInput & {
+export type FounderPassportWire = FounderPassportInputWire & {
   id: string;
   created_at: string;
   enriched_at?: string;
   enrichment_source?: string;
 };
 
-export type RecommendRequest = FounderPassportInput;
+export type RecommendRequestWire = FounderPassportInputWire;
 
-export type RecommendedResource = {
+export type RecommendedResourceWire = {
   resource_id: string;
   title: string;
   score: number;
@@ -43,25 +46,25 @@ export type RecommendedResource = {
   contact_email?: string;
 };
 
-export type RecommendResponse = {
+export type RecommendResponseWire = {
   passport_id: string;
-  recommendations: RecommendedResource[];
+  recommendations: RecommendedResourceWire[];
   generated_at: string;
 };
 
 // Smart prefill from a business website (Agent 2's enrich endpoint).
-export type EnrichRequest = {
+export type EnrichRequestWire = {
   website_url: string;
 };
 
-export type EnrichField = {
-  name: keyof FounderPassportInput | string;
+export type EnrichFieldWire = {
+  name: string;
   value: unknown;
   confidence: number;
 };
 
-export type EnrichResponse = {
-  fields: EnrichField[];
+export type EnrichResponseWire = {
+  fields: EnrichFieldWire[];
   degraded?: boolean;
 };
 
