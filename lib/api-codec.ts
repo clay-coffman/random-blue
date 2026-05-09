@@ -75,6 +75,16 @@ const WIRE_TO_CAMEL: Record<string, PassportFieldName> = {
   constraints: "constraints",
 };
 
+// Coerce form-bound empty strings to undefined so optional schema
+// fields don't fail validation. The form's `emptyPassport()` seeds
+// optional text fields with `""`; the API's zod schema declares them
+// `z.string().url().optional()` (website_url) or `z.string().optional()`
+// (city, business_size, business_type), all of which reject `""`.
+// Without this coercion, every form submit without a website populated
+// 400s with `Invalid url` even though the field is optional.
+const undef = (s: string | undefined): string | undefined =>
+  s && s.length > 0 ? s : undefined;
+
 export function toWirePassportInput(
   p: FounderPassportInput,
 ): FounderPassportInputWire {
@@ -85,19 +95,19 @@ export function toWirePassportInput(
   // FORM_TO_SCHEMA_GOAL in lib/intake-options.ts. Schema-vocab and
   // unknown values pass through unchanged.
   return {
-    website_url: p.websiteUrl,
-    county: p.county,
-    city: p.city,
+    website_url: undef(p.websiteUrl),
+    county: undef(p.county),
+    city: undef(p.city),
     stage: toSchemaStage(p.stage),
     industry: p.industry,
     communities: p.communities,
     goal: toSchemaGoal(p.goal),
-    urgency: p.urgency,
-    business_size: p.businessSize,
-    business_type: p.businessType,
+    urgency: undef(p.urgency),
+    business_size: undef(p.businessSize),
+    business_type: undef(p.businessType),
     needs: p.needs,
     constraints: p.constraints,
-    enrichment_source: p.enrichmentSource,
+    enrichment_source: undef(p.enrichmentSource),
   };
 }
 
