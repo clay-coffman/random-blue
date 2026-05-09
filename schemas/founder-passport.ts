@@ -24,12 +24,13 @@ export const FounderGoal = z.enum([
 ]);
 export type FounderGoal = z.infer<typeof FounderGoal>;
 
+// Listed in chronological order (soonest → latest).
 export const FounderUrgency = z.enum([
   "this_week",
   "this_month",
   "this_quarter",
-  "this_year",
   "next_quarter",
+  "this_year",
 ]);
 export type FounderUrgency = z.infer<typeof FounderUrgency>;
 

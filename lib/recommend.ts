@@ -232,11 +232,18 @@ function scoreCommunity(
   resource: ResourceRow,
   passport: FounderPassportInput,
 ): { score: number; reason: string | null } {
+  // Community is intentionally NOT given the 0.5 neutral fallback that the
+  // other scorers use. ~95% of resources in the dataset have empty
+  // `Communities`, so a 0.5 baseline would mean every founder gets a 5-pt
+  // floor on this component for almost every resource — flattening the
+  // distribution and amplifying community-tagged resources by less than
+  // intended. Empty either side returns 0 (zero contribution, no penalty);
+  // a real overlap returns 1 and adds the full 10 points.
   if (
     resource.communities.length === 0 ||
     passport.communities.length === 0
   ) {
-    return { score: 0, reason: null }; // empty either side → no penalty, no credit
+    return { score: 0, reason: null };
   }
   if (overlap(passport.communities, resource.communities)) {
     const matched = resource.communities.find((c) =>
@@ -278,19 +285,25 @@ export function scoreResource(
   return { score, reasons };
 }
 
+// Minimum score required to enter `now` or `next`. Items below this floor
+// don't get presented as actionable recommendations — a founder with
+// little signal in their passport sees a smaller list rather than 6
+// generic "do this now" cards.
+const ACTIONABLE_FLOOR = 25;
+
 export function bucketize(scored: Scored[]): {
   now: Scored[];
   next: Scored[];
   ignore: Scored[];
 } {
   const sorted = [...scored].sort((a, b) => b.score - a.score);
-  const now = sorted.slice(0, 3);
-  const next = sorted.slice(3, 6);
-  // "Ignore for now" = anything below 25 with at least one reason
-  // (i.e. nearly matched). Cap at 6 for response size.
+  const actionable = sorted.filter((s) => s.score >= ACTIONABLE_FLOOR);
+  const now = actionable.slice(0, 3);
+  const next = actionable.slice(3, 6);
+  // "Ignore for now" = anything below the actionable floor with at least
+  // one reason (i.e. nearly matched). Cap at 6 for response size.
   const ignore = sorted
-    .slice(6)
-    .filter((s) => s.score < 25 && s.reasons.length > 0)
+    .filter((s) => s.score < ACTIONABLE_FLOOR && s.reasons.length > 0)
     .slice(0, 6);
   return { now, next, ignore };
 }

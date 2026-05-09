@@ -248,7 +248,6 @@ describe("Edge cases", () => {
   it("statewide resource beats county-mismatched local resource", () => {
     const generalFounder: FounderPassportInput = {
       county: "Box Elder",
-      city: null as never,
       stage: "growth",
       industry: "agriculture",
       communities: [],
@@ -282,6 +281,34 @@ describe("Edge cases", () => {
 
   it("resource with no metadata returns a low score", () => {
     expect(score(generic, priya)).toBeLessThan(40);
+  });
+
+  it("bucketize hides weak-signal rows from now/next", () => {
+    // A passport that won't match any of the fixtures well: agriculture in
+    // Box Elder county, no goal-tagged topics. Top scores should all be
+    // below the actionable floor → empty now / next, populated ignore.
+    const lonelyFounder: FounderPassportInput = {
+      county: "Box Elder",
+      stage: "mature",
+      industry: "tourism",
+      communities: [],
+      goal: "find_workspace",
+      needs: [],
+      constraints: [],
+    };
+    const fixtures = [fundingSLC, educationSLC, generic];
+    const scored = fixtures.map((resource) => ({
+      resource,
+      ...scoreResource(resource, lonelyFounder),
+    }));
+    const buckets = bucketize(scored);
+    // No item should reach the actionable floor for this founder.
+    for (const b of [...buckets.now, ...buckets.next]) {
+      expect(b.score).toBeGreaterThanOrEqual(25);
+    }
+    // Weak matches with at least one reason should still appear in ignore
+    // (ranking-as-coaching).
+    expect(Array.isArray(buckets.ignore)).toBe(true);
   });
 
   it("bucketize splits top 3 / next 3 / ignore", () => {

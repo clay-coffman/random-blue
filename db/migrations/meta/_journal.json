@@ -15,6 +15,13 @@
       "when": 1778284641028,
       "tag": "0001_brainy_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1778287308246,
+      "tag": "0002_slow_shotgun",
+      "breakpoints": true
     }
   ]
 }

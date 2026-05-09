@@ -3,7 +3,6 @@ import { EnrichRequest } from "@/schemas/recommend";
 import { enrichWebsite } from "@/lib/website-enrich";
 
 export const runtime = "edge";
-export const maxDuration = 30;
 
 // Hosts where the founder probably pasted a profile/social, not a business
 // site. Brief: defer LinkedIn enrichment; require a real business website.

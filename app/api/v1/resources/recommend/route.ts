@@ -4,7 +4,12 @@ import { founderPassports, recommendations } from "@/db/schema";
 import { newId } from "@/lib/ids";
 import { ApiError, errorResponse } from "@/lib/api-error";
 import { RecommendRequest } from "@/schemas/recommend";
-import { FounderPassportInput } from "@/schemas/founder-passport";
+import {
+  FounderGoal,
+  FounderPassportInput,
+  FounderStage,
+  FounderUrgency,
+} from "@/schemas/founder-passport";
 import {
   bucketize,
   scoreResource,
@@ -12,6 +17,7 @@ import {
 } from "@/lib/recommend";
 import { loadAllResourceRows } from "@/lib/resources-loader";
 import { explainRecommendations } from "@/lib/recommend-explain";
+import { safeParseJson } from "@/lib/json-safe";
 import type {
   Bucket,
   RecommendResponse,
@@ -19,16 +25,10 @@ import type {
 } from "@/types/api";
 
 export const runtime = "edge";
-export const maxDuration = 30;
-
-function safeParseJson<T>(s: string | null | undefined, fallback: T): T {
-  if (!s) return fallback;
-  try {
-    return JSON.parse(s) as T;
-  } catch {
-    return fallback;
-  }
-}
+// Note: `maxDuration` (Vercel Functions config) is intentionally omitted —
+// the deploy target is Cloudflare Workers, where it has no effect. The
+// real long-tail caps are the AbortController timeouts in
+// explainRecommendations (12s) and enrichWebsite (8s fetch + 10s LLM).
 
 export async function POST(req: Request) {
   try {
@@ -50,6 +50,22 @@ export async function POST(req: Request) {
     let passport: FounderPassportInput;
 
     if (input.passport_id) {
+      // When `passport_id` is provided, the saved passport wins. Sending a
+      // full body alongside is a client mistake — reject so callers don't
+      // silently lose fields. (Documented in openapi-additions.md.)
+      const sentExtraFields =
+        input.stage !== undefined ||
+        input.industry !== undefined ||
+        input.goal !== undefined;
+      if (sentExtraFields) {
+        throw new ApiError({
+          code: "BAD_REQUEST",
+          message:
+            "Send either `passport_id` (use saved passport) OR a full passport body, not both.",
+          status: 400,
+        });
+      }
+
       const rows = await d
         .select()
         .from(founderPassports)
@@ -64,16 +80,33 @@ export async function POST(req: Request) {
         });
       }
       passportId = row.id;
+
+      // Validate enum-typed columns at the boundary. The DB stores text
+      // without CHECK constraints, so a corrupt or out-of-vocab value is
+      // possible. Hard-fail rather than silently degrade the scorer.
+      const stage = FounderStage.safeParse(row.stage);
+      const goal = FounderGoal.safeParse(row.goal);
+      if (!stage.success || !goal.success) {
+        throw new ApiError({
+          code: "INTERNAL",
+          message: `Stored passport ${row.id} has invalid stage/goal`,
+          status: 500,
+        });
+      }
+      const urgency = row.urgency
+        ? FounderUrgency.safeParse(row.urgency)
+        : null;
+
       passport = {
         county: row.county ?? undefined,
         city: row.city ?? undefined,
-        stage: row.stage as FounderPassportInput["stage"],
+        stage: stage.data,
         industry: row.industry ?? "",
         communities: safeParseJson<string[]>(row.communitiesJson, []),
-        goal: row.goal as FounderPassportInput["goal"],
-        urgency:
-          (row.urgency as FounderPassportInput["urgency"]) ?? undefined,
+        goal: goal.data,
+        urgency: urgency && urgency.success ? urgency.data : undefined,
         business_size: row.businessSize ?? undefined,
+        business_type: row.businessType ?? undefined,
         needs: safeParseJson<string[]>(row.needsJson, []),
         constraints: safeParseJson<string[]>(row.constraintsJson, []),
         website_url: row.websiteUrl ?? undefined,
@@ -102,6 +135,7 @@ export async function POST(req: Request) {
         goal: passport.goal,
         urgency: passport.urgency ?? null,
         businessSize: passport.business_size ?? null,
+        businessType: passport.business_type ?? null,
         needsJson: JSON.stringify(passport.needs),
         constraintsJson: JSON.stringify(passport.constraints),
         websiteUrl: passport.website_url ?? null,

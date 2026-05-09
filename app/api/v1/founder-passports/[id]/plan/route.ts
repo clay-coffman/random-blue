@@ -1,23 +1,15 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { founderPassports, recommendations, resources } from "@/db/schema";
 import { ApiError, errorResponse } from "@/lib/api-error";
+import { Bucket } from "@/schemas/recommend";
+import { safeParseJson } from "@/lib/json-safe";
 import type {
-  Bucket,
   PlanResponse,
   RecommendedResource,
 } from "@/types/api";
 
 export const runtime = "edge";
-
-function safeParseJson<T>(s: string | null | undefined, fallback: T): T {
-  if (!s) return fallback;
-  try {
-    return JSON.parse(s) as T;
-  } catch {
-    return fallback;
-  }
-}
 
 export async function GET(
   _req: Request,
@@ -48,21 +40,25 @@ export async function GET(
       .from(recommendations)
       .innerJoin(resources, eq(recommendations.resourceId, resources.id))
       .where(eq(recommendations.passportId, id))
-      .orderBy(recommendations.score);
+      .orderBy(desc(recommendations.score));
 
-    // Sort desc by score; rows came back asc so reverse.
-    rows.reverse();
-
-    const recs: RecommendedResource[] = rows.map((r) => ({
-      resource_id: r.res.id,
-      title: r.res.title,
-      source_url: r.res.sourceUrl,
-      score: r.rec.score,
-      bucket: (r.rec.bucket ?? "next") as Bucket,
-      reasons: safeParseJson<string[]>(r.rec.reasonsJson, []),
-      why: r.rec.actionText ?? null,
-      action: null,
-    }));
+    const recs: RecommendedResource[] = [];
+    for (const r of rows) {
+      // Validate the bucket value at the boundary; drop the row if it's
+      // unrecognized rather than silently labeling it `next`.
+      const bucketParsed = Bucket.safeParse(r.rec.bucket);
+      if (!bucketParsed.success) continue;
+      recs.push({
+        resource_id: r.res.id,
+        title: r.res.title,
+        source_url: r.res.sourceUrl,
+        score: r.rec.score,
+        bucket: bucketParsed.data,
+        reasons: safeParseJson<string[]>(r.rec.reasonsJson, []),
+        why: r.rec.actionText ?? null,
+        action: null,
+      });
+    }
 
     const payload: PlanResponse = {
       passport_id: id,

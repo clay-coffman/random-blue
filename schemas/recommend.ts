@@ -44,7 +44,12 @@ export type PlanResponse = z.infer<typeof PlanResponse>;
 // ─── Enrich ────────────────────────────────────────────────────────
 
 export const EnrichRequest = z.object({
-  website_url: z.string().url(),
+  website_url: z
+    .string()
+    .url()
+    .refine((u) => /^https?:\/\//i.test(u), {
+      message: "URL must use http or https.",
+    }),
 });
 export type EnrichRequest = z.infer<typeof EnrichRequest>;
 

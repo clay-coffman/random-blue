@@ -33,6 +33,7 @@ export async function POST(req: Request) {
         goal: input.goal,
         urgency: input.urgency ?? null,
         businessSize: input.business_size ?? null,
+        businessType: input.business_type ?? null,
         needsJson: JSON.stringify(input.needs),
         constraintsJson: JSON.stringify(input.constraints),
         websiteUrl: input.website_url ?? null,

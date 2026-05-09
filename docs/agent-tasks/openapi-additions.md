@@ -124,9 +124,12 @@ or
 
 **Errors:**
 
-- `400 BAD_REQUEST` — invalid request body (zod details in `details`).
+- `400 BAD_REQUEST` — invalid request body (zod details in `details`),
+  or both `passport_id` AND a full passport body sent. Send one or the
+  other; if `passport_id` is provided, the saved row wins.
 - `404 NOT_FOUND` — `passport_id` provided but doesn't exist.
-- `500 INTERNAL` — DB or unexpected error.
+- `500 INTERNAL` — DB or unexpected error, or the stored passport's
+  `stage` / `goal` is corrupt (out of vocab).
 
 **Side effects:**
 

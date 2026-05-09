@@ -201,6 +201,7 @@ export const founderPassports = sqliteTable(
     goal: text("goal"),
     urgency: text("urgency"),
     businessSize: text("business_size"),
+    businessType: text("business_type"),
     needsJson: text("needs_json"),
     constraintsJson: text("constraints_json"),
     websiteUrl: text("website_url"),
