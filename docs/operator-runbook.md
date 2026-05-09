@@ -114,7 +114,7 @@ npx wrangler d1 execute startup-state-atlas-db --remote \
 
 # Pending claim submissions
 npx wrangler d1 execute startup-state-atlas-db --remote \
-  --command "SELECT id, company_slug, status, created_at FROM business_ownership_submissions WHERE status = 'pending' ORDER BY created_at;"
+  --command "SELECT id, company_id, status, submitted_at FROM business_ownership_submissions WHERE status = 'pending' ORDER BY submitted_at;"
 
 # Outstanding admin invites that haven't been consumed yet
 npx wrangler d1 execute startup-state-atlas-db --remote \
@@ -224,26 +224,49 @@ flow yet. Phase 5. Until then, owner-side edits are applied
 immediately on submission (the field whitelist enforces what owners
 are allowed to change).
 
-### Demoting yourself
+### Demoting a superadmin
 
-The bootstrap script and `/admin/users` API both refuse to demote the
-currently-logged-in superadmin. If you genuinely need to demote
-yourself, sign in as a different superadmin and demote from there.
-This is intentional — it prevents an admin from accidentally locking
-the org out of `superadmin` access.
+The UI doesn't support demoting any superadmin — `/admin/users` returns
+a 409 (`"Superadmin role can only be changed via the bootstrap script"`)
+for every superadmin row, including your own. There's also a separate
+self-demote guard that blocks `goeo_admin` ↔ self changes (`"You can't
+change your own role from the UI"`).
 
-To mint a second superadmin so you can demote yourself, that second
-person must have signed up first, then run the bootstrap script
-against their email.
+The bootstrap script also doesn't demote — it only promotes. So
+despite what the UI error message implies, there's currently **no
+supported path** to demote a superadmin without going to the database
+directly:
+
+```bash
+# Replace <userId> with the user.id of the superadmin to demote.
+# Find it via:
+#   wrangler d1 execute startup-state-atlas-db --remote \
+#     --command "SELECT id, email, role FROM user WHERE role = 'superadmin';"
+npx wrangler d1 execute startup-state-atlas-db --remote \
+  --command "UPDATE user SET role = 'goeo_admin', updated_at = unixepoch() * 1000 WHERE id = '<userId>';"
+```
+
+Use this only when you genuinely need to step down or remove a
+departing superadmin. To preserve continuity, mint the replacement
+first (`npm run bootstrap-superadmin <new-email> -- --remote`) and
+confirm they can sign in before demoting the outgoing one.
 
 ## Pre-launch sanity checklist
 
 Run this end to end before announcing the production URL:
 
-- [ ] `npx wrangler secret list` includes `RESEND_API_KEY`,
-      `BETTER_AUTH_SECRET`, `ANTHROPIC_API_KEY`, `ATLAS_ADMIN_TOKEN`
-      (and any other secrets the deployment needs from
-      `.dev.vars.example`).
+- [ ] `npx wrangler secret list` includes:
+      - `RESEND_API_KEY` (transactional email)
+      - `BETTER_AUTH_SECRET` (session signing)
+      - `BETTER_AUTH_URL` (base URL for invite links — must match the
+        live host)
+      - `ANTHROPIC_API_KEY` (recommendation explanations, investor brief)
+      - `ATLAS_ADMIN_TOKEN` (machine-token write path for CLI/MCP)
+      - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
+        (required by the claim-queue document viewer at
+        `/admin/submissions/[id]` — without them, signed R2 URLs
+        fail and admins can't review uploaded ownership docs)
+      - Any other secrets in `.dev.vars.example` your deployment needs.
 - [ ] First superadmin minted via `npm run bootstrap-superadmin
       <email> -- --remote`. Confirmed they can sign in and reach
       `/admin`.
