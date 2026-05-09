@@ -6,7 +6,9 @@
 //
 // Mirrors lib/company-card.ts. snake_case wire format throughout.
 // Email is NEVER in the output — the only way to surface contact info
-// is via an admin-accepted intro request.
+// is via an admin-accepted intro request. Visibility gating
+// (verified-only for anon viewers; owner + admin can see unverified)
+// is applied by callers via canSeeInvestor() below.
 
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
