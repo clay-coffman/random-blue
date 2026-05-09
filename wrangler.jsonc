@@ -8,6 +8,14 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Custom domain. `custom_domain: true` makes Cloudflare manage the
+  // DNS record and the SSL cert automatically — no separate route or
+  // CNAME-setup dance. Apex + www both point at the Worker so either
+  // form serves the app.
+  "routes": [
+    { "pattern": "startupstateatlas.dev", "custom_domain": true },
+    { "pattern": "www.startupstateatlas.dev", "custom_domain": true }
+  ],
   "observability": {
     "enabled": true
   },
