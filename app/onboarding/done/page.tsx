@@ -41,7 +41,7 @@ const COPY: Record<string, RoleCopy> = {
       href: "/me/investor",
     },
     secondary: [
-      { label: "Browse the investor directory →", href: "/investors" },
+      { label: "Browse the investor directory →", href: "/investors/all" },
       { label: "Saved companies →", href: "/me/saved" },
       MAP,
       SETTINGS,

@@ -226,8 +226,10 @@ preferences personalize, they don't gate.
 **Not part of the initial production ship.** Phase 6 builds on top of
 Phase 4's investor identity. See `docs/archive/agent-tasks/agent-8-investor.md`.
 
-- **Public investor directory** at `/investors`. Anonymous-readable.
+- **Public investor directory** at `/investors/all`. Anonymous-readable.
   Lists profiles with `verification_status = 'verified'` only.
+  `/investors` is a public landing page that pitches the value to
+  investors and links into the map and the directory.
 - **Public investor profile** at `/investors/<slug>` with `.md` and
   `.json` agent variants (mirroring the company-profile triple).
   Investor email is **never** public — intros are admin-brokered.

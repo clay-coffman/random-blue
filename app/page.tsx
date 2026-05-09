@@ -23,7 +23,7 @@ const audienceCards = [
     title: "The map, with a memo.",
     body:
       "Filter by stage, sector, and county. Click any company for a one-page brief with citations.",
-    cta: { label: "Open the map →", href: "/map" },
+    cta: { label: "Why investors use Atlas →", href: "/investors" },
     tone: "sky" as const,
   },
   {
@@ -63,7 +63,7 @@ export default async function Home() {
             </em>
           </p>
           <p className="mt-5 max-w-[560px] text-base leading-relaxed text-ink-2">
-            Tell us who you&rsquo;re building. Atlas matches your situation
+            Tell us what you&rsquo;re building. Atlas matches your situation
             against every state-vetted resource &mdash; capital, mentors, pitch
             nights, rural and veteran programs &mdash; and returns a ranked
             plan, not a pile of links.

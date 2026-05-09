@@ -143,7 +143,8 @@ preferences, and `/settings` Investor section.
 
 | URL | Agent | Wireframe variant | Role | Notes |
 |-----|-------|------------------|------|-------|
-| `/investors` | 8 | — (mirror `/startups` directory pattern) | anon | Public directory; only `verified` profiles appear |
+| `/investors` | 8 | — | anon | Investor landing page (pitch + CTAs to `/map` and `/investors/all`) |
+| `/investors/all` | 8 | — (mirror `/startups` directory pattern) | anon | Public directory; only `verified` profiles appear |
 | `/investors/:slug` | 8 | — (mirror `/startups/:slug` profile) | anon | Public investor profile; **no email exposed** |
 | `/investors/:slug.md` | 8 | — | anon | Markdown agent card |
 | `/investors/:slug.json` | 8 | — | anon | JSON agent card |
