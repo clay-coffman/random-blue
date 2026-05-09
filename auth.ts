@@ -4,8 +4,13 @@ import { emailOTP } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/d1";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { D1Database } from "@cloudflare/workers-types";
+import { z } from "zod";
 import * as authSchema from "@/db/schema.auth";
 import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
+
+// Self-serve roles only. goeo_admin/superadmin are gained via
+// /admin/admins invites + scripts/bootstrap-superadmin.ts respectively.
+const SELF_SERVE_ROLE = z.enum(["founder", "owner", "investor"]);
 
 // Dual-mode Better Auth config. CLI codegen calls `betterAuth(...)` with
 // a stub D1 (no env). Runtime calls `getAuth()` which lazily wires the
@@ -44,12 +49,19 @@ function buildAuth(env?: CloudflareEnv) {
       // a value at insert time, but we set the default to 'founder' —
       // the brief's user-facing default. Sign-up forms pass the picked
       // role explicitly via `input: true`, which overrides the default.
+      // The validator restricts the role enum to the three self-serve
+      // values; goeo_admin and superadmin are *invite-only* (admin
+      // invites + bootstrap script), so the signup endpoint must reject
+      // any client trying to POST `{role: "superadmin"}`.
       additionalFields: {
         role: {
           type: "string",
           required: true,
           defaultValue: "founder",
           input: true,
+          validator: {
+            input: SELF_SERVE_ROLE,
+          },
         },
       },
       changeEmail: { enabled: true },

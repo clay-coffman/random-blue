@@ -5,24 +5,28 @@ import { investorProfiles } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
 import { getApiSession } from "@/lib/auth-utils";
 import { newId } from "@/lib/ids";
+import { InvestorPreferencesSchema } from "@/lib/investor-schema";
 
 export const dynamic = "force-dynamic";
 
-// POST: upsert caller's investor profile (one row per user).
+// POST: upsert caller's investor profile (one row per user). The
+// payload is validated against the same Zod schema the form uses, so
+// the closed-enum guarantees survive curl-side bypass attempts.
 export async function POST(req: Request) {
   const session = await getApiSession(req);
   if (!session) return errorResponse("unauthorized", "Sign in required.", 401);
 
-  const body = (await req.json().catch(() => null)) as {
-    firm_name?: string;
-    investor_type?: string;
-    stages?: string[];
-    sectors?: string[];
-    check_size_min?: number;
-    check_size_max?: number;
-    geo_focus?: string[];
-  } | null;
-  if (!body) return errorResponse("bad_request", "Body required.", 400);
+  const raw = await req.json().catch(() => null);
+  const parsed = InvestorPreferencesSchema.safeParse(raw);
+  if (!parsed.success) {
+    return errorResponse(
+      "bad_request",
+      "Invalid investor preferences.",
+      400,
+      parsed.error.flatten(),
+    );
+  }
+  const body = parsed.data;
 
   const userId = session.user.id;
   const [existing] = await db()
@@ -32,13 +36,13 @@ export async function POST(req: Request) {
     .limit(1);
 
   const values = {
-    firmName: body.firm_name ?? null,
-    investorType: body.investor_type ?? null,
-    stagesJson: body.stages ? JSON.stringify(body.stages) : null,
-    sectorsJson: body.sectors ? JSON.stringify(body.sectors) : null,
-    checkSizeMin: body.check_size_min ?? null,
-    checkSizeMax: body.check_size_max ?? null,
-    geoFocusJson: body.geo_focus ? JSON.stringify(body.geo_focus) : null,
+    firmName: body.firm_name,
+    investorType: body.investor_type,
+    stagesJson: JSON.stringify(body.stages),
+    sectorsJson: JSON.stringify(body.sectors),
+    checkSizeMin: body.check_size_min,
+    checkSizeMax: body.check_size_max,
+    geoFocusJson: JSON.stringify(body.geo_focus),
   };
 
   if (existing) {

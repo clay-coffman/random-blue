@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
   Form,
   FormControl,
@@ -13,57 +12,20 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  GEO_FOCUS_OPTIONS,
+  INVESTOR_TYPE_OPTIONS,
+  InvestorPreferencesSchema,
+  InvestorPreferencesValues,
+  SECTOR_OPTIONS,
+  STAGE_OPTIONS,
+} from "@/lib/investor-schema";
 
-export const INVESTOR_TYPES = [
-  { id: "vc", label: "VC" },
-  { id: "angel", label: "Angel" },
-  { id: "family_office", label: "Family office" },
-  { id: "corp_dev", label: "Corp dev" },
-  { id: "scout", label: "Scout" },
-  { id: "lp", label: "LP" },
-] as const;
-
-export const STAGES = [
-  { id: "pre_seed", label: "Pre-seed" },
-  { id: "seed", label: "Seed" },
-  { id: "series_a", label: "Series A" },
-  { id: "growth", label: "Growth" },
-] as const;
-
-export const SECTORS = [
-  { id: "b2b_saas", label: "B2B SaaS" },
-  { id: "fintech", label: "FinTech" },
-  { id: "ai", label: "AI" },
-  { id: "aerospace", label: "Aerospace" },
-  { id: "life_sciences", label: "Life sciences" },
-  { id: "energy", label: "Energy" },
-  { id: "consumer", label: "Consumer" },
-] as const;
-
-export const GEO_FOCUS = [
-  { id: "wasatch_front", label: "Wasatch Front" },
-  { id: "statewide", label: "Statewide" },
-  { id: "national", label: "National" },
-] as const;
-
-const Schema = z.object({
-  firm_name: z.string().min(2, "Enter your firm or affiliation"),
-  investor_type: z.enum([
-    "vc",
-    "angel",
-    "family_office",
-    "corp_dev",
-    "scout",
-    "lp",
-  ]),
-  stages: z.array(z.string()).min(1, "Pick at least one stage"),
-  sectors: z.array(z.string()).min(1, "Pick at least one sector"),
-  check_size_min: z.coerce.number().int().min(0),
-  check_size_max: z.coerce.number().int().min(0),
-  geo_focus: z.array(z.string()).min(1, "Pick at least one geo"),
-});
-
-export type InvestorPreferencesValues = z.infer<typeof Schema>;
+const INVESTOR_TYPES = INVESTOR_TYPE_OPTIONS;
+const STAGES = STAGE_OPTIONS;
+const SECTORS = SECTOR_OPTIONS;
+const GEO_FOCUS = GEO_FOCUS_OPTIONS;
+const Schema = InvestorPreferencesSchema;
 
 export type InvestorPreferencesDefaults = Partial<InvestorPreferencesValues>;
 

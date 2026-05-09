@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AuthFooterLink, AuthShell } from "@/components/auth/AuthShell";
 import { authClient } from "@/lib/auth-client";
+import { safeNext } from "@/lib/url";
 import {
   Form,
   FormControl,
@@ -30,7 +31,7 @@ type FormValues = z.infer<typeof Schema>;
 export default function SignInPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/";
+  const next = safeNext(params.get("next"));
   const errParam = params.get("error");
   const [serverError, setServerError] = useState<string | null>(
     errParam === "forbidden" ? "You don't have access to that page." : null,

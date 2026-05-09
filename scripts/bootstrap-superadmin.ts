@@ -8,7 +8,7 @@
 // description so the project lead knows to run it after the first
 // GOEO staff sign-up on prod.
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 const args = process.argv.slice(2);
 const remote = args.includes("--remote");
@@ -19,24 +19,41 @@ if (!email) {
   process.exit(2);
 }
 
-if (!email.includes("@")) {
-  console.error(`"${email}" doesn't look like an email.`);
+// Strict email pattern. The actual security comes from execFileSync
+// (no shell, so metacharacters can't escape quoting); this regex is
+// defense-in-depth against SQL injection from a hostile value.
+const EMAIL_RE = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
+if (!EMAIL_RE.test(email)) {
+  console.error(`"${email}" doesn't look like a valid email.`);
   process.exit(2);
 }
 
-// Escape single quotes for SQL literal (light defense; the email
-// passed by a project owner is trusted).
+// SQL '-quote escape (defense in depth — execFileSync already prevents
+// shell escape).
 const safeEmail = email.replace(/'/g, "''");
-
 const sql = `UPDATE user SET role = 'superadmin', updated_at = unixepoch() * 1000 WHERE email = '${safeEmail}';`;
 const target = remote ? "--remote" : "--local";
-const cmd = `npx wrangler d1 execute startup-state-atlas-db ${target} --command "${sql}" --json`;
 
-console.log(`→ ${cmd}`);
+console.log(
+  `→ npx wrangler d1 execute startup-state-atlas-db ${target} --command "<update>" --json`,
+);
 
 let raw: string;
 try {
-  raw = execSync(cmd, { encoding: "utf8" });
+  raw = execFileSync(
+    "npx",
+    [
+      "wrangler",
+      "d1",
+      "execute",
+      "startup-state-atlas-db",
+      target,
+      "--command",
+      sql,
+      "--json",
+    ],
+    { encoding: "utf8" },
+  );
 } catch (err) {
   console.error(
     "wrangler d1 execute failed:",

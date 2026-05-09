@@ -87,14 +87,16 @@ export async function PATCH(
   > | null;
   if (!body) return errorResponse("bad_request", "Body required.", 400);
 
-  // Auth precedence: machine token → admin session → owner session.
-  const machine = hasMachineToken(req);
-  const session = machine ? null : await getApiSession(req);
+  // Auth precedence: session (admin or owner) wins over the machine
+  // token if both are present, so an admin's user id is preserved in
+  // the audit row instead of being recorded as 'machine'.
+  const session = await getApiSession(req);
   const isAdmin = !!session && isAdminRole(session.user.role);
   const isOwner =
     !!session &&
     !!company.claimedByUserId &&
     company.claimedByUserId === session.user.id;
+  const machine = !session && hasMachineToken(req);
 
   if (!machine && !isAdmin && !isOwner) {
     return errorResponse(

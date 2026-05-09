@@ -14,6 +14,12 @@ import { ProfileSection } from "./_sections/ProfileSection";
 import { SecuritySection } from "./_sections/SecuritySection";
 import { InvestorSection } from "./_sections/InvestorSection";
 import { DangerZone } from "./_sections/DangerZone";
+import {
+  InvestorTypeEnum,
+  StageEnum,
+  SectorEnum,
+  GeoFocusEnum,
+} from "@/lib/investor-schema";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +43,12 @@ export default async function SettingsPage() {
     createdAt?: Date | string;
   };
   const role = user.role ?? "founder";
+
+  function fmtDate(v: Date | string | undefined): string {
+    if (!v) return "—";
+    const d = v instanceof Date ? v : new Date(v);
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "short" });
+  }
 
   // Role-specific data fetch.
   const [passport] =
@@ -106,13 +118,7 @@ export default async function SettingsPage() {
             {user.name}
           </h1>
           <p className="mt-1 text-sm text-ink-3">
-            {user.email} · joined{" "}
-            {user.createdAt
-              ? new Date(user.createdAt as string).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "short",
-                })
-              : "—"}
+            {user.email} · joined {fmtDate(user.createdAt)}
           </p>
         </header>
 
@@ -147,30 +153,7 @@ export default async function SettingsPage() {
           {role === "investor" ? (
             <InvestorSection
               defaults={
-                investor
-                  ? {
-                      firm_name: investor.firmName ?? undefined,
-                      investor_type:
-                        (investor.investorType as
-                          | "vc"
-                          | "angel"
-                          | "family_office"
-                          | "corp_dev"
-                          | "scout"
-                          | "lp") ?? undefined,
-                      stages: investor.stagesJson
-                        ? JSON.parse(investor.stagesJson)
-                        : undefined,
-                      sectors: investor.sectorsJson
-                        ? JSON.parse(investor.sectorsJson)
-                        : undefined,
-                      check_size_min: investor.checkSizeMin ?? undefined,
-                      check_size_max: investor.checkSizeMax ?? undefined,
-                      geo_focus: investor.geoFocusJson
-                        ? JSON.parse(investor.geoFocusJson)
-                        : undefined,
-                    }
-                  : undefined
+                investor ? toInvestorDefaults(investor) : undefined
               }
             />
           ) : null}
@@ -230,6 +213,45 @@ function SectionLabel({
       <ScribbleDivider className="mb-5" />
     </>
   );
+}
+
+// Shape the DB row into form defaults. Runtime-validate the closed
+// enums (DB stores text — bad values from a prior bug or manual SQL
+// shouldn't survive into the form's typed enum fields).
+type InvestorRow = {
+  firmName: string | null;
+  investorType: string | null;
+  stagesJson: string | null;
+  sectorsJson: string | null;
+  checkSizeMin: number | null;
+  checkSizeMax: number | null;
+  geoFocusJson: string | null;
+};
+function toInvestorDefaults(row: InvestorRow) {
+  const parseArr = (s: string | null) => {
+    if (!s) return [];
+    try {
+      const parsed: unknown = JSON.parse(s);
+      return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch {
+      return [];
+    }
+  };
+  return {
+    firm_name: row.firmName ?? undefined,
+    investor_type: InvestorTypeEnum.safeParse(row.investorType).data,
+    stages: parseArr(row.stagesJson).flatMap((s) =>
+      StageEnum.safeParse(s).data ? [StageEnum.parse(s)] : [],
+    ),
+    sectors: parseArr(row.sectorsJson).flatMap((s) =>
+      SectorEnum.safeParse(s).data ? [SectorEnum.parse(s)] : [],
+    ),
+    check_size_min: row.checkSizeMin ?? undefined,
+    check_size_max: row.checkSizeMax ?? undefined,
+    geo_focus: parseArr(row.geoFocusJson).flatMap((s) =>
+      GeoFocusEnum.safeParse(s).data ? [GeoFocusEnum.parse(s)] : [],
+    ),
+  };
 }
 
 function FounderRoleBlock({

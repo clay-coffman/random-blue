@@ -31,5 +31,19 @@ export function hasMachineToken(req: Request): boolean {
   const token = req.headers.get("x-atlas-admin-token");
   if (!token) return false;
   const expected = env().ATLAS_ADMIN_TOKEN;
-  return Boolean(expected) && token === expected;
+  if (!expected) return false;
+  return timingSafeStringEqual(token, expected);
+}
+
+// Constant-time string compare. Length mismatch returns false fast
+// (length leak is acceptable here — tokens are fixed-length); the
+// inner loop runs on every byte regardless of where the mismatch is,
+// avoiding the early-out that === permits.
+function timingSafeStringEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
 }

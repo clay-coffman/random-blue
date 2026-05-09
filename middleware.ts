@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { safeNext } from "@/lib/url";
 
 // Edge-cheap presence check. Pages and API route handlers re-verify
 // with `auth.api.getSession({ headers })` for role-aware decisions —
@@ -10,7 +11,12 @@ export default function middleware(req: NextRequest) {
   if (!session) {
     const url = req.nextUrl.clone();
     url.pathname = "/sign-in";
-    url.searchParams.set("next", req.nextUrl.pathname + req.nextUrl.search);
+    // safeNext keeps the post-login redirect within the app — prevents
+    // a crafted /admin/?next=https://evil.example bounce-attack.
+    url.searchParams.set(
+      "next",
+      safeNext(req.nextUrl.pathname + req.nextUrl.search),
+    );
     return NextResponse.redirect(url);
   }
 

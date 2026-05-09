@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { authClient } from "@/lib/auth-client";
+import { safeNext } from "@/lib/url";
 
 const OTP_TTL_SECONDS = 600; // matches auth.ts emailOTP.expiresIn
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -13,7 +14,7 @@ export default function SignUpVerifyPage() {
   const params = useSearchParams();
   const email = params.get("email") ?? "";
   const role = params.get("role") ?? "founder";
-  const next = params.get("next") ?? "";
+  const next = safeNext(params.get("next"), "");
 
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +50,9 @@ export default function SignUpVerifyPage() {
       for (let i = 0; i < 6; i++) next[i] = pasted[i] ?? "";
       return next;
     });
+    // Focus the next-empty cell, or the last cell when fully pasted.
     const lastFilled = Math.min(pasted.length, 6) - 1;
-    inputs.current[lastFilled === 5 ? 5 : lastFilled + 1]?.focus();
+    inputs.current[Math.min(5, lastFilled + 1)]?.focus();
   }
 
   function handleKeyDown(i: number, e: React.KeyboardEvent<HTMLInputElement>) {

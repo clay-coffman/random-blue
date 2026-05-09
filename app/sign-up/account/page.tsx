@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AuthFooterLink, AuthShell } from "@/components/auth/AuthShell";
 import { authClient } from "@/lib/auth-client";
+import { safeNext } from "@/lib/url";
 import {
   Form,
   FormControl,
@@ -48,7 +49,7 @@ export default function SignUpAccountPage() {
   const router = useRouter();
   const params = useSearchParams();
   const role = Role.safeParse(params.get("role") ?? "founder").data ?? "founder";
-  const next = params.get("next") ?? "";
+  const next = safeNext(params.get("next"), "");
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -68,9 +69,6 @@ export default function SignUpAccountPage() {
         name: values.name,
         email: values.email,
         password: values.password,
-        // additionalFields.role with input: true accepts this at signup.
-        // (Better Auth typing surfaces additional fields on the call site.)
-        // @ts-expect-error - role is a custom additional field
         role,
       });
       if (result.error) {

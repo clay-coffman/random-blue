@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { AuthFooterLink, AuthShell } from "@/components/auth/AuthShell";
+import { safeNext } from "@/lib/url";
 
 type Role = "founder" | "owner" | "investor";
 
@@ -39,7 +40,7 @@ export default function SignUpRolePage() {
   const router = useRouter();
   const params = useSearchParams();
   const intent = params.get("intent");
-  const next = params.get("next");
+  const next = safeNext(params.get("next"), "");
   const [role, setRole] = useState<Role>(
     intent === "claim" ? "owner" : "founder",
   );

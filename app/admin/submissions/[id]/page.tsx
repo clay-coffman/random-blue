@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { businessOwnershipSubmissions, companies } from "@/db/schema";
 import { user as userTable } from "@/db/schema.auth";
 import { presignOwnershipDocGet } from "@/lib/r2-presign";
+import { isSubdomainOf } from "@/lib/url";
 import { ScribbleDivider } from "@/components/brand";
 import { ReviewActions } from "./_actions";
 
@@ -56,10 +57,13 @@ export default async function AdminSubmissionReviewPage({
       return null;
     }
   })();
+  // Strict suffix match — websiteHost must equal submitterDomain or be
+  // a true subdomain (`.crew.com`), so "evilcrew.com" doesn't read as
+  // a `crew.com` match.
   const domainMatch =
     !!submitterDomain &&
     !!websiteHost &&
-    (submitterDomain === websiteHost || websiteHost.endsWith(submitterDomain));
+    isSubdomainOf(websiteHost, submitterDomain);
   const mode = domainMatch ? "auto" : "manual";
 
   // 60-second signed URL for the doc preview.

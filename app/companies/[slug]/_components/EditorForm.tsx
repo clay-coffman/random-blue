@@ -58,7 +58,23 @@ const Schema = z.object({
       "Year between 1800 and 2100",
     ),
   logo_url: optionalUrl,
-  founder_team_json: z.string().optional(),
+  // Stored as TEXT but parsed as JSON downstream — reject non-JSON
+  // strings on write so /api/v1/companies/:slug consumers don't throw.
+  founder_team_json: z
+    .string()
+    .optional()
+    .refine(
+      (s) => {
+        if (!s) return true;
+        try {
+          JSON.parse(s);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      "Must be valid JSON (e.g. [{\"name\":\"...\",\"role\":\"...\"}])",
+    ),
   // Admin-only:
   slug: z.string().optional(),
   linkedin: z.string().optional(),

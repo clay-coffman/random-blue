@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { desc } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { adminInvites } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
@@ -7,26 +8,22 @@ import { getApiSession, isSuperadmin } from "@/lib/auth-utils";
 import { newId } from "@/lib/ids";
 import { sendAdminInviteEmail } from "@/lib/email";
 import { env } from "@/lib/cf";
+import { sha256Hex } from "@/lib/hash";
+
+const InviteRequest = z.object({
+  email: z.string().email(),
+});
 
 export const dynamic = "force-dynamic";
 
-async function sha256Hex(input: string): Promise<string> {
-  const enc = new TextEncoder().encode(input);
-  const buf = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
+// 32 random bytes → 64-char lowercase hex. Uniform distribution, no
+// truncation, no UUID structure leak.
 function generateToken(): string {
-  // 32 random bytes → base32-like string. Crypto.randomUUID() also fine
-  // but uuid syntax leaks structure. Use base64url of random bytes.
   const arr = new Uint8Array(32);
   crypto.getRandomValues(arr);
   return Array.from(arr)
-    .map((b) => b.toString(36))
-    .join("")
-    .slice(0, 48);
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export async function POST(req: Request) {
@@ -35,12 +32,16 @@ export async function POST(req: Request) {
   if (!isSuperadmin(session.user.role)) {
     return errorResponse("forbidden", "Superadmin only.", 403);
   }
-  const body = (await req.json().catch(() => null)) as {
-    email?: string;
-  } | null;
-  if (!body || !body.email) {
-    return errorResponse("bad_request", "email is required.", 400);
+  const parsed = InviteRequest.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return errorResponse(
+      "bad_request",
+      "Valid email required.",
+      400,
+      parsed.error.flatten(),
+    );
   }
+  const { email } = parsed.data;
 
   const id = newId("aiv");
   const token = generateToken();
@@ -50,20 +51,21 @@ export async function POST(req: Request) {
 
   await db().insert(adminInvites).values({
     id,
-    email: body.email,
+    email,
     role: "goeo_admin",
     tokenHash,
     invitedByUserId: session.user.id,
     expiresAt,
   });
 
-  const baseUrl =
-    env().BETTER_AUTH_URL ?? new URL(req.url).origin;
-  const link = `${baseUrl}/admin/invite/${token}`;
-  await sendAdminInviteEmail(body.email, link);
+  const baseUrl = env().BETTER_AUTH_URL ?? new URL(req.url).origin;
+  // Invite redemption lives at /invite/[token] — outside /admin/* so
+  // the layout's role gate doesn't bounce the (still non-admin) invitee.
+  const link = `${baseUrl}/invite/${token}`;
+  await sendAdminInviteEmail(email, link);
 
   return NextResponse.json(
-    { id, email: body.email, expires_at: expiresAt },
+    { id, email, expires_at: expiresAt },
     { status: 201 },
   );
 }
