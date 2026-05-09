@@ -5,9 +5,10 @@
 // filtered in SQL).
 
 import { z } from "zod";
-import { and, eq, like, or, type SQL } from "drizzle-orm";
+import { and, eq, or, sql, type SQL } from "drizzle-orm";
 import { companies, companyLocations } from "@/db/schema";
 import { bucketMatchesRange, bucketMatchesBucket } from "@/lib/employee-bucket";
+import { escapeLikeWildcards } from "@/lib/sql";
 
 export const CompanyFilterParams = z.object({
   sector: z.string().trim().min(1).optional(),
@@ -89,12 +90,14 @@ export function buildBaseWhere(f: CompanyFilters): SQL | undefined {
   }
 
   if (f.q) {
-    const needle = `%${f.q}%`;
+    // Escape `%` / `_` / `\` so user input matches literally — same
+    // pattern as `app/api/v1/search/route.ts` and `resources/route.ts`.
+    const needle = `%${escapeLikeWildcards(f.q)}%`;
     const textSearch = or(
-      like(companies.name, needle),
-      like(companies.slug, needle),
-      like(companies.website, needle),
-      like(companies.description, needle),
+      sql`${companies.name} LIKE ${needle} ESCAPE '\\'`,
+      sql`${companies.slug} LIKE ${needle} ESCAPE '\\'`,
+      sql`${companies.website} LIKE ${needle} ESCAPE '\\'`,
+      sql`${companies.description} LIKE ${needle} ESCAPE '\\'`,
     );
     if (textSearch) clauses.push(textSearch);
   }

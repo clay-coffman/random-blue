@@ -15,6 +15,29 @@ const FIELDS: Record<string, string> = {
   contact_email: "contactEmail",
 };
 
+// GET: public read. Used by CLI/MCP `get_resource` and the founder UI
+// when linking out from a recommendation card.
+export async function GET(
+  _req: Request,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const { id } = await ctx.params;
+  const [row] = await db()
+    .select({
+      id: resources.id,
+      title: resources.title,
+      description: resources.description,
+      kind: resources.kind,
+      source_url: resources.sourceUrl,
+      contact_email: resources.contactEmail,
+    })
+    .from(resources)
+    .where(eq(resources.id, id))
+    .limit(1);
+  if (!row) return errorResponse("not_found", "Resource not found.", 404);
+  return NextResponse.json({ resource: row });
+}
+
 async function adminOnly(req: Request) {
   const session = await getApiSession(req);
   const machine = hasMachineToken(req);

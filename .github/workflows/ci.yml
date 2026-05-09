@@ -61,6 +61,18 @@ jobs:
         # `env().DB` etc. doesn't typecheck.
         run: npm run cf-typegen
 
+      - name: Verify OpenAPI spec is fresh
+        # `app/api/v1/openapi.yaml` is the source of truth; the
+        # generated `_openapi-spec.json` is committed and served by
+        # `app/api/v1/openapi.json/route.ts`. Regenerate and fail if
+        # the working tree is dirty so a stale JSON can't merge.
+        run: |
+          npm run openapi:build
+          if ! git diff --exit-code app/api/v1/_openapi-spec.json; then
+            echo "::error::OpenAPI JSON is stale. Run 'npm run openapi:build' locally and commit."
+            exit 1
+          fi
+
       - name: Lint
         run: npm run lint
 

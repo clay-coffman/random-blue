@@ -1,0 +1,76 @@
+# Startup State Atlas
+
+> Startup State Atlas is Utah's agent-readable map of startup
+> companies, founder resources, funding sources, mentor networks, and
+> ecosystem programs. Operated for the Utah Governor's Office of
+> Economic Development (GOED). Read the OpenAPI spec at
+> `/api/v1/openapi.json` before you call anything.
+
+## Core data
+
+- [OpenAPI 3.1 spec](/api/v1/openapi.json): Machine-readable contract
+  for every public endpoint.
+- [End-user agent rules](/AGENTS.md): What you must do before
+  recommending or writing.
+- [Resources API](/api/v1/resources): Searchable list of Utah startup
+  resources. Each item has `id` (`r_<n>`), `title`, `description`,
+  `kind`, `source_url`, `contact_email`.
+- [Companies API](/api/v1/companies): Searchable Utah company
+  directory. Each item has `slug`, `name`, `sector`, `stage`,
+  `employee_count`, ownership `status`.
+- [Generic search](/api/v1/search?q=accelerator&type=all): Cross-entity
+  search.
+- [Recommendations](/api/v1/resources/recommend): POST a founder
+  profile (or a `passport_id` for one of the seeded personas like
+  `fp_priya`) and get scored, bucketed Utah resources.
+- [Cached plan](/api/v1/founder-passports/{id}/plan): Re-read a saved
+  recommendation set.
+- [Founder Passport schema](/api/v1/openapi.json#/components/schemas/FounderPassportInput):
+  Required intake fields.
+- [Company Profile schema](/api/v1/openapi.json#/components/schemas/Company):
+  How companies represent themselves.
+
+## Authentication for writes
+
+Read endpoints are open. Writes (`PATCH /companies/{slug}`,
+`POST /ownership-submissions`) require either a Better Auth session
+cookie (humans through the web) or the `X-Atlas-Admin-Token` header
+(machine clients). Configure `ATLAS_ADMIN_TOKEN` in your environment
+and send it as `X-Atlas-Admin-Token: <token>`. Do not impersonate
+human sessions.
+
+## Error envelope
+
+Every non-2xx response uses:
+
+```json
+{ "error": { "code": "string", "message": "string", "details": {} } }
+```
+
+Codes you'll see: `bad_request`, `not_found`, `forbidden`,
+`unauthorized`, `conflict`, `internal`.
+
+## Agent instructions
+
+- **Never recommend a resource that does not appear in the API
+  result.** No fabrications. No "resources I know of in Utah."
+- **Always cite resource id and link.** Example:
+  `Small Business Administration ([r_2628](/api/v1/resources/r_2628))`.
+- **Ask for county / stage / industry / goal before recommending.**
+  Without these, the scoring engine can't bucket resources for
+  the founder's situation.
+- **Prefer 3 high-fit resources over broad lists.** The recommend
+  endpoint returns `now`, `next`, and `ignore` buckets; surface the
+  `now` bucket first. Don't paste the whole `ignore` list.
+- **For company facts, call `GET /api/v1/companies/{slug}`.** Don't
+  invent funding rounds, headcount, or founders.
+- **For ownership claims, send the user to the web sign-up + R2
+  upload flow.** Do not try to claim a company on a user's behalf
+  through the API. The `start_company_claim` MCP tool was
+  intentionally removed.
+- **Respect the `goal` vocabulary.** Valid values:
+  `start_business`, `raise_seed_round`, `raise_growth_round`,
+  `find_customers`, `hire`, `export`, `commercialize_research`,
+  `find_workspace`, `find_mentors`, `scale_business`.
+- **Respect the `stage` vocabulary.** Valid values: `idea`,
+  `pre_seed`, `mvp`, `paying_customers`, `growth`, `mature`.

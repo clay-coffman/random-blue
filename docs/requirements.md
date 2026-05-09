@@ -330,13 +330,16 @@ context obvious.
 
 - **REST API** under `/api/v1/...` — versioned. OpenAPI spec at
   `/api/v1/openapi.json`.
-- **CLI** (`startup-state` bin):
-  - `startup-state recommend --persona priya --compact`
-  - `startup-state map search --sector fintech --stage seed --json`
-  - `startup-state company claim crew --domain trycrew.com --email founder@trycrew.com`
-  - `startup-state profile build --company "NewCo" --from-url … --emit md,json,llms`
-- **MCP server** (`startup-state-mcp` bin, stdio for local Claude
-  Desktop usage). Tools: `recommend_resources`, `search_resources`,
+- **CLI** — invoked as `npm run cli -- <args>` from a checkout (no
+  global bin):
+  - `npm run cli -- recommend --persona priya --compact`
+  - `npm run cli -- map search --sector fintech --stage seed --json`
+  - `npm run cli -- company patch <slug> --field …` (write — needs
+    `ATLAS_ADMIN_TOKEN`)
+  - `npm run cli -- profile build --company "NewCo" --from-url … --emit md,json,llms`
+- **MCP server** — `npm run mcp` (stdio, for local Claude Desktop)
+  plus a stateless Streamable-HTTP endpoint at `/api/mcp` (for remote
+  clients). Tools: `recommend_resources`, `search_resources`,
   `search_companies`, `get_company`, `start_company_claim`,
   `update_company_profile`, `generate_founder_plan`,
   `generate_investor_tour`. Resources:
@@ -410,9 +413,9 @@ fixtures.
    `/startups/crew.md` and `/api/v1/companies/crew` both updated
    from the same canonical source.
 5. **Terminal / MCP proof** — Run
-   `startup-state recommend --persona priya --compact`, then
-   `startup-state company get crew --json`, then show the MCP tools
-   list.
+   `npm run cli -- recommend --persona priya --compact`, then
+   `npm run cli -- company get crew --json`, then show the MCP tools
+   list (`npm run mcp` + MCP Inspector, or `curl /api/mcp`).
 
 ## Customer priorities (from the GOED brief)
 

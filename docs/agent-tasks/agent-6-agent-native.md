@@ -52,10 +52,12 @@ this layer. Aim for ~120 minutes.
 - `app/api/v1/openapi.json/route.ts` — serves the YAML as JSON.
 - `app/api/v1/search/route.ts` — generic search across resources +
   companies.
-- `cli/index.ts` — CLI entry; `startup-state` bin in
-  `package.json`.
+- `cli/index.ts` — CLI entry, invoked as `npm run cli -- <args>`
+  from a checkout (no published bin).
 - `cli/commands/*.ts` — subcommand handlers.
-- `mcp/server.ts` — MCP server; `startup-state-mcp` bin.
+- `mcp/server.ts` — local stdio MCP server, invoked as `npm run mcp`.
+- `app/api/mcp/route.ts` — stateless Streamable-HTTP MCP endpoint
+  for remote clients (Cloudflare Workers, no DO needed).
 - `mcp/tools/*.ts`, `mcp/resources/*.ts`, `mcp/prompts/*.ts`.
 - `public/llms.txt`.
 - `public/AGENTS.md` (END-USER-FACING — distinct from root
@@ -111,21 +113,21 @@ Reads the YAML at request time (Workers can read from `app/`'s
 public assets), parses, returns as JSON. Or simpler: import a
 generated `.ts` constant.
 
-### 3. CLI (`cli/index.ts` → `startup-state` bin)
+### 3. CLI (`cli/index.ts`, run as `npm run cli`)
 
-Subcommands:
+Subcommands (`npm run cli -- ...`):
 
-- `startup-state recommend --persona <name>`
+- `npm run cli -- recommend --persona <name>`
   `[--county <c>] [--stage <s>] [--industry <i>] [--goal <g>]
    [--compact] [--json]`
-- `startup-state map search --sector <s> --stage <s>
+- `npm run cli -- map search --sector <s> --stage <s>
    --employees <range> [--json]`
-- `startup-state company get <slug> [--json]`
-- `startup-state company patch <slug> --field key=value …`
+- `npm run cli -- company get <slug> [--json]`
+- `npm run cli -- company patch <slug> --field key=value …`
    — uses `X-Atlas-Admin-Token` from env. Replaces the old
    `company claim` subcommand: human ownership goes through the
    web sign-up + R2 upload flow, not the CLI.
-- `startup-state profile build --company <name>
+- `npm run cli -- profile build --company <name>
    --from-url <url> --emit md,json,llms`
 
 Implementation:
@@ -138,18 +140,13 @@ Implementation:
 - `--persona <name>` shortcut: load the canonical
   `fp_<name>` ID and POST to `/api/v1/founder-passports/:id/plan`.
 
-Add the bin entry to `package.json`:
+Distribution: external agents run `npm run cli -- <args>` from a
+checkout. Don't ship `bin` entries — the shebang would point at a
+TypeScript file, and `tsx` is a devDependency, so a globally
+installed `npx startup-state` would fail. The CLI script in
+package.json (`"cli": "tsx cli/index.ts"`) is the canonical entry.
 
-```jsonc
-"bin": {
-  "startup-state": "./cli/index.js",
-  "startup-state-mcp": "./mcp/server.js"
-}
-```
-
-(Or use `tsx` for dev: `npx startup-state` works via `npm run cli`.)
-
-### 4. MCP server (`mcp/server.ts` → `startup-state-mcp` bin)
+### 4. MCP server (`mcp/server.ts`, run as `npm run mcp`)
 
 Use `@modelcontextprotocol/sdk` (install it). Stdio transport for
 local Claude Desktop configuration.
@@ -225,8 +222,9 @@ Per `docs/archive/product-plan-original.md` lines 800–815. Human-readable. Sec
 
 - "Startup State for Agents" headline.
 - API: `curl https://...../api/v1/resources/recommend ...`
-- CLI: `npm install -g startup-state-cli` (or `npx`-style).
-- Claude Desktop MCP config snippet.
+- CLI: `git clone … && npm install && npm run cli -- <args>`.
+- Claude Desktop MCP config snippet (uses `npx -y tsx <abs-path>/mcp/server.ts`,
+  not a published bin).
 - Link to `/llms.txt` and `/AGENTS.md`.
 - Link to OpenAPI: `/api/v1/openapi.json`.
 
@@ -260,7 +258,8 @@ gh pr create --base main --title "Agent-native layer"
    ```jsonc
    "mcpServers": {
      "startup-state": {
-       "command": "npx", "args": ["startup-state-mcp"],
+       "command": "npx",
+       "args": ["-y", "tsx", "<absolute-path>/mcp/server.ts"],
        "env": { "STARTUP_STATE_API_URL": "https://..." }
      }
    }

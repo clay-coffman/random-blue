@@ -1,0 +1,733 @@
+openapi: 3.1.0
+info:
+  title: Startup State Atlas API
+  version: "1.0"
+  summary: Utah's agent-readable map of startup companies and resources.
+  description: |
+    The Startup State Atlas API powers the Founder Navigator, the Utah
+    Startup Map, and the agent-native CLI/MCP surfaces.
+
+    ## Authentication
+
+    Two authentication modes are supported:
+
+    - **Better Auth session cookie** (`auth.session_token`) — set by
+      `/sign-in` and `/sign-up`. Used by humans clicking through the
+      web UI. Roles: `owner`, `goeo_admin`, `superadmin`.
+    - **`X-Atlas-Admin-Token`** header — service-account-style token
+      validated against `env.ATLAS_ADMIN_TOKEN`. Used by the local
+      CLI, the local stdio MCP server, and any external machine
+      client. Bypasses Better Auth and assumes a privileged caller.
+
+    Read endpoints are open to both. Write endpoints accept either.
+    For owner-edit on `PATCH /api/v1/companies/{slug}`, the session
+    user id must match `companies.claimed_by_user_id`.
+
+    ## Error envelope
+
+    Every non-2xx response uses the same shape:
+
+    ```json
+    { "error": { "code": "string", "message": "string", "details": "unknown?" } }
+    ```
+
+    Codes used: `bad_request`, `not_found`, `forbidden`, `unauthorized`,
+    `conflict`, `internal`.
+
+    ## Wire format
+
+    All wire fields are `snake_case`. Internal TS uses `camelCase` and
+    converts at the boundary via `lib/api-codec.ts`.
+
+servers:
+  - url: https://startup.utah.gov
+    description: Production
+  - url: http://localhost:3000
+    description: Local dev (Next.js)
+  - url: http://localhost:8787
+    description: Local Worker preview (`npm run preview`)
+
+security:
+  - cookieAuth: []
+  - atlasAdminToken: []
+  - {}
+
+tags:
+  - name: founder-passports
+    description: Intake profiles + cached recommendation plans.
+  - name: recommend
+    description: Score Utah resources against a founder profile.
+  - name: resources
+    description: The library of Utah startup resources.
+  - name: companies
+    description: Utah startup company directory + ownership.
+  - name: ownership
+    description: Business-owner verification flow.
+  - name: search
+    description: Generic search across resources + companies.
+  - name: meta
+    description: API metadata (OpenAPI spec, etc.).
+
+paths:
+  /api/v1/founder-passports:
+    post:
+      tags: [founder-passports]
+      operationId: createFounderPassport
+      summary: Create a founder passport without computing recommendations.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FounderPassportInput"
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [passport_id]
+                properties:
+                  passport_id:
+                    type: string
+                    pattern: "^fp_[a-zA-Z0-9_-]+$"
+                    example: fp_x9p2w8KsPq
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "500": { $ref: "#/components/responses/Internal" }
+
+  /api/v1/founder-passports/enrich:
+    post:
+      tags: [founder-passports]
+      operationId: enrichFounderPassport
+      summary: Extract intake fields from a website URL via fetch + LLM.
+      description: |
+        The user pastes a website URL on the intake form; this endpoint
+        fetches the page directly and pipes the text through Anthropic
+        with a structured-output prompt, returning a partial set of
+        fields the front-end can use to prefill chips. **No persistence.**
+        On fetch failure / non-HTML response / LLM timeout / private-IP
+        rejection the response degrades to `{ fields: [], degraded: true }`
+        — never returns 5xx for upstream failures.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [website_url]
+              properties:
+                website_url:
+                  type: string
+                  format: uri
+                  description: Must use http:// or https://. Social/profile hosts (linkedin, x, github, etc.) are rejected.
+                  example: https://example.com
+      responses:
+        "200":
+          description: Extracted fields (possibly degraded).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnrichResponse"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "500": { $ref: "#/components/responses/Internal" }
+
+  /api/v1/founder-passports/{id}/plan:
+    get:
+      tags: [founder-passports]
+      operationId: getFounderPlan
+      summary: Return cached recommendations for a passport.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/PassportId"
+      responses:
+        "200":
+          description: Plan (possibly empty if not yet computed).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendResponse"
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+
+  /api/v1/resources/recommend:
+    post:
+      tags: [recommend]
+      operationId: recommendResources
+      summary: Score and bucket Utah resources for a founder's profile.
+      description: |
+        Pass either `passport_id` (re-uses an existing passport row) or
+        a full `FounderPassportInput` (creates one) — but **not both**.
+
+        LLM "Because…" is enabled by default; on Anthropic error/timeout
+        the response degrades gracefully (`because: ""`) — the endpoint
+        never 5xxs on the LLM.
+
+        Side effects: if no `passport_id` is provided, a `founder_passports`
+        row is created. The full result set is persisted to
+        `recommendations` (idempotent; any prior recs for the passport
+        are deleted first).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecommendRequest"
+      responses:
+        "200":
+          description: Scored recommendations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendResponse"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+
+  /api/v1/resources:
+    get:
+      tags: [resources]
+      operationId: listResources
+      summary: List startup resources, optionally filtered by free-text query.
+      security: []
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Optional free-text query against title + description.
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: Resource list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [resources]
+                properties:
+                  resources:
+                    type: array
+                    items: { $ref: "#/components/schemas/ResourceSummary" }
+        "500": { $ref: "#/components/responses/Internal" }
+
+  /api/v1/resources/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          pattern: "^r_[a-zA-Z0-9_-]+$"
+        description: Resource id (e.g. `r_2628`).
+    get:
+      tags: [resources]
+      operationId: getResource
+      summary: Fetch a single resource by id.
+      security: []
+      responses:
+        "200":
+          description: Resource row.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [resource]
+                properties:
+                  resource: { $ref: "#/components/schemas/ResourceSummary" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/companies:
+    get:
+      tags: [companies]
+      operationId: listCompanies
+      summary: Search companies by name / slug / website.
+      security: []
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Optional free-text search.
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        "200":
+          description: Companies.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [companies]
+                properties:
+                  companies:
+                    type: array
+                    items: { $ref: "#/components/schemas/CompanySummary" }
+
+  /api/v1/companies/{slug}:
+    parameters:
+      - $ref: "#/components/parameters/CompanySlug"
+    get:
+      tags: [companies]
+      operationId: getCompany
+      summary: Fetch a single company by slug.
+      security: []
+      responses:
+        "200":
+          description: Company row.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [company]
+                properties:
+                  company: { $ref: "#/components/schemas/Company" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [companies]
+      operationId: patchCompany
+      summary: Update a company profile.
+      description: |
+        Three auth modes are accepted:
+
+        - **Owner**: Better Auth session whose `user.id` matches
+          `companies.claimed_by_user_id`. Owner edits are restricted
+          to a whitelist (no `slug`, `linkedin`, `address_text`).
+        - **Admin**: Better Auth session with role `goeo_admin` or
+          `superadmin`. No whitelist.
+        - **Machine**: `X-Atlas-Admin-Token` header. No whitelist.
+
+        Every successful PATCH writes an audit row to `profile_updates`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyPatch"
+      responses:
+        "200":
+          description: Updated company row.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [company]
+                properties:
+                  company: { $ref: "#/components/schemas/Company" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/ownership-submissions:
+    post:
+      tags: [ownership]
+      operationId: submitOwnershipDoc
+      summary: Upload an ownership-proof document (multipart).
+      description: |
+        Multipart upload (PDF / PNG / JPEG / WebP, ≤10 MB) routed to the
+        R2 `OWNERSHIP_DOCS` bucket. Creates a submission row with status
+        `pending`. If the caller already has a pending submission for the
+        same company, the existing row is returned with `duplicate: true`.
+      security:
+        - cookieAuth: []
+        - atlasAdminToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [company_slug, file]
+              properties:
+                company_slug:
+                  type: string
+                  description: Slug of the company being claimed.
+                file:
+                  type: string
+                  format: binary
+                  description: PDF / PNG / JPEG / WebP, ≤10 MB.
+      responses:
+        "201":
+          description: Submission created (or pending duplicate returned).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [submission_id, status]
+                properties:
+                  submission_id:
+                    type: string
+                    pattern: "^bos_[a-zA-Z0-9_-]+$"
+                  status: { type: string, enum: [pending] }
+                  duplicate: { type: boolean }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/search:
+    get:
+      tags: [search]
+      operationId: search
+      summary: Generic search across resources + companies.
+      security: []
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string, minLength: 1 }
+          description: Search query.
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [resources, companies, all]
+            default: all
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        "200":
+          description: Mixed result list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results]
+                properties:
+                  results:
+                    type: array
+                    items: { $ref: "#/components/schemas/SearchResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/v1/openapi.json:
+    get:
+      tags: [meta]
+      operationId: getOpenApiSpec
+      summary: Return this OpenAPI 3.1 specification as JSON.
+      security: []
+      responses:
+        "200":
+          description: The OpenAPI spec.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: OpenAPI 3.1 document.
+
+components:
+  parameters:
+    PassportId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        pattern: "^fp_[a-zA-Z0-9_-]+$"
+      description: Founder-passport id.
+    CompanySlug:
+      in: path
+      name: slug
+      required: true
+      schema: { type: string }
+      description: Company slug.
+
+  responses:
+    BadRequest:
+      description: Validation error or malformed request.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    Unauthorized:
+      description: Missing or invalid authentication.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    Forbidden:
+      description: Authenticated but not authorized for this resource.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    NotFound:
+      description: Resource does not exist.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    Internal:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: auth.session_token
+      description: |
+        Better Auth session cookie. Set by `/sign-in` or `/sign-up`.
+        Roles: `owner`, `goeo_admin`, `superadmin`. Owner edits gate
+        on `companies.claimed_by_user_id` matching `user.id`.
+    atlasAdminToken:
+      type: apiKey
+      in: header
+      name: X-Atlas-Admin-Token
+      description: |
+        Service-account-style token validated against
+        `env.ATLAS_ADMIN_TOKEN`. The local CLI (`npm run cli` from a
+        checkout), the local stdio MCP server (`npm run mcp`), and
+        external machine clients use this header for write operations.
+        Bypasses Better Auth and assumes a privileged caller.
+
+  schemas:
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: bad_request }
+            message: { type: string }
+            details: {}
+
+    FounderStage:
+      type: string
+      enum: [idea, pre_seed, mvp, paying_customers, growth, mature]
+
+    FounderGoal:
+      type: string
+      enum:
+        - start_business
+        - raise_seed_round
+        - raise_growth_round
+        - find_customers
+        - hire
+        - export
+        - commercialize_research
+        - find_workspace
+        - find_mentors
+        - scale_business
+
+    FounderUrgency:
+      type: string
+      enum: [this_week, this_month, this_quarter, next_quarter, this_year]
+
+    FounderPassportInput:
+      type: object
+      required: [stage, industry, goal, communities, needs, constraints]
+      properties:
+        county: { type: string }
+        city: { type: string }
+        stage: { $ref: "#/components/schemas/FounderStage" }
+        industry: { type: string, example: B2B SaaS }
+        communities:
+          type: array
+          items: { type: string }
+          default: []
+        goal: { $ref: "#/components/schemas/FounderGoal" }
+        urgency: { $ref: "#/components/schemas/FounderUrgency" }
+        business_size: { type: string }
+        business_type: { type: string }
+        needs:
+          type: array
+          items: { type: string }
+          default: []
+        constraints:
+          type: array
+          items: { type: string }
+          default: []
+        website_url:
+          type: string
+          format: uri
+          description: Must use http:// or https://.
+        enrichment_source:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: |
+            Set by the front-end to the enrich provider id (e.g.
+            `anthropic-fetch`) when the enrich path ran before
+            submission. Server stamps `enriched_at = now`.
+
+    RecommendRequest:
+      allOf:
+        - $ref: "#/components/schemas/FounderPassportInput"
+      type: object
+      properties:
+        passport_id:
+          type: string
+          pattern: "^fp_[a-zA-Z0-9_-]+$"
+      description: |
+        Either pass `passport_id` and skip the body (we'll load the
+        passport from D1), or pass a full `FounderPassportInput`. Sending
+        both with conflicting `stage`/`industry`/`goal` is a 400.
+
+    Bucket:
+      type: string
+      enum: [now, next, ignore]
+
+    RecommendedResource:
+      type: object
+      required:
+        [resource_id, title, score, bucket, reasons, because, action_text]
+      properties:
+        resource_id:
+          type: string
+          pattern: "^r_[0-9]+$"
+          example: r_2628
+        title: { type: string, example: Small Business Administration (SBA) }
+        score: { type: integer, minimum: 0, maximum: 100, example: 78 }
+        bucket: { $ref: "#/components/schemas/Bucket" }
+        reasons:
+          type: array
+          items: { type: string }
+        because:
+          type: string
+          description: LLM "Because…" sentence; empty string on Anthropic timeout / parse failure.
+        action_text:
+          type: string
+          description: Suggested next action; empty string when none.
+        kind:
+          type: string
+          description: Primary topic, lowercased.
+        source_url: { type: string, format: uri }
+        contact_email: { type: string, format: email }
+
+    RecommendResponse:
+      type: object
+      required: [passport_id, recommendations, generated_at]
+      properties:
+        passport_id:
+          type: string
+          pattern: "^fp_[a-zA-Z0-9_-]+$"
+        recommendations:
+          type: array
+          items: { $ref: "#/components/schemas/RecommendedResource" }
+        generated_at:
+          type: string
+          format: date-time
+
+    EnrichField:
+      type: object
+      required: [name, value, confidence]
+      properties:
+        name:
+          type: string
+          example: industry
+        value: {}
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    EnrichResponse:
+      type: object
+      required: [fields]
+      properties:
+        fields:
+          type: array
+          items: { $ref: "#/components/schemas/EnrichField" }
+        degraded:
+          type: boolean
+          description: Set when fetch / parse / LLM degraded; `fields` will be empty.
+
+    ResourceSummary:
+      type: object
+      required: [id, title]
+      properties:
+        id:
+          type: string
+          pattern: "^r_[0-9]+$"
+        title: { type: string }
+        description: { type: string }
+        kind: { type: string }
+        source_url: { type: string, format: uri }
+        contact_email: { type: string, format: email }
+
+    CompanySummary:
+      type: object
+      required: [id, slug, name, status]
+      properties:
+        id:
+          type: string
+          pattern: "^co_[a-zA-Z0-9_-]+$"
+        slug: { type: string }
+        name: { type: string }
+        website: { type: string, format: uri, nullable: true }
+        sector: { type: string, nullable: true }
+        stage: { type: string, nullable: true }
+        employee_count: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        county: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [claimed, pending, unclaimed]
+          description: Computed from `claimed_by_user_id` + presence of pending ownership submission.
+
+    Company:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id: { type: string, pattern: "^co_[a-zA-Z0-9_-]+$" }
+        slug: { type: string }
+        name: { type: string }
+        website: { type: string, format: uri, nullable: true }
+        description: { type: string, nullable: true }
+        sector: { type: string, nullable: true }
+        stage: { type: string, nullable: true }
+        employee_count: { type: string, nullable: true }
+        hiring_status: { type: boolean, nullable: true }
+        founding_year: { type: integer, nullable: true }
+        logo_url: { type: string, format: uri, nullable: true }
+        founder_team_json: { type: string, nullable: true }
+        lat: { type: number, nullable: true }
+        lng: { type: number, nullable: true }
+        address_text: { type: string, nullable: true }
+        linkedin: { type: string, nullable: true }
+        claimed_by_user_id: { type: string, nullable: true }
+        verified_at: { type: string, format: date-time, nullable: true }
+        claimed_at: { type: string, format: date-time, nullable: true }
+
+    CompanyPatch:
+      type: object
+      description: |
+        Partial update. Owner edits accept only the whitelisted keys
+        below. Admin / machine token may also send `slug`, `linkedin`,
+        and `address_text`.
+      properties:
+        name: { type: string }
+        website: { type: string, format: uri }
+        description: { type: string }
+        sector: { type: string }
+        stage: { type: string }
+        employee_count: { type: string }
+        hiring_status: { type: boolean }
+        founding_year: { type: integer }
+        logo_url: { type: string, format: uri }
+        founder_team_json: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        slug: { type: string, description: Admin / machine only. }
+        linkedin: { type: string, description: Admin / machine only. }
+        address_text: { type: string, description: Admin / machine only. }
+
+    SearchResult:
+      type: object
+      required: [kind, id, title]
+      properties:
+        kind:
+          type: string
+          enum: [resource, company]
+        id: { type: string }
+        slug:
+          type: string
+          description: Present when `kind == "company"`.
+        title: { type: string }
+        summary: { type: string }
+        score:
+          type: number
+          description: Relevance score (higher is better).
