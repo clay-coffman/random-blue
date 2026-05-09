@@ -1,6 +1,6 @@
 import { ApiError, errorResponse } from "@/lib/api-error";
 import { EnrichRequest } from "@/schemas/recommend";
-import { enrichWebsite } from "@/lib/parallel";
+import { enrichWebsite } from "@/lib/website-enrich";
 
 export const runtime = "edge";
 export const maxDuration = 30;

@@ -179,10 +179,14 @@ to populate.
 ### `POST /api/v1/founder-passports/enrich`
 
 Founder pastes a website URL on the intake form; this endpoint
-calls Parallel.ai and returns a partial `FounderPassportInput` with
-per-field confidences so the front-end can prefill chips. **No
-persistence** — the founder reviews + edits, then submits via
-`POST /founder-passports`.
+fetches the page directly and pipes the text through Anthropic
+with a structured-output prompt, returning a partial
+`FounderPassportInput` with per-field confidences so the front-end
+can prefill chips. **No persistence** — the founder reviews + edits,
+then submits via `POST /founder-passports`. (Originally designed
+around Parallel.ai but their Search API doesn't return structured
+data and their Task API exceeds the form-UX latency budget; the
+fetch+LLM path lands in ~5–10s.)
 
 **Request:**
 
@@ -211,7 +215,7 @@ Rejects social / profile hosts (`linkedin.com`, `facebook.com`,
 }
 ```
 
-**Degraded mode** (Parallel timeout / 5xx / API key missing in dev):
+**Degraded mode** (fetch failure / non-HTML response / LLM timeout / parse failure / denylist match):
 
 ```json
 {
