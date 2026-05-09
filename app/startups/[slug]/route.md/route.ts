@@ -1,26 +1,22 @@
-import {
-  formatCompanyCardMarkdown,
-  getCompanyCard,
-} from "@/lib/company-card";
+import { NextResponse } from "next/server";
+import { companyCard } from "@/lib/company-card";
 
-export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ slug: string }> },
+  ctx: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = await params;
-  const card = await getCompanyCard(slug);
-  if (!card) {
-    return new Response(`# Not found\n\nNo company with slug \`${slug}\`.\n`, {
+  const { slug } = await ctx.params;
+  const result = await companyCard(slug);
+  if (!result) {
+    return new NextResponse("Not found", {
       status: 404,
-      headers: { "Content-Type": "text/markdown; charset=utf-8" },
+      headers: { "content-type": "text/plain; charset=utf-8" },
     });
   }
-  return new Response(formatCompanyCardMarkdown(card), {
-    headers: {
-      "Content-Type": "text/markdown; charset=utf-8",
-      "Cache-Control": "public, max-age=60",
-    },
+  return new NextResponse(result.markdown, {
+    status: 200,
+    headers: { "content-type": "text/markdown; charset=utf-8" },
   });
 }

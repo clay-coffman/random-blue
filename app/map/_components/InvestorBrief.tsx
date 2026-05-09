@@ -1,163 +1,190 @@
 "use client";
 
+// Stub for task 5 — full panel + endpoint wiring lands in task 8.
+// Renders enough to verify the open/close + keyboard shortcut work.
+
 import { useEffect, useState } from "react";
-import type { CompanyListItem, MapFilters } from "./types";
+import { Tile } from "@/components/brand";
+import type { CompanyListItem } from "@/lib/companies-list";
+import { cn } from "@/lib/utils";
 
-type Cluster = {
-  title: string;
-  count: number;
-  slugs: string[];
-  summary: string;
-};
-
+type Theme = { title: string; slugs: string[]; summary: string };
 type BriefResponse = {
-  filter_summary: string;
-  total_in_view: number;
-  clusters: Cluster[];
-  hiring_summary?: string | null;
+  headline?: string | null;
+  metadata?: string | null;
+  themes: Theme[];
+  notable_raises?: Array<{ slug: string; amount: string; date: string | null }>;
+  hiring?: { open_roles: number; top_hirers: string[] } | null;
   degraded?: boolean;
 };
 
 type Props = {
+  companies: CompanyListItem[];
+  filters: Record<string, string>;
   open: boolean;
   onClose: () => void;
-  filters: MapFilters;
-  companies: CompanyListItem[];
 };
 
-export function InvestorBrief({ open, onClose, filters, companies }: Props) {
+export function InvestorBrief({ companies, filters, open, onClose }: Props) {
   const [data, setData] = useState<BriefResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Re-fetch when the panel opens or the filtered set changes shape.
+  // Use the filtered slugs as the cache key so a different set always
+  // refreshes.
+  const slugsKey = companies.map((c) => c.slug).join(",");
+
   useEffect(() => {
     if (!open) return;
+    if (companies.length === 0) {
+      setData({ themes: [], degraded: true });
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setError(null);
-    setData(null);
-
-    const slugs = companies.map((c) => c.slug).slice(0, 80);
-    fetch("/api/v1/companies/brief", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filter: filters, slugs }),
-    })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return (await r.json()) as BriefResponse;
-      })
-      .then((b) => {
-        if (!cancelled) setData(b);
-      })
-      .catch((e) => {
-        if (!cancelled) setError(String(e?.message ?? e));
-      })
-      .finally(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/v1/companies/investor-brief", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            filter: filters,
+            slugs: companies.map((c) => c.slug).slice(0, 80),
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = (await res.json()) as BriefResponse;
+        if (cancelled) return;
+        setData(d);
+      } catch (err) {
+        if (!cancelled) {
+          setError((err as Error).message ?? "fetch failed");
+          setData({ themes: [], degraded: true });
+        }
+      } finally {
         if (!cancelled) setLoading(false);
-      });
-
+      }
+    })();
     return () => {
       cancelled = true;
     };
-    // Re-run when the panel opens or the visible set changes meaningfully.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, companies.length, filters.sector, filters.stage, filters.county, filters.hiring, filters.q]);
+  }, [open, slugsKey]);
 
-  if (!open) return null;
+  function copySummary() {
+    if (!data) return;
+    const lines: string[] = [];
+    if (data.headline) lines.push(`# ${data.headline}`);
+    if (data.metadata) lines.push(`_${data.metadata}_`);
+    lines.push("");
+    for (const t of data.themes) {
+      lines.push(`## ${t.title}`);
+      lines.push(t.summary);
+      if (t.slugs.length) lines.push(`Companies: ${t.slugs.join(", ")}`);
+      lines.push("");
+    }
+    navigator.clipboard.writeText(lines.join("\n"));
+  }
 
   return (
-    <>
-      <button
-        type="button"
-        aria-label="Close investor brief"
-        onClick={onClose}
-        className="fixed inset-0 z-30 bg-ink/30 md:hidden"
-      />
-      <aside
-        className="
-          fixed inset-x-0 bottom-0 z-40 max-h-[80dvh] overflow-y-auto rounded-t-tile border-t-[1.5px] border-ink bg-paper-2 shadow-sketch
-          md:bottom-0 md:left-auto md:right-0 md:top-[68px] md:max-h-none md:w-[380px] md:rounded-none md:border-l-[1.5px] md:border-t-0
-        "
-        role="dialog"
-        aria-label="Investor brief"
-      >
-        <header className="flex items-center justify-between border-b-[1.5px] border-ink bg-ink px-5 py-3 text-paper">
-          <span className="font-mono text-[11px] uppercase tracking-wider">
+    <aside
+      data-open={open ? "true" : "false"}
+      aria-hidden={!open}
+      className={cn(
+        "fixed inset-y-0 right-0 z-30 flex w-full max-w-md flex-col overflow-hidden border-l-[1.5px] border-ink/20 bg-ink text-paper transition-transform duration-300",
+        "translate-x-full data-[open=true]:translate-x-0",
+        "lg:absolute lg:inset-y-0 lg:w-[360px]",
+      )}
+    >
+      <header className="flex items-center justify-between border-b border-paper/15 bg-paper/5 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ember-tint">
             ↓ Investor brief
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-11 w-11 place-items-center rounded-full border border-paper/40 text-lg leading-none transition hover:bg-paper hover:text-ink"
-            aria-label="Close"
+          </p>
+          <kbd className="rounded bg-paper/10 px-1.5 py-0.5 font-mono text-[10px] text-paper/70">
+            B
+          </kbd>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex h-9 min-h-[40px] items-center rounded-pill border-[1.5px] border-paper/30 bg-paper/5 px-3 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:bg-paper/15"
+        >
+          Close
+        </button>
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-4">
+        {loading ? (
+          <p className="font-mono text-[11px] uppercase tracking-wider text-paper/60">
+            Generating brief…
+          </p>
+        ) : null}
+
+        {!loading && data?.degraded ? (
+          <Tile
+            variant="default"
+            shadow="none"
+            className="border-paper/30 bg-paper/5 p-4 text-paper"
           >
-            ×
-          </button>
-        </header>
-
-        <div className="space-y-4 p-5">
-          {loading ? (
-            <p className="font-mono text-[11px] uppercase tracking-wider text-ink-3">
-              Reading the cluster…
+            <p className="font-serif text-lg leading-snug">
+              {error
+                ? "Couldn't generate a brief just now."
+                : companies.length === 0
+                  ? "No companies in the current filter."
+                  : "Brief unavailable."}
             </p>
-          ) : null}
-          {error ? (
-            <p className="rounded-md border border-danger/40 bg-paper p-3 text-sm text-danger">
-              Couldn&apos;t generate a brief right now. Try again in a moment.
+            <p className="mt-1 text-xs text-paper/70">
+              {error
+                ? `Reason: ${error}. Try changing a filter or hit B again to retry.`
+                : companies.length === 0
+                  ? "Loosen a filter to see clusters."
+                  : "Try a tighter filter or hit B again to retry."}
             </p>
-          ) : null}
-          {data ? (
-            <>
-              <div>
-                <h2 className="font-serif text-xl leading-snug text-ink">
-                  {data.filter_summary}
-                </h2>
-                <div className="mt-1 font-mono text-[11px] uppercase tracking-wider text-ink-3">
-                  {data.total_in_view} compan
-                  {data.total_in_view === 1 ? "y" : "ies"} in view
-                </div>
-              </div>
+          </Tile>
+        ) : null}
 
-              {data.degraded ? (
-                <p className="rounded-md border border-topo bg-paper p-2 text-xs text-ink-3">
-                  Brief generation degraded — showing what we have.
-                </p>
-              ) : null}
+        {!loading && data && !data.degraded ? (
+          <div className="space-y-5">
+            {data.headline ? (
+              <h2 className="font-serif text-2xl leading-tight">
+                {data.headline}
+              </h2>
+            ) : null}
+            {data.metadata ? (
+              <p className="font-hand text-base text-paper/80">
+                {data.metadata}
+              </p>
+            ) : null}
 
+            {data.themes.length > 0 ? (
               <section>
-                <h3 className="font-mono text-[10px] uppercase tracking-wider text-ink-3">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ember-tint">
                   Cluster themes
-                </h3>
+                </p>
                 <ul className="mt-2 space-y-3">
-                  {data.clusters.length === 0 ? (
-                    <li className="text-sm text-ink-3">
-                      No themes — try widening the filter.
-                    </li>
-                  ) : null}
-                  {data.clusters.map((c, i) => (
+                  {data.themes.map((t, i) => (
                     <li
                       key={i}
-                      className="rounded-tile border border-topo bg-paper p-3"
+                      className="rounded-md border border-paper/15 bg-paper/5 p-3"
                     >
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="font-serif text-base text-ink">
-                          {c.title}
-                        </span>
-                        <span className="rounded-pill border border-ink bg-ink px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-paper">
-                          {c.count}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm text-ink-2">{c.summary}</p>
-                      {c.slugs.length ? (
-                        <div className="mt-1.5 flex flex-wrap gap-1.5 font-mono text-[10px] uppercase tracking-wider">
-                          {c.slugs.slice(0, 6).map((s) => (
+                      <p className="font-serif text-base font-medium leading-snug">
+                        {t.title}
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-paper/80">
+                        {t.summary}
+                      </p>
+                      {t.slugs.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {t.slugs.map((slug) => (
                             <a
-                              key={s}
-                              href={`/startups/${s}`}
-                              className="rounded-pill border border-topo bg-paper-2 px-2 py-0.5 text-ember transition hover:border-ink hover:text-ink"
+                              key={slug}
+                              href={`/startups/${slug}`}
+                              className="inline-flex items-center rounded-pill bg-paper/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-paper hover:bg-paper/20"
                             >
-                              {s}
+                              {slug}
                             </a>
                           ))}
                         </div>
@@ -166,19 +193,72 @@ export function InvestorBrief({ open, onClose, filters, companies }: Props) {
                   ))}
                 </ul>
               </section>
+            ) : null}
 
-              {data.hiring_summary ? (
-                <section>
-                  <h3 className="font-mono text-[10px] uppercase tracking-wider text-ink-3">
-                    Hiring
-                  </h3>
-                  <p className="mt-1 text-sm text-ink-2">{data.hiring_summary}</p>
-                </section>
-              ) : null}
-            </>
-          ) : null}
-        </div>
-      </aside>
-    </>
+            {data.notable_raises && data.notable_raises.length > 0 ? (
+              <section>
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ember-tint">
+                  Notable raises (12 mo)
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {data.notable_raises.slice(0, 4).map((r, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center justify-between rounded-md border border-paper/15 bg-paper/5 px-3 py-1.5 text-sm"
+                    >
+                      <a
+                        href={`/startups/${r.slug}`}
+                        className="font-mono text-[11px] uppercase tracking-wider hover:underline"
+                      >
+                        {r.slug}
+                      </a>
+                      <span className="font-serif text-sm">{r.amount}</span>
+                    </li>
+                  ))}
+                  {data.notable_raises.length > 4 ? (
+                    <li className="text-xs text-paper/60">
+                      + {data.notable_raises.length - 4} more
+                    </li>
+                  ) : null}
+                </ul>
+              </section>
+            ) : null}
+
+            {data.hiring ? (
+              <section>
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ember-tint">
+                  Hiring now
+                </p>
+                <p className="mt-1 font-serif text-base">
+                  {data.hiring.open_roles} open role
+                  {data.hiring.open_roles === 1 ? "" : "s"}
+                  {data.hiring.top_hirers.length > 0
+                    ? ` · top hirers: ${data.hiring.top_hirers.slice(0, 3).join(", ")}`
+                    : ""}
+                </p>
+              </section>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <footer className="flex flex-wrap gap-2 border-t border-paper/15 bg-paper/5 p-3">
+        <button
+          type="button"
+          onClick={copySummary}
+          disabled={!data || data.degraded}
+          className="inline-flex h-9 min-h-[40px] items-center gap-1 rounded-pill border-[1.5px] border-paper/30 bg-paper/5 px-3 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:bg-paper/15 disabled:opacity-40"
+        >
+          📋 Copy summary
+        </button>
+        <button
+          type="button"
+          onClick={() => alert("PDF export coming soon. Use Copy summary for now.")}
+          className="inline-flex h-9 min-h-[40px] items-center gap-1 rounded-pill border-[1.5px] border-paper/30 bg-paper/5 px-3 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:bg-paper/15"
+        >
+          📄 Export PDF
+        </button>
+      </footer>
+    </aside>
   );
 }

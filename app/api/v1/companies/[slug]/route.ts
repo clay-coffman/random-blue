@@ -2,17 +2,14 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { companies, profileUpdates } from "@/db/schema";
-import { ApiError, errorResponse } from "@/lib/api-error";
-import { getCompanyCard, toWireCompanyCard } from "@/lib/company-card";
+import { errorResponse } from "@/lib/api-error";
 import {
   getApiSession,
   hasMachineToken,
   isAdminRole,
 } from "@/lib/auth-utils";
+import { companyCard } from "@/lib/company-card";
 
-// Mixed-runtime file: GET (Agent 4) reads via Drizzle; PATCH/DELETE
-// (Agent 5) call Better Auth which needs Node APIs, so we keep the
-// default Node runtime here rather than `runtime = "edge"`.
 export const dynamic = "force-dynamic";
 
 // Owner-edit whitelist. Excludes (per brief): slug, linkedin,
@@ -52,29 +49,18 @@ const WIRE_TO_DB: Record<string, string> = {
   address_text: "addressText",
 };
 
-// GET — full company agent card (Agent 4). Same shape as
-// `/startups/{slug}/route.json`. Used by /startups/{slug} (server),
-// `lib/company-card.ts` consumers, and CLI/MCP tooling.
+// Full Agent Card. Same shape as /startups/:slug.json. Joins jobs +
+// location through the shared lib/company-card.ts formatter so all
+// three entry points (this API, the .json route, the HTML page) read
+// from one source.
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ slug: string }> },
+  ctx: { params: Promise<{ slug: string }> },
 ) {
-  try {
-    const { slug } = await params;
-    const card = await getCompanyCard(slug);
-    if (!card) {
-      throw new ApiError({
-        code: "company_not_found",
-        message: `No company with slug ${slug}`,
-        status: 404,
-      });
-    }
-    return NextResponse.json(toWireCompanyCard(card));
-  } catch (err) {
-    if (err instanceof ApiError) return err.toResponse();
-    console.error("companies/[slug] GET error", err);
-    return errorResponse("internal_error", "Failed to load company", 500);
-  }
+  const { slug } = await ctx.params;
+  const result = await companyCard(slug);
+  if (!result) return errorResponse("not_found", "Company not found.", 404);
+  return NextResponse.json(result.card);
 }
 
 // PATCH with three auth modes: owner edit (whitelist), admin edit
