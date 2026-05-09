@@ -37,6 +37,12 @@ const pipeSplit = (s: string | undefined | null): string[] =>
 
 const normalize = (s: string): string => s.trim();
 
+// Topics whose lowercased form is a poor eyebrow on a plan card. The CSV
+// orders Topics by upstream convention, not by display priority — when one
+// of these is first, falling through to it makes resources read like they're
+// categorized for a different purpose than they actually serve.
+const KIND_DEPRIORITIZED = new Set<string>(["close or exit a business"]);
+
 export function loadResources(csvPath: string): ResourceSeed[] {
   const csv = fs.readFileSync(csvPath, "utf8");
   const parsed = Papa.parse<ResourceRow>(csv, {
@@ -65,7 +71,16 @@ export function loadResources(csvPath: string): ResourceSeed[] {
     // dedicated Kind column, so we collapse the first pipe-separated topic
     // and lowercase it to match the (also-lowercased) `resource_topics.topic`
     // rows, so any join/filter on topic == kind hits the resources_kind_idx.
-    const kind = topics[0]?.toLowerCase() ?? null;
+    // Deprioritize topics that read poorly as the eyebrow on a plan card
+    // (e.g. "Close or Exit a Business" was the upstream-first topic for a
+    // chunk of GOEO-curated rows like SBDC and StartUp State, which made
+    // their plan cards look mis-categorized). Pick the first non-deprioritized
+    // topic; fall back to topics[0] only if every topic is deprioritized.
+    const loweredTopics = topics.map((t) => t.toLowerCase());
+    const kind =
+      loweredTopics.find((t) => !KIND_DEPRIORITIZED.has(t)) ??
+      loweredTopics[0] ??
+      null;
 
     seeds.push({
       id: `r_${upstreamId}`,

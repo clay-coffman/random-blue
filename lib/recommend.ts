@@ -31,6 +31,13 @@ export type Scored = {
   resource: ResourceRow;
   score: number;
   reasons: string[];
+  // True when the resource explicitly targets one or more communities
+  // (`resource.communities` non-empty) and the founder doesn't share any
+  // of those identities. `bucketize` routes restricted items to `ignore`
+  // even when their score clears the actionable floor — identity-targeted
+  // programs aren't appropriate fallbacks for founders outside the
+  // intended community.
+  communityRestricted: boolean;
 };
 
 // ─── Vocabulary maps ────────────────────────────────────────────────
@@ -267,7 +274,7 @@ function scoreCommunity(
 export function scoreResource(
   resource: ResourceRow,
   passport: FounderPassportInput,
-): { score: number; reasons: string[] } {
+): { score: number; reasons: string[]; communityRestricted: boolean } {
   const stage = scoreStage(resource, passport);
   const location = scoreLocation(resource, passport);
   const goal = scoreGoal(resource, passport);
@@ -295,7 +302,28 @@ export function scoreResource(
     community.reason,
   ].filter((r): r is string => r !== null);
 
-  return { score, reasons };
+  // Identity gate. Distinct from `scoreCommunity` (which is a soft signal
+  // for ranking inside a bucket) — this routes mismatches out of the
+  // actionable buckets entirely. Also true when the founder selected no
+  // identity at all and the resource is community-targeted: identity-
+  // specific programs (Women's Business Center, Veterans in Manufacturing,
+  // Teen Entrepreneur Support Center, etc.) shouldn't surface as generic
+  // "do this now" recommendations.
+  //
+  // GOEO's source data uses an `any` sentinel inside `Communities` for
+  // broad-serving orgs (SBDC, SBA, StartUp State, …) — "we serve everyone
+  // and especially support the listed groups." When it's present, bypass
+  // the gate entirely so founders outside the listed identities still see
+  // these resources in their actionable buckets.
+  const servesAnyCommunity = resource.communities.some(
+    (c) => ci(c) === "any",
+  );
+  const communityRestricted =
+    !servesAnyCommunity &&
+    resource.communities.length > 0 &&
+    !overlap(passport.communities, resource.communities);
+
+  return { score, reasons, communityRestricted };
 }
 
 // Minimum score required to enter `now` or `next`. Items below this floor
@@ -310,13 +338,22 @@ export function bucketize(scored: Scored[]): {
   ignore: Scored[];
 } {
   const sorted = [...scored].sort((a, b) => b.score - a.score);
-  const actionable = sorted.filter((s) => s.score >= ACTIONABLE_FLOOR);
+  const actionable = sorted.filter(
+    (s) => s.score >= ACTIONABLE_FLOOR && !s.communityRestricted,
+  );
   const now = actionable.slice(0, 3);
   const next = actionable.slice(3, 6);
   // "Ignore for now" = anything below the actionable floor with at least
-  // one reason (i.e. nearly matched). Cap at 6 for response size.
+  // one reason (i.e. nearly matched), plus any community-restricted item
+  // whose score otherwise would have qualified — keeping the "ranking-as-
+  // coaching" surface populated with near-misses. Cap at 6 for response
+  // size.
   const ignore = sorted
-    .filter((s) => s.score < ACTIONABLE_FLOOR && s.reasons.length > 0)
+    .filter(
+      (s) =>
+        (s.score < ACTIONABLE_FLOOR || s.communityRestricted) &&
+        s.reasons.length > 0,
+    )
     .slice(0, 6);
   return { now, next, ignore };
 }
