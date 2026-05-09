@@ -1,19 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-// Full-viewport overlay rendered while a plan is being generated.
-// Used by:
-//   - app/founder/_components/IntakeForm.tsx (during the form-submit
-//     POST → /api/v1/resources/recommend, which takes ~5–7s for the
-//     LLM call)
-//   - app/plan/[id]/loading.tsx (during SSR navigation when a persona
-//     plan needs lazy generation; ~3–6s with sonnet)
-//
-// The button-text swap on IntakeForm.tsx was too easy to miss
-// (sticky-bottom small text); user-reported the UI looked broken.
-// This overlay is impossible to miss + announces itself to screen
-// readers via role="status" + aria-live="polite".
+import { useEffect, useId, useState } from "react";
 
 const DEFAULT_STAGES = [
   "Reading your profile",
@@ -30,30 +17,36 @@ export function PlanLoadingOverlay({
   intervalMs?: number;
 }) {
   const [idx, setIdx] = useState(0);
+  const headingId = useId();
 
   useEffect(() => {
     if (messages.length <= 1) return;
-    const t = setInterval(
-      () => setIdx((i) => Math.min(i + 1, messages.length - 1)),
-      intervalMs,
-    );
+    const t = setInterval(() => {
+      setIdx((i) => {
+        const next = Math.min(i + 1, messages.length - 1);
+        // Stop ticking once we reach the last message instead of
+        // re-firing every intervalMs forever until unmount.
+        if (next === messages.length - 1) clearInterval(t);
+        return next;
+      });
+    }, intervalMs);
     return () => clearInterval(t);
   }, [messages.length, intervalMs]);
 
   return (
     <div
       role="status"
-      aria-live="polite"
-      aria-label="Writing your plan"
+      aria-labelledby={headingId}
       className="fixed inset-0 z-50 flex items-center justify-center bg-paper/95 px-4 backdrop-blur-sm"
     >
       <div className="max-w-sm rounded-tile border-[1.5px] border-ink bg-paper-2 px-8 py-10 text-center shadow-sketch">
         <Spinner />
-        <h2 className="mt-6 font-serif text-2xl">Writing your plan…</h2>
+        <h2 id={headingId} className="mt-6 font-serif text-2xl">
+          Writing your plan…
+        </h2>
         <p
-          // re-key on idx so the swap fades in instead of being a hard cut
           key={idx}
-          className="mt-3 animate-in fade-in font-hand text-base text-ink-3 duration-500"
+          className="mt-3 animate-in fade-in font-hand text-base text-ink-3 duration-500 motion-reduce:animate-none"
         >
           {messages[idx]}
         </p>
@@ -66,7 +59,7 @@ function Spinner() {
   return (
     <svg
       aria-hidden
-      className="mx-auto h-12 w-12 animate-spin text-ember"
+      className="mx-auto h-12 w-12 animate-spin text-ember motion-reduce:animate-none"
       viewBox="0 0 24 24"
       fill="none"
     >

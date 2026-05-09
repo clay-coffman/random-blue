@@ -175,11 +175,17 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
     let result: ReturnType<typeof recommendMock> | undefined;
     let resolvedPassportId: string | undefined;
 
+    // 30s ceiling so a hung fetch doesn't strand the user under the
+    // full-screen overlay forever. On abort/error we fall through to
+    // the mock + redirect path below, which is recoverable UX.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
     try {
       const res = await fetch("/api/v1/resources/recommend", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(toWirePassportInput(passport)),
+        signal: controller.signal,
       });
       if (res.ok) {
         const wire = (await res.json()) as RecommendResponseWire;
@@ -187,7 +193,9 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
         resolvedPassportId = result.passportId;
       }
     } catch {
-      // network or DNS failure — fall through to mock
+      // network / DNS / abort — fall through to mock
+    } finally {
+      clearTimeout(timeout);
     }
 
     if (!result || !resolvedPassportId) {
@@ -210,11 +218,7 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
       }
     }
 
-    // Intentionally do NOT reset `submitting` here — the component
-    // unmounts on navigation, and resetting causes a brief flash of
-    // "Get my plan →" between the API resolving and the new plan
-    // page mounting (the overlay collapses, then the route changes).
-    // Back-navigating to the form re-mounts it with submitting=false.
+    // Don't reset submitting — unmount on navigate; resetting flashes the old button label.
     router.push(`/plan/${resolvedPassportId}`);
   }
 
