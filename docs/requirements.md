@@ -1,6 +1,6 @@
 # Requirements — Startup State Atlas
 
-Distilled from `docs/hackathon-plan.md` (the full 870-line product spec
+Distilled from `docs/product-plan.md` (the full 870-line product spec
 remains the source of truth for any ambiguity).
 
 ## Product summary
@@ -31,7 +31,7 @@ of the affordances that makes the live flow tolerable for users who
 don't fit a persona.
 
 Persona fixtures live in `db/seed/personas.ts` (Agent 1 writes these).
-For the demo and for QA regression, each persona is one-click
+For QA regression and quick exploration, each persona is one-click
 testable on the founder page ("Try Jordan", "Try Maria", etc.).
 
 | Persona     | One-line description                                                   |
@@ -210,9 +210,9 @@ preferences into `/map` filter chips and a weekly cluster-brief
 email. Investors can still see the whole map regardless — the
 preferences personalize, they don't gate.
 
-### Investor public surface + watchlists + intros (Phase 6 / post-MVP)
+### Investor public surface + watchlists + intros (Phase 6 / post-launch)
 
-**Not part of the 24-hour hackathon ship.** Phase 6 builds on top of
+**Not part of the initial production ship.** Phase 6 builds on top of
 Phase 4's investor identity. See `docs/agent-tasks/agent-8-investor.md`.
 
 - **Public investor directory** at `/investors`. Anonymous-readable.
@@ -268,9 +268,9 @@ Phase 4's investor identity. See `docs/agent-tasks/agent-8-investor.md`.
 Every shipped UI surface — Founder Navigator, ecosystem map,
 company profiles, claim flow, GOEO admin UI, `/agents` docs page —
 must work cleanly at both desktop and mobile widths. Design
-mobile-first; verify at 375 / 768 / 1280px. The demo will show
-phones in the audience, and Utah founders & GOEO staff will open
-this on mobile in the wild. See `CLAUDE.md` § Coding Style for the
+mobile-first; verify at 375 / 768 / 1280px. Real founders, investors,
+and GOEO staff will open this on mobile, so phone layout is a
+launch-blocking requirement. See `CLAUDE.md` § Coding Style for the
 breakpoint policy and test checklist.
 
 ### GOEO admin UI
@@ -331,7 +331,7 @@ context obvious.
   - `startup-state company claim crew --domain trycrew.com --email founder@trycrew.com`
   - `startup-state profile build --company "NewCo" --from-url … --emit md,json,llms`
 - **MCP server** (`startup-state-mcp` bin, stdio for local Claude
-  Desktop demo). Tools: `recommend_resources`, `search_resources`,
+  Desktop usage). Tools: `recommend_resources`, `search_resources`,
   `search_companies`, `get_company`, `start_company_claim`,
   `update_company_profile`, `generate_founder_plan`,
   `generate_investor_tour`. Resources:
@@ -348,11 +348,12 @@ context obvious.
   instructions (NOT the same as the repo-root AGENTS.md, which is
   for coding agents).
 - **`/agents`** human-readable docs page that exposes the above
-  surfaces in a way investors/judges can scan.
+  surfaces in a way that investors, GOEO staff, and external
+  integrators can scan without reading the OpenAPI YAML.
 
-## Out of scope for this hackathon (explicit cuts)
+## Out of scope for the initial production ship (explicit cuts)
 
-Per `docs/hackathon-plan.md`, do not invest in:
+Per `docs/product-plan.md`, do not invest in:
 
 - Real OAuth with ChatGPT/Claude (Better Auth covers our user /
   admin login; agents use `X-Atlas-Admin-Token`).
@@ -383,7 +384,11 @@ In scope but kept simple: Better Auth email + password, file-upload
 ownership verification (admin manually reviews), email verification
 + password reset via the `send-email` skill (Resend).
 
-## Demo script (5 scenes — condensed from plan lines 449–528)
+## Canonical user flows (five test scenarios)
+
+These are the load-bearing paths real users hit on the live site;
+they double as regression scenarios exercised by the seeded persona
+fixtures. Full narrative in `docs/product-plan.md`.
 
 1. **Jordan (pre-seed)** — Click "Try Jordan". System produces a
    start-business checklist + student/community resources + "not
@@ -404,18 +409,20 @@ ownership verification (admin manually reviews), email verification
    `startup-state company get crew --json`, then show the MCP tools
    list.
 
-## Judging-rubric notes
+## Customer priorities (from the GOED brief)
 
-- **Usability + design = 55% of judging.** Polish on the founder
-  navigator and map matters more than feature breadth.
+- **Usability + design = 55% of stated weighting.** Polish on the
+  founder navigator and map matters more than feature breadth.
 - One exceptional product beats two half-baked ones. Cut
   aggressively when behind.
-- The agent layer is a *visible flourish in the demo*, not the main
-  product. ~20 seconds of CLI/MCP airtime.
+- The agent layer is a complementary surface, not the primary one.
+  External agents and integrators reach the same data through
+  CLI/MCP/API.
 - "Why this matched" explanations build trust faster than generic
   AI prose. Show field-level reasons.
-- Six persona buttons should produce *meaningfully different*
-  outputs to validate against the organizers' test cases.
+- Six persona test fixtures should produce *meaningfully different*
+  outputs — they validate the recommendation engine against the
+  customer's stated test cases.
 
 ## Datasets
 
@@ -434,10 +441,10 @@ no copy-into-`db/seed/data/` step.
   `# of Employees `, `Section`. Address-only — Agent 1 geocodes via
   city/county centroids.
 - **`docs/source_data/page-2026-05-08-19-38-24.md`** — the canonical
-  AI Builder Day brief from Utah GOED. Contains the verbatim persona
-  descriptions, required company-profile fields, judging breakdown
-  (30 / 25 / 25 / 20), and the link to the live site this build may
-  replace: <https://startup.utah.gov/>.
+  brief from Utah GOED (delivered at AI Builder Day). Contains the
+  verbatim persona descriptions, required company-profile fields,
+  customer priorities (30 / 25 / 25 / 20), and the link to the live
+  site this build may replace: <https://startup.utah.gov/>.
 
 The brief explicitly says: *"You don't need to research or compile
 anything — focus every hour on the build."* Don't scrape startup.utah.gov,
@@ -447,8 +454,8 @@ LinkedIn, or pampam.city. Use what's in `docs/source_data/`.
 
 - Implementation map: `docs/implementation-plan.md`.
 - Screens / sitemap: `docs/screens.md`.
-- Full plan: `docs/hackathon-plan.md`.
+- Full product plan: `docs/product-plan.md`.
 - Architecture: `docs/architecture.md`.
-- Hackathon brief (canonical): `docs/source_data/page-2026-05-08-19-38-24.md`.
+- Customer brief (canonical): `docs/source_data/page-2026-05-08-19-38-24.md`.
 - Per-agent execution: `docs/agent-tasks/agent-<N>-<slice>.md`.
 - Shared conventions: `docs/agent-tasks/00-shared-context.md`.

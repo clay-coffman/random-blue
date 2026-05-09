@@ -4,7 +4,7 @@
 forking into a worktree, read this file first to find your phase and
 your dependencies, then your assigned brief.
 
-The product spec lives in `hackathon-plan.md`. The frozen contracts
+The product spec lives in `product-plan.md`. The frozen contracts
 live in `architecture.md` and `agent-tasks/00-shared-context.md`. This
 file does *not* restate either — it sequences the work.
 
@@ -12,14 +12,14 @@ file does *not* restate either — it sequences the work.
 
 Everything you need to seed the app lives in `docs/source_data/`:
 
-- **`page-2026-05-08-19-38-24.md`** — the AI Builder Day brief from
-  Utah's Governor's Office of Economic Development. Authoritative
-  product framing, required company-profile fields, judging breakdown
-  (30% usability, 25% tech, 25% design, 20% innovation), exact persona
-  descriptions, and the link to the live site this build may replace
-  or feed: <https://startup.utah.gov/>. **Read this before reading
-  `hackathon-plan.md`** if you need to know what the judges actually
-  asked for.
+- **`page-2026-05-08-19-38-24.md`** — the brief from Utah's
+  Governor's Office of Economic Development (delivered at AI Builder
+  Day). Authoritative product framing, required company-profile
+  fields, customer priorities (30% usability, 25% tech, 25% design,
+  20% innovation), exact persona descriptions, and the link to the
+  live site this build may replace or feed: <https://startup.utah.gov/>.
+  **Read this before reading `product-plan.md`** if you need to know
+  what the customer asked for.
 - **`Map Data for Builder Day  - Sheet1.csv`** — 254 companies. Note
   the **double space** in the filename. Columns: `Display Type`,
   `LinkedIn Link (...)`, `Startup Name `, `Full Address`,
@@ -32,9 +32,9 @@ Everything you need to seed the app lives in `docs/source_data/`:
   pipe-separated. Resource IDs come from upstream (start at 2543);
   preserve them as `r_<id>` so re-imports don't duplicate.
 
-> The hackathon brief explicitly says: *"The state has prepared
-> complete datasets for both products. You don't need to research or
-> compile anything — focus every hour on the build."* Don't scrape
+> The GOED brief explicitly says: *"The state has prepared complete
+> datasets for both products. You don't need to research or compile
+> anything — focus every hour on the build."* Don't scrape
 > startup.utah.gov, don't enrich from LinkedIn, don't touch
 > pampam.city/utah-startup-map. Use what's in `docs/source_data/`.
 
@@ -69,15 +69,15 @@ Phase 4  Map + Auth & Admin  (parallel ✕2)    Agents 4, 5       [IN FLIGHT]
             │   4b auth+admin OPEN (PR #20); 4a map not started
             │
 Phase 5a Production hardening                 (whoever has cycles)
-Phase 5b Polish + e2e + demo dry-run          (whoever has cycles)
+Phase 5b Polish + e2e + smoke test            (whoever has cycles)
             │
-Phase 6  Investor public surface + intros     Agent 8           [POST-MVP, scope locked]
+Phase 6  Investor public surface + intros     Agent 8           [POST-LAUNCH, scope locked]
 ```
 
-**Phases 1–5 are the hackathon ship.** Phase 6 lands after the
-24-hour demo as a post-MVP follow-up. It builds **on top of** Agent
-5's investor identity work (Phase 4): public investor directory and
-profile pages, saved-companies watchlists, and admin-brokered intro
+**Phases 1–5 are the initial production ship.** Phase 6 lands as a
+post-launch follow-up. It builds **on top of** Agent 5's investor
+identity work (Phase 4): public investor directory and profile
+pages, saved-companies watchlists, and admin-brokered intro
 requests. If Phase 6 never ships, the product still works — Phase 4
 investors exist, they just don't have a public surface or
 watchlists.
@@ -92,8 +92,8 @@ Phase 3 saturates at 3.
 | 2 | 1, 7 | `feat/data`, `feat/brand-shell` | wt1, wt2 | Agent 1 |
 | 3 | 2, 3, 6 | `feat/recommend`, `feat/navigator`, `feat/agent-layer` | wt1, wt2, wt3 | Agent 3 |
 | 4 | 4, 5 | `feat/map`, `feat/auth-claim-admin` | any 2 of wt1-3 | Agent 5 |
-| 5 | — | `chore/...` or `fix/...` per task | any | demo readiness |
-| 6 | 8 | `feat/investor-public` | any | post-MVP |
+| 5 | — | `chore/...` or `fix/...` per task | any | launch readiness |
+| 6 | 8 | `feat/investor-public` | any | post-launch |
 
 Agents may reuse worktrees as earlier phases' PRs merge. Reset a
 worktree between phases with `git checkout main && git pull && git
@@ -198,10 +198,9 @@ soon as Agent 1 merges.
   - `tests/recommend.test.ts`
 - **Coordination:** writes endpoint shapes to
   `docs/agent-tasks/openapi-additions.md` for Agent 6 to consume.
-- **Demo enables:** Scenes 1 (Jordan), 2 (Priya).
 - **Production enables:** Real founders' first-touch UX on
-  `/founder` (URL → prefill → review → submit). Demo personas
-  bypass enrich.
+  `/founder` (URL → prefill → review → submit). Persona test
+  fixtures bypass enrich.
 
 ### Agent 3 — Founder Navigator UI
 
@@ -224,10 +223,9 @@ soon as Agent 1 merges.
 - **URL note:** the saved plan lives at `/plan/:id`, not
   `/founder/results/:id`. The intake stays at `/founder`. See
   `screens.md` for the full URL map.
-- **Demo enables:** Scenes 1, 2, 4 (the headline of the demo).
 - **Production enables:** the live `/founder` flow for founders
-  who don't match a persona. The optional URL prefill is the
-  primary first-touch friction-reducer.
+  who don't match a persona test fixture. The optional URL prefill is
+  the primary first-touch friction-reducer.
 
 ### Agent 6 — Agent-native layer
 
@@ -252,7 +250,9 @@ soon as Agent 1 merges.
   changes from Agents 2 and 4. Agent 6 may ship the spec in two
   passes — first with Phase 3 endpoints, then a refresh after Phase 4
   lands company PATCH and ownership-submissions endpoints.
-- **Demo enables:** Scene 5.
+- **Production enables:** the agent-native surface — external agents,
+  CLI users, and integrators reach the live API/MCP through the
+  documented OpenAPI spec, the `/agents` page, and `llms.txt`.
 
 ### Phase 3 → Phase 4 gate
 
@@ -285,7 +285,9 @@ merge and free up worktrees.
   PATCH is Agent 5's. Land Agent 4's PR first; Agent 5 adds PATCH on
   top. If Agent 5 is ready first, they may stub a placeholder GET in
   their PR — Agent 4 replaces it on merge.
-- **Demo enables:** Scenes 3, 4.
+- **Production enables:** the live ecosystem map and company-profile
+  surfaces — investors filtering startups, founders looking up peers,
+  the public profile pages that ownership claims hang off of.
 
 ### Agent 5 — Auth + Onboarding + Claim + Admin
 
@@ -319,7 +321,7 @@ merge and free up worktrees.
   - `lib/auth-client.ts`, `lib/email.ts`, `middleware.ts`
   - `db/schema.ts` (extension — investor_profiles + admin_invites)
   - `db/migrations/000N_*.sql` (generated; rebase before generate)
-  - `db/seed/investor-profiles.ts` (3 demo rows)
+  - `db/seed/investor-profiles.ts` (3 seed rows)
   - `app/api/auth/[...all]/route.ts`
   - `app/sign-in/page.tsx`, `app/sign-up/page.tsx` (step 1),
     `app/sign-up/account/page.tsx` (step 2),
@@ -358,16 +360,17 @@ merge and free up worktrees.
 - **Time budget:** ~210 minutes (was 150 — absorbs Auth.html scope
   + investor type). If you hit ~150 min and aren't through admin,
   start the cuts cascade below.
-- **Demo enables:** Scene 4 (claim → review → edit → all surfaces update).
-- **Production enables:** real founder/owner/investor sign-up,
-  ongoing GOEO admin operation.
+- **Production enables:** real founder/owner/investor sign-up, the
+  business-owner claim → admin review → edit loop where every public
+  surface (HTML, `.md`, `.json`, API) reflects the same canonical
+  source, and ongoing GOEO admin operation.
 
 ## Phase 5 — Production hardening + Polish
 
 Whoever has cycles after Phase 4 merges. Split into two tracks
 with different DONE-when criteria. **This is a real ship to
-startup.utah.gov, not just a demo** — Phase 5a's hardening items
-gate any traffic; Phase 5b is craft.
+startup.utah.gov** — Phase 5a's hardening items gate any traffic;
+Phase 5b is craft.
 
 ### Phase 5a — Production hardening (preconditions for any traffic)
 
@@ -396,26 +399,29 @@ gate any traffic; Phase 5b is craft.
 7. **Observability decision recorded.** Sentry vs. Workers built-in
    only — write the choice down (currently neither is wired).
 
-### Phase 5b — Polish + demo dry-run (craft)
+### Phase 5b — Polish + production smoke test (craft)
 
 1. **Production-readiness sweep.** Every shipped surface needs:
    working empty state, working error state, loading state, mobile
    layout, basic a11y (semantic HTML + keyboard reachability + alt
-   text). The persona buttons make happy-path demos trivial; real
-   users hit the failure paths first.
+   text). The persona test fixtures make the happy path easy to
+   regression-check; real users hit the failure paths first.
 2. **Mobile sweep.** Open every shipped page at 375 / 768 / 1280px
    and fix horizontal-scroll / tap-target violations. Use
    `mcp__playwright__browser_resize` or agent-browser device toolbar.
-3. **Demo dry-run** — run all five demo scenes end-to-end against
-   the deployed Worker. Catch broken share URLs, persona-tile flows,
-   R2 doc previews, MCP tool listing.
+3. **End-to-end smoke test against the deployed Worker** — exercise
+   each canonical user flow (founder intake → plan, investor map
+   filter → company profile, business owner claim → admin review →
+   edit propagating through HTML/.md/.json/API, terminal/MCP probe).
+   Catch broken share URLs, persona-tile flows, R2 doc previews, MCP
+   tool listing.
 4. **Activity ticker wire-up** — Agent 7 stubbed it with three fake
    strings. Real wiring pulls last-N events (claim approvals, new
    passports) from D1.
 5. **InvestorBrief polish** — Agent 4 ships a basic version; tune
    the prompt and cap citation count.
-6. **Fixture coverage** — ensure every persona produces a
-   meaningfully-different top-3.
+6. **Fixture coverage** — ensure every persona test fixture produces
+   a meaningfully-different top-3.
 7. **`/agents` page polish** — code samples, copy-button on curl
    blocks, MCP install snippet for Claude Desktop.
 8. **Wireframe-variant complement passes** — for screens where a v2
@@ -424,10 +430,11 @@ gate any traffic; Phase 5b is craft.
 
 ## Phase 6 — Investor public surface + watchlists + intro brokerage
 
-**Post-MVP. Not part of the 24-hour hackathon ship.** Picks up
-after Phase 5 once the demo is locked. Single agent. Builds **on
-top of** Phase 4's investor identity (sign-up, role, onboarding,
-`investor_profiles` preferences) — does not duplicate any of it.
+**Post-launch. Not part of the initial production ship.** Picks up
+after Phase 5 once the launch surfaces are stable. Single agent.
+Builds **on top of** Phase 4's investor identity (sign-up, role,
+onboarding, `investor_profiles` preferences) — does not duplicate
+any of it.
 
 ### Agent 8 — Investor public surface
 
@@ -440,7 +447,8 @@ top of** Phase 4's investor identity (sign-up, role, onboarding,
 - **What's already done by Phase 4 (don't redo):** investor role,
   sign-up, OTP verify, `/onboarding/investor`, `/settings`
   Investor section, `investor_profiles` table (preferences-shaped),
-  `POST/GET /api/v1/investor-profiles`, demo seed rows.
+  `POST/GET /api/v1/investor-profiles`, seed rows for the test
+  fixtures.
 - **Touches:**
   - `db/schema.ts` extensions:
     - **Add columns to `investor_profiles`** (rebase before
@@ -474,8 +482,10 @@ top of** Phase 4's investor identity (sign-up, role, onboarding,
     .json (mirrors `lib/company-card.ts`).
 - **Coordination:** see new Agent 5 ↔ Agent 8 and Agent 4 ↔ Agent 8
   rows in the matrix below.
-- **Demo enables:** none. Phase 6 ships its own follow-up demo if
-  desired — no impact on the original 5-scene demo script.
+- **Production enables:** investor public surface (directory +
+  profile pages), saved-companies watchlists, and admin-brokered
+  intros. Lands as a follow-up after the initial production ship; no
+  impact on the five canonical user flows from Phases 1–5.
 
 ## Coordination matrix
 
@@ -528,42 +538,46 @@ This file does **not** restate them. Sources of truth:
 - **Responsive design (375 / 768 / 1280px)** — `CLAUDE.md` § Coding
   Style
 
-## Demo gating
+## User-flow coverage
 
-Demo gating doubles as production-criticality. Anything that gates
-scenes 1–4 is production-blocking — those scenes are the live
-product's primary surfaces, just exercised with seeded personas.
-Scene 5 (CLI/MCP) is a flourish; if it slips, the product still
+The five canonical user flows below double as both production-load
+mapping and the test scenarios we exercise with seeded personas.
+Anything that gates flows 1–4 is production-blocking — those flows
+are the live product's primary surfaces. Flow 5 (CLI/MCP) is the
+agent-native surface; if it slips, the human-facing product still
 ships.
 
-| Scene | Story | Required agents |
-|-------|-------|-----------------|
+| Flow | Story | Required agents |
+|------|-------|-----------------|
 | 1 | Jordan (pre-seed) — start-business plan | 1, 2, 3, 7 |
 | 2 | Priya (raising) — capital plan | 1, 2, 3, 7 |
 | 3 | Investor map — filter, click, brief | 1, 4, 7 |
 | 4 | Business owner as website — claim → approve → edit → all surfaces update | 1, 4, 5, 7 |
 | 5 | Terminal / MCP proof | 1, 2, 4, 6 |
 
-If a phase slips, scenes drop in this order: 5 → 4 → 3 → 2 → 1
-(keep the founder Navigator scenes if at all possible — they're the
-headline). Scene 5 is a 20-second flourish; cut first.
+If a phase slips, drop production scope in this order: 5 → 4 → 3 →
+2 → 1. Keep the founder Navigator flows if at all possible — they
+are the highest-traffic surface for real founders hitting
+startup.utah.gov. Flow 5 is the agent-native surface and the cheapest
+to defer.
 
-The **investor user type** does not gate any demo scene. It's
+The **investor user type** does not gate any of the five flows. It's
 production scaffolding (sign-up, onboarding, profile persistence,
 admin user-table representation) for a real user class GOEO will
 have on the live site. If Agent 5 takes its cuts cascade, investor
-features drop *before* any demo-load-bearing surface.
+features drop *before* any user-facing surface that founders /
+investors / business owners interact with.
 
 ## Cuts cascade — when behind, take these in order
 
-These are **production cuts**, not demo cuts. The mental model is
-"what can the live site live without," not "what won't the judges
-see." Drawn from each brief's "Cuts allowed if time-pressed"
-sections, prioritized.
+These are **production cuts**. The mental model is "what can the
+live site live without." Drawn from each brief's "Cuts allowed if
+time-pressed" sections, prioritized.
 
 0. **Phase 6 entirely.** Phase 6 (investor public surface +
-   watchlists + intros) is post-MVP by design — it never gates the
-   hackathon ship. If you're behind, don't even start it.
+   watchlists + intros) is post-launch by design — it never gates
+   the initial production ship. If you're behind, don't even start
+   it.
 1. **Phase 5 entirely** — only do Phase 5 if every Phase 4 PR has
    merged with time to spare.
 2. **Agent 6** — skip remote MCP, skip MCP prompts/resources (8 tools
@@ -575,7 +589,7 @@ sections, prioritized.
    1. Drop the **coverage-gaps strip** on `/admin`.
    2. Drop the **stats row** on `/admin` (5 cards).
    3. Drop **`/admin/admins`** — promote admins via the bootstrap
-      script + manual `wrangler d1 execute` for the hackathon.
+      script + manual `wrangler d1 execute` at launch.
    4. Drop **investor onboarding persistence** — collect the form
       inputs but skip writing `investor_profiles` (the row never
       gets created; map personalization is Phase 5 anyway).
@@ -597,18 +611,18 @@ sections, prioritized.
    11. **Last resort:** cosmetic-only ownership upload (no R2
        persistence).
 
-   The investor flow is **production scaffolding**, not a demo
-   gate — its drops are first because cutting it doesn't damage
-   any of the five demo scenes.
+   The investor flow is **production scaffolding**, not one of the
+   five canonical user flows — its drops are first because cutting
+   it doesn't damage any of the user-facing surfaces founders /
+   investors / business owners hit on the live site.
 5. **Agent 4** — skip vector tiles (raster basemap), skip
    InvestorBrief panel, skip clustering (individual pins), skip
    "Update with Claude/ChatGPT" button.
 6. **Agent 3** — skip the URL-prefill UX (manual fill is the
-   always-works path; cut early if Parallel.ai integration slips
-   or bites into demo polish), skip "Ignore for now" bucket, skip
-   field-level modal, skip share URL (deep-link still works), skip
-   skeleton loaders. **Mobile is not optional** — never cut
-   responsive.
+   always-works path; cut early if Parallel.ai integration slips),
+   skip "Ignore for now" bucket, skip field-level modal, skip share
+   URL (deep-link still works), skip skeleton loaders. **Mobile is
+   not optional** — never cut responsive.
 7. **Agent 2** — skip the enrich endpoint and `lib/parallel.ts`
    (front-end falls back to manual fill — coordinate with Agent 3),
    skip persistence (recompute on every GET), skip LLM explanation
@@ -617,7 +631,8 @@ sections, prioritized.
 8. **Agent 1** — skip embedding column, skip FTS5 (LIKE %term%
    instead), skip `company_photos`, drop malformed CSV rows silently.
 
-Cut earliest from agents whose work is *least* visible in the demo.
+Cut earliest from agents whose work is *least* user-facing on the
+live site.
 
 ## Time budget (advisory, not contractual)
 
@@ -628,10 +643,10 @@ Cut earliest from agents whose work is *least* visible in the demo.
 | 3 | ~120 min (longest of Agents 2, 3, 6) | ~330 min |
 | 4 | ~210 min (Agent 5 critical — Auth.html scope + investor; Agent 4 ~120 min in parallel) | ~330 min |
 | 5 | remainder, capped at 3 hr | varies |
-| 6 | post-hackathon — ~150 min when picked up | ~150 min |
+| 6 | post-launch — ~150 min when picked up | ~150 min |
 
-Buffer for demo prep, deploy validation, and slippage: at least 2 hr
-before the 24-hour mark.
+Launch buffer for deploy validation, smoke tests, and slippage: at
+least 2 hr before any traffic is sent.
 
 ## Status snapshot (update as phases complete)
 
@@ -652,8 +667,8 @@ Phase 4:  🟡 IN FLIGHT
             Agent 4 — map+profiles:  ⬜ NOT STARTED (wt3 picking up next on `feat/map`)
             Agent 5 — auth+admin:    PR #20 OPEN (must rebase + renumber 0001 → 0003)
 Phase 5a: ⬜ PENDING — production hardening (CI, deploy, secrets, security review)
-Phase 5b: ⬜ PENDING — polish + demo dry-run
-Phase 6:  📝 DOCS-ONLY — scope locked (PR #15); implementation deferred to post-MVP
+Phase 5b: ⬜ PENDING — polish + production smoke test
+Phase 6:  📝 DOCS-ONLY — scope locked (PR #15); implementation deferred to post-launch
 ```
 
 **Migration state on `main`:** `0000_flaky_scarlet_spider` (Agent 1)

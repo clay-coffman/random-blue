@@ -145,7 +145,7 @@ shortcuts elsewhere (e.g. an admin "preview as" tool) must use the
 same URL.
 
 The oneLiners are verbatim from the GOED brief. Don't paraphrase —
-judges recognize them.
+users recognize them.
 
 ## Layout chrome
 
@@ -207,7 +207,7 @@ doesn't excuse breaking it.
   hero and brand primitives server-rendered.
 - **Don't gate UI on auth.** The hero and `/founder` intake are
   anonymous. Auth-gated routes are explicit (admin, claim, edit).
-- **Don't paraphrase persona descriptions.** They are part of the demo.
+- **Don't paraphrase persona descriptions.** They are part of the production UX.
 
 ## Adding to the brand
 

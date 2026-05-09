@@ -3,10 +3,10 @@
 > **Status: scope locked, implementation deferred.** Phase 6 docs
 > were merged to `main` ahead of code (PR #15) so Agents 4 and 5
 > could coordinate against the final schema shape. **No Phase 6 code
-> will land until Phase 5 demo lock.** If you are looking for what
+> will land until Phase 5 production lock.** If you are looking for what
 > to build next, see `docs/implementation-plan.md` § Phases 3 / 4.
 
-**Phase 6 — post-MVP.** Not part of the 24-hour hackathon ship.
+**Phase 6 — post-launch.** Not part of the initial production ship.
 
 You build three coordinated surfaces **on top of** Agent 5's
 investor identity work:
@@ -43,7 +43,7 @@ merged code before starting. **Do not rebuild any of this:**
   geo focus).
 - `POST /api/v1/investor-profiles` (upsert own preferences),
   `GET /api/v1/investor-profiles` (own profile fetch).
-- 3 demo investor seed rows (Pelion, etc.) in
+- 3 seed investor rows (Pelion, etc.) for test fixtures in
   `db/seed/investor-profiles.ts`.
 
 Phase 5 polish wires the preferences into `/map` filter chips —
@@ -64,7 +64,7 @@ that's also someone else's work, not yours.
 3. `docs/architecture.md` — repo layout + dual-auth model.
 4. `docs/requirements.md` § Investor public surface + watchlists
    + intros — single source of truth for what ships.
-5. `docs/screens.md` § Phase 6 / post-MVP — URL matrix.
+5. `docs/screens.md` § Phase 6 / post-launch — URL matrix.
 6. **`docs/agent-tasks/agent-5-claim.md`** — your closest analog.
    Auth wiring, role-gated middleware, admin queue with
    pending/accepted/declined states + email-on-status-change.
@@ -81,7 +81,7 @@ that's also someone else's work, not yours.
 ## Depends on
 
 **All of Phase 1–5 should be merged before you start.** This
-isn't a hackathon-time agent — pick this up post-demo. If Phase 5
+isn't a launch-time agent — pick this up post-launch. If Phase 5
 hasn't fully landed, the `/map` filter integration may still be
 in flight, but that's not your concern.
 
@@ -234,13 +234,17 @@ in flight, but that's not your concern.
 Rebase against `main` first. Run `npm run db:generate` →
 `npm run db:migrate:local` → re-run `npm run seed` (the existing
 seed will skip rows that exist; the new public-profile columns
-on existing investor seed rows stay null until each demo investor
+on existing investor seed rows stay null until each investor
 "publishes").
 
 The migration must be backward-compatible: the new columns on
 `investor_profiles` are nullable (or have defaults), and Phase 4
 rows continue to satisfy `POST /api/v1/investor-profiles` (which
-only writes the preference fields).
+only writes the preference fields). Rebase against `main` first.
+Run `npm run db:generate` → `npm run db:migrate:local` → re-run
+`npm run seed` (the existing seed will skip rows that exist; the new
+public-profile columns on existing investor seed rows stay null until
+each investor "publishes").
 
 ### 2. Slug bootstrapping
 

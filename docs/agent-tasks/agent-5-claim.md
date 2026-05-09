@@ -26,10 +26,9 @@ You build five surfaces:
    directory, company list, users list, admin invites, and map
    curation without a developer.
 
-The admin half is required for the demo narrative ("the state can
-maintain this without us"). The owner-edit half is the headline
-"business owners are the website" demo. The investor type is
-production scaffolding — it doesn't gate any demo scene; cut it
+The admin half is required to show the state can maintain this without us. The owner-edit
+half is the headline that business owners are the website. The investor type is
+production scaffolding — it doesn't gate any core flow; cut it
 first if you slip.
 
 The auth visual scope comes from
@@ -59,7 +58,7 @@ admin half, start the cuts cascade in
    the OWNERSHIP_DOCS R2 binding.
 4. `docs/requirements.md` — Authentication, Self-service claim
    flow, GOEO admin UI.
-5. `docs/hackathon-plan.md` — § "Authentication & ownership
+5. `docs/product-plan.md` — § "Authentication & ownership
    verification".
 6. `design/startup-state-atlas-wireframes/project/Auth.html` —
    **primary** auth/onboarding/admin UI reference. Read all five
@@ -565,7 +564,7 @@ Extend `db/schema.ts` with the two tables documented in
 migration. Rebase before generating to avoid number collisions
 (per `00-shared-context.md`).
 
-Add a small seed file with three demo investor profiles (Pelion
+Add a small seed file with three investor seed profiles (Pelion
 Ventures / Salt Lake Angels / Kickstart Fund) tied to one new
 investor user so the admin user table has a representative
 investor row on day one.
@@ -694,20 +693,11 @@ admin" against `main` from `feat/auth-claim-admin`. Use the
     the page.
 20. PR open.
 
-## Demo path
-
-**Scene 4 (business owner as website)**: sign up as a founder,
-upload a business license, switch to a logged-in admin tab,
-approve. Switch back, edit the company, show the website AND
-the .md AND the API endpoint all updating from the same source
-of truth. The "approve" click is the punchline of the
-verification story.
-
 ## Cuts allowed if time-pressed (in priority order)
 
-The investor type is **production scaffolding**, not a demo
-gate — its drops come first because cutting any of them doesn't
-damage the five demo scenes.
+The investor type is **production scaffolding** — its cuts come
+first because cutting any of them doesn't damage the core product
+flows.
 
 1. **Drop the coverage-gaps strip** on `/admin`.
 2. **Drop the stats row** on `/admin`.
@@ -737,8 +727,8 @@ damage the five demo scenes.
     `/admin/submissions` (the headline) and resources CRUD.
 14. **Last resort: cosmetic-only ownership upload** — the upload
     form lands on a "thanks, your submission is pending review"
-    page that doesn't actually persist. The demo says "this
-    WOULD update everywhere" without actually doing it.
+    page that doesn't actually persist. This shows the flow without
+    the actual persistence backend.
 
 ## Common pitfalls
 

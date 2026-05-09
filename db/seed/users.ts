@@ -36,9 +36,9 @@ export const testUsers: TestUser[] = [
   // Superadmin (full system access).
   { id: "u_super", email: "super@startup-state-atlas.test", name: "Atlas Superadmin", role: "superadmin" },
   // Investors — each tied to one investor_profiles row (firm/affiliation).
-  // Phase 4 demo seed: gives the admin user table representative investor
-  // rows on day one, and lets the map filter chips have real preferences
-  // to dogfood once Phase 5 wires personalization.
+  // Phase 4 test-fixture seed: gives the admin user table representative
+  // investor rows on day one, and lets the map filter chips have real
+  // preferences to dogfood once Phase 5 wires personalization.
   { id: "u_pelion", email: "deals@pelion.test", name: "D. Ortiz (Pelion)", role: "investor" },
   { id: "u_slangels", email: "scout@slangels.test", name: "Casey Lin (SL Angels)", role: "investor" },
   { id: "u_kickstart", email: "partner@kickstart.test", name: "Sam Patel (Kickstart)", role: "investor" },

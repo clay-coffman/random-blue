@@ -17,8 +17,8 @@ visual polish matters here.
 3. `docs/architecture.md` — repo layout + `/startups/:slug.{md,json}`
    route conventions.
 4. `docs/requirements.md` — Investor / map view + Company profiles.
-5. `docs/hackathon-plan.md` lines 117–183 (map + profile spec) and
-   lines 471–495 (Scene 3, investor view).
+5. `docs/product-plan.md` lines 117–183 (map + profile spec) and
+   lines 471–495 (Flow 3, investor view).
 6. **`docs/source_data/page-2026-05-08-19-38-24.md`** § "The Utah
    Startup Map" — required company-profile fields, filter list, and
    the `pampam.city/utah-startup-map` reference. **Don't scrape or
@@ -109,7 +109,7 @@ Cap results at 500 for the map view.
 ### 2. `GET /api/v1/companies/:slug` (single)
 
 Returns the full Agent Card shape (per
-`docs/hackathon-plan.md` lines 158–179). Include all the company
+`docs/product-plan.md` lines 158–179). Include all the company
 profile fields.
 
 ### 3. `app/map/page.tsx` — the map view
@@ -157,7 +157,7 @@ Cite company slugs.
 ```
 
 Display the response in the right panel as bulleted clusters.
-Per `docs/hackathon-plan.md` lines 484–493 — turn the map from
+Per `docs/product-plan.md` lines 484–493 — turn the map from
 directory into narrative.
 
 ### 5. `app/startups/[slug]/page.tsx` — public profile
@@ -174,7 +174,7 @@ Sections:
 - **"Claim this company"** button (Agent 5 wires the handler;
   link to `/claim?slug=...`).
 - **"Update with Claude/ChatGPT"** button — copies a structured
-  prompt to clipboard (per `docs/hackathon-plan.md` lines
+  prompt to clipboard (per `docs/product-plan.md` lines
   421–440). Don't implement OAuth; just the prompt-copy UX.
 - **"Agent Card"** footer with links to `/startups/:slug.md`,
   `/startups/:slug.json`, `/api/v1/companies/:slug`.
@@ -206,7 +206,7 @@ gh pr create --base main --title "Ecosystem map + company profiles"
 1. `/map` loads MapLibre with Utah-centered view, clustered
    companies visible.
 2. Filtering by `sector=FinTech, stage=Seed, county=Salt Lake`
-   shows the cluster from `docs/hackathon-plan.md` Scene 3.
+   shows the cluster from `docs/product-plan.md` Flow 3.
 3. Clicking a pin opens the drawer with company preview.
 4. "Investor brief" returns 3–5 cluster bullets citing real
    company slugs.
@@ -224,11 +224,6 @@ gh pr create --base main --title "Ecosystem map + company profiles"
    horizontal scroll. Verified with
    `mcp__playwright__browser_resize`.
 10. PR open.
-
-## Demo path
-
-**Scene 3 (investor view)** and **Scene 4 (business owner as
-website)**. The map is the visual you put on the projector.
 
 ## Cuts allowed if time-pressed
 
@@ -253,7 +248,7 @@ website)**. The map is the visual you put on the projector.
   City company resolving to the same lat/lng). Apply a tiny random
   jitter or rely on clustering to make this readable.
 - **Sector vocabulary comes from the source data**, not the
-  hackathon brief's prose. Use the actual `Section` values in the
+  product brief's prose. Use the actual `Section` values in the
   CSV (`B2B Software`, `Security`, `FinTech`, `Aerospace and Defense`,
   `Life Sciences`, etc.) — the brand palette has eight sector colors,
   but the data may have more or fewer. Map unknown sectors to a

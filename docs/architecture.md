@@ -136,7 +136,7 @@ startup-state-atlas/
 │   ├── seed/personas.ts
 │   ├── seed/resources.ts
 │   ├── seed/companies.ts
-│   ├── seed/investor-profiles.ts  # demo investor rows (Agent 5)
+│   ├── seed/investor-profiles.ts  # test-fixture investor rows (Agent 5)
 │   ├── seed/data/resources.csv  # user provides (Google Sheets)
 │   └── seed/data/companies.csv  # user provides
 ├── auth.ts                       # Better Auth config (Agent 5)
@@ -165,7 +165,7 @@ startup-state-atlas/
 │   ├── AGENTS.md                 # END-USER-FACING agent docs (Agent 6)
 │   └── llms.txt                  # /llms.txt (Agent 6)
 ├── docs/
-│   ├── hackathon-plan.md
+│   ├── product-plan.md
 │   ├── architecture.md           # this file
 │   ├── requirements.md
 │   └── agent-tasks/00-…6-…md
@@ -178,7 +178,7 @@ startup-state-atlas/
 └── .env.example
 ```
 
-## Data flow — the three demo paths
+## Data flow — the three primary user paths
 
 ### A) Founder intake → personalized plan
 
@@ -274,7 +274,7 @@ Wrap that in `lib/cf.ts` so handlers don't import OpenNext directly.
 - Enable via `observability.enabled = true` in `wrangler.jsonc`.
 - Live tail: `wrangler tail` (during dev).
 - Search/retention: Cloudflare Workers dashboard → Logs.
-- No third-party error tracker for the hackathon. If we want richer
+- No third-party error tracker at launch. If we want richer
   grouping later, add Sentry's free tier or self-host GlitchTip — but
   not now.
 
@@ -301,7 +301,7 @@ Wrap that in `lib/cf.ts` so handlers don't import OpenNext directly.
   is also served at `/api/v1/openapi.json`. Agent 6 owns it.
 - **Error shape:** `{ error: { code, message, details? } }`.
 - **ID prefixes:** `fp_*`, `co_*`, `r_*`, `rec_*`, `bos_*`,
-  `inv_*` (investor profiles). Phase 6 (post-MVP) adds
+  `inv_*` (investor profiles). Phase 6 (post-launch) adds
   `sc_*` (saved companies) and `irq_*` (intro requests) — see
   `docs/agent-tasks/agent-8-investor.md`. Use `lib/ids.ts`.
   (Better Auth's own IDs — `user`, `session`, `account`,
