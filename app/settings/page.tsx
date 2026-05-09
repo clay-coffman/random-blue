@@ -23,14 +23,31 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const SECTION_NAV: Array<{ id: string; label: string }> = [
-  { id: "profile", label: "Profile" },
-  { id: "security", label: "Security" },
-  { id: "role", label: "Role" },
-  { id: "notifications", label: "Notifications" },
-  { id: "tokens", label: "Agent tokens" },
-  { id: "danger", label: "Danger zone" },
-];
+function buildSectionNav(
+  role: string,
+  ownedCount: number,
+): Array<{ id: string; label: string; count?: number }> {
+  const roleLabel =
+    role === "founder"
+      ? "Founder passport"
+      : role === "owner"
+        ? "Claimed companies"
+        : role === "investor"
+          ? "Investor preferences"
+          : "Role";
+  return [
+    { id: "profile", label: "Profile" },
+    { id: "security", label: "Security" },
+    {
+      id: "role",
+      label: roleLabel,
+      count: role === "owner" ? ownedCount : undefined,
+    },
+    { id: "notifications", label: "Notifications" },
+    { id: "tokens", label: "Agent tokens" },
+    { id: "danger", label: "Danger zone" },
+  ];
+}
 
 export default async function SettingsPage() {
   const session = await getAuth().api.getSession({ headers: await headers() });
@@ -81,6 +98,8 @@ export default async function SettingsPage() {
           .limit(1)
       : [];
 
+  const sectionNav = buildSectionNav(role, claimedCompanies.length);
+
   return (
     <section className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-7 md:grid-cols-[200px_1fr]">
       {/* Sidebar nav */}
@@ -89,17 +108,22 @@ export default async function SettingsPage() {
           Settings
         </p>
         <nav aria-label="Settings sections" className="grid gap-1">
-          {SECTION_NAV.map((s) => (
+          {sectionNav.map((s) => (
             <a
               key={s.id}
               href={`#${s.id}`}
               className={
                 s.id === "danger"
-                  ? "rounded-tile border-l-2 border-transparent px-3 py-1.5 text-sm text-danger hover:border-danger hover:bg-paper-2"
-                  : "rounded-tile border-l-2 border-transparent px-3 py-1.5 text-sm text-ink-2 hover:border-ember hover:bg-paper-2 hover:text-ink"
+                  ? "flex items-center gap-2 rounded-tile border-l-2 border-transparent px-3 py-1.5 text-sm text-danger hover:border-danger hover:bg-paper-2"
+                  : "flex items-center gap-2 rounded-tile border-l-2 border-transparent px-3 py-1.5 text-sm text-ink-2 hover:border-ember hover:bg-paper-2 hover:text-ink"
               }
             >
-              {s.label}
+              <span className="flex-1">{s.label}</span>
+              {typeof s.count === "number" && s.count > 0 ? (
+                <span className="rounded-pill bg-stone px-2 py-0.5 font-mono text-[10px] text-ink-3">
+                  {s.count}
+                </span>
+              ) : null}
             </a>
           ))}
         </nav>
@@ -108,6 +132,12 @@ export default async function SettingsPage() {
             Current role
           </p>
           <p className="mt-1 font-medium">{role}</p>
+          <Link
+            href="#role"
+            className="mt-2 inline-block font-medium text-ember underline-offset-4 hover:underline"
+          >
+            Manage role →
+          </Link>
         </div>
       </aside>
 
@@ -323,6 +353,12 @@ function OwnerRoleBlock({
           key={c.slug}
           className="flex flex-wrap items-center gap-3 rounded-tile border-[1.5px] border-topo bg-paper-2 p-4"
         >
+          <span
+            aria-hidden
+            className="grid h-9 w-9 flex-none place-items-center rounded-tile border-[1.5px] border-ink bg-stone font-serif text-lg"
+          >
+            {c.name[0]?.toUpperCase() ?? "?"}
+          </span>
           <span className="flex-1">
             <span className="block font-serif text-lg leading-tight">
               {c.name}

@@ -230,29 +230,6 @@ export default function SignUpAccountPage() {
           >
             {submitting ? "Sending code…" : "Send verification code →"}
           </button>
-          <div className="flex items-center gap-3 text-xs uppercase tracking-wider text-ink-3">
-            <span className="h-px flex-1 bg-topo" />
-            or
-            <span className="h-px flex-1 bg-topo" />
-          </div>
-          <div className="grid gap-2">
-            <button
-              type="button"
-              disabled
-              className="inline-flex min-h-[44px] items-center justify-center rounded-tile border border-topo bg-paper-2 px-5 py-3 text-sm text-ink-3"
-              aria-label="Continue with Google (coming soon)"
-            >
-              Continue with Google · coming soon
-            </button>
-            <button
-              type="button"
-              disabled
-              className="inline-flex min-h-[44px] items-center justify-center rounded-tile border border-topo bg-paper-2 px-5 py-3 text-sm text-ink-3"
-              aria-label="Email me a magic link (coming soon)"
-            >
-              Email me a magic link · coming soon
-            </button>
-          </div>
         </form>
       </Form>
     </AuthShell>

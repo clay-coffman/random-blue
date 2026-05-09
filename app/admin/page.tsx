@@ -11,24 +11,18 @@ import {
 import { user as userTable } from "@/db/schema.auth";
 import { getAuth } from "@/auth";
 import { ScribbleDivider } from "@/components/brand";
+import { getPendingSubmissionsCount } from "@/lib/admin/pending";
 
 export const dynamic = "force-dynamic";
 
 async function loadStats() {
-  const [
-    [{ users }],
-    [{ companiesC }],
-    [{ resourcesC }],
-    [{ pending }],
-  ] = await Promise.all([
-    db().select({ users: count() }).from(userTable),
-    db().select({ companiesC: count() }).from(companies),
-    db().select({ resourcesC: count() }).from(resources),
-    db()
-      .select({ pending: count() })
-      .from(businessOwnershipSubmissions)
-      .where(eq(businessOwnershipSubmissions.status, "pending")),
-  ]);
+  const [[{ users }], [{ companiesC }], [{ resourcesC }], pending] =
+    await Promise.all([
+      db().select({ users: count() }).from(userTable),
+      db().select({ companiesC: count() }).from(companies),
+      db().select({ resourcesC: count() }).from(resources),
+      getPendingSubmissionsCount(),
+    ]);
 
   // Week-over-week: rough deltas from created_at on user, companies
   // (claimed in past 7 days as proxy), resources lastUpdatedAt.

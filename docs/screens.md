@@ -54,7 +54,7 @@ ones.
 | `/sign-up/verify` | 5 | `project/Auth.html#signup` (1.3) | anon-with-token | Step 3: 6-digit OTP (10-min expiry, 30-sec resend). Better Auth `emailOTP` plugin. |
 | `/forgot-password` | 5 | `project/Auth.html#login` (2.2) | anon | Generic confirmation — does not leak whether email is on file. |
 | `/reset-password` | 5 | `project/Auth.html#login` (2.3) | anon-with-token | OTP-driven; same plugin as signup verify. |
-| `/login/sent` | 5 | `project/Auth.html#login` (2.3) | anon | Shared "code/link sent" confirmation. Phase 4: reset only. Phase 5: magic-link too. |
+| `/login/sent` | 5 | `project/Auth.html#login` (2.3) | anon | Reset code confirmation. Magic-link is deferred indefinitely (2026-05-08 audit decision: email + password + OTP is the only ship path). |
 | `/api/auth/[...all]` | 5 | — | varies | Better Auth catch-all handler (incl. OTP endpoints) |
 
 ## Onboarding screens (signed-in, role-specific)

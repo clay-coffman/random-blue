@@ -43,7 +43,6 @@ export default function ForgotPasswordPage() {
       // Swallow — generic confirmation copy is the contract.
     }
     const sp = new URLSearchParams();
-    sp.set("mode", "reset");
     sp.set("email", values.email);
     router.push(`/login/sent?${sp.toString()}`);
   }
