@@ -57,6 +57,18 @@
     {
       "name": "meta",
       "description": "API metadata (OpenAPI spec, etc.)."
+    },
+    {
+      "name": "investors",
+      "description": "Public investor directory + profiles (Phase 6 / Agent 8)."
+    },
+    {
+      "name": "saved",
+      "description": "Investor watchlist of saved companies (Phase 6 / Agent 8)."
+    },
+    {
+      "name": "intros",
+      "description": "Admin-brokered intro requests (Phase 6 / Agent 8)."
     }
   ],
   "paths": {
@@ -619,6 +631,602 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/v1/investors": {
+      "get": {
+        "tags": [
+          "investors"
+        ],
+        "operationId": "listVerifiedInvestors",
+        "summary": "List all verified investors with public profiles.",
+        "description": "Public — no auth required. Returns only investors whose admin\nreview has flipped them to `verification_status = \"verified\"` and\nwho have published a slug. Email is never included.\n",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Verified investors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "investors",
+                    "count"
+                  ],
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "investors": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/InvestorListItem"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/investor-profiles/{slug}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "slug",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "investors"
+        ],
+        "operationId": "getInvestorProfileBySlug",
+        "summary": "Return the public investor card for a given slug.",
+        "description": "Public — no auth required. Email is intentionally redacted; the\nonly way to surface contact info is via an admin-accepted intro\nrequest.\n",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Investor card.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestorPublicCard"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "investors"
+        ],
+        "operationId": "patchInvestorProfile",
+        "summary": "Update an investor's public profile.",
+        "description": "Three auth modes:\n- **Owner** (Better Auth session, `investor_profiles.user_id ===\n  session.user.id`): can write the public-fields whitelist\n  (display_name, bio, tagline, website, linkedin, slug while\n  unverified). Editing display_name or website on a verified\n  profile auto-flips `verification_status` back to `unverified`\n  for re-review.\n- **Admin** (`goeo_admin` / `superadmin`): can also write\n  `verification_status`. Admin edits do NOT auto-unverify.\n- **Machine** (`X-Atlas-Admin-Token`): same as admin.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvestorPublicPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated investor card.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "profile"
+                  ],
+                  "properties": {
+                    "profile": {
+                      "$ref": "#/components/schemas/InvestorPublicCard"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Slug already taken.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/saved-companies": {
+      "get": {
+        "tags": [
+          "saved"
+        ],
+        "operationId": "listSavedCompanies",
+        "summary": "The caller's saved-companies watchlist.",
+        "description": "Session required. Returns the calling investor's watchlist\njoined to companies. Returns an empty list if the caller has\nno investor profile.\n",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved companies.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "saved"
+                  ],
+                  "properties": {
+                    "saved": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SavedCompany"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "saved"
+        ],
+        "operationId": "saveCompany",
+        "summary": "Save a company to the caller's watchlist.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "company_id"
+                ],
+                "properties": {
+                  "company_id": {
+                    "type": "string",
+                    "pattern": "^co_[a-z0-9]+$"
+                  },
+                  "note": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^sc_[a-z0-9]+$"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "created"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Already saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "saved"
+        ],
+        "operationId": "updateSavedCompanyNote",
+        "summary": "Update the note on a saved company.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "company_id",
+                  "note"
+                ],
+                "properties": {
+                  "company_id": {
+                    "type": "string",
+                    "pattern": "^co_[a-z0-9]+$"
+                  },
+                  "note": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "updated"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "saved"
+        ],
+        "operationId": "unsaveCompany",
+        "summary": "Remove a company from the caller's watchlist.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^co_[a-z0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unsaved."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/intro-requests": {
+      "get": {
+        "tags": [
+          "intros"
+        ],
+        "operationId": "listIntroRequests",
+        "summary": "The caller's intro requests (outbound + inbound).",
+        "description": "Session required. Returns:\n- `outbound`: all rows where the caller is the requester, any status.\n- `inbound`: rows targeted at the caller (their investor profile\n  or claimed company), but only after admin moves them to\n  `accepted` or `introduced`.\n",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Outbound + inbound.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "outbound",
+                    "inbound"
+                  ],
+                  "properties": {
+                    "outbound": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/IntroRequestOutbound"
+                      }
+                    },
+                    "inbound": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/IntroRequestInbound"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "intros"
+        ],
+        "operationId": "createIntroRequest",
+        "summary": "Submit a new intro request to GOEO.",
+        "description": "Body's `target` is a discriminated union — exactly one of\n`investor` or `company` may be specified. The requester's role\nis snapshotted at request time so the audit trail reflects what\nthey were when they asked, not what they are now.\n",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntroRequestCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^irq_[a-z0-9]+$"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/intro-requests/{id}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^irq_[a-z0-9]+$"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "intros"
+        ],
+        "operationId": "getIntroRequest",
+        "summary": "Read a single intro request.",
+        "description": "Allowed for the requester, an admin, or the target party — but\nthe target only sees the row after admin moves it to `accepted`\nor `introduced`.\n",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The intro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "intro"
+                  ],
+                  "properties": {
+                    "intro": {
+                      "$ref": "#/components/schemas/IntroRequest"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "intros"
+        ],
+        "operationId": "reviewIntroRequest",
+        "summary": "Admin review — accept, decline, or mark introduced.",
+        "description": "Admin only (`goeo_admin` / `superadmin`). Body's `status` must\nbe one of `accepted | declined | introduced`.\n\nConcurrent-action guard: only `pending` rows are actionable.\nTwo admins acting near-simultaneously will see one win and one\nget a 409.\n\nEmail side-effects:\n- `accepted`: emails both parties with each other's contact info\n  (or just the requester if the target hasn't claimed their\n  profile, with a note that GOEO will follow up).\n- `declined`: emails the requester only.\n- `introduced`: emails the requester only (used when admin made\n  the intro out-of-band).\n",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntroRequestPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated intro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "intro"
+                  ],
+                  "properties": {
+                    "intro": {
+                      "$ref": "#/components/schemas/IntroRequest"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Intro already moved past `pending`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -1270,6 +1878,557 @@
           "score": {
             "type": "number",
             "description": "Relevance score (higher is better)."
+          }
+        }
+      },
+      "InvestorListItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "display_name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^inv_[a-z0-9]+$"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "firm_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "tagline": {
+            "type": "string",
+            "nullable": true
+          },
+          "investor_type": {
+            "type": "string",
+            "nullable": true
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sectors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "geo_focus": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canonical_url": {
+            "type": "string",
+            "example": "/investors/pelion"
+          }
+        }
+      },
+      "InvestorPublicCard": {
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "display_name",
+          "stages",
+          "sectors",
+          "geo_focus",
+          "verification",
+          "canonical_url",
+          "agent_card_urls"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^inv_[a-z0-9]+$"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "firm_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "investor_type": {
+            "type": "string",
+            "nullable": true
+          },
+          "investor_type_display": {
+            "type": "string",
+            "nullable": true
+          },
+          "tagline": {
+            "type": "string",
+            "nullable": true
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true
+          },
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "linkedin": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stages_display": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sectors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sectors_display": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "check_size_min": {
+            "type": "integer",
+            "nullable": true
+          },
+          "check_size_max": {
+            "type": "integer",
+            "nullable": true
+          },
+          "geo_focus": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "geo_focus_display": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "verification": {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "verified",
+                  "unverified"
+                ]
+              },
+              "verified_at": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              }
+            }
+          },
+          "last_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canonical_url": {
+            "type": "string"
+          },
+          "agent_card_urls": {
+            "type": "object",
+            "required": [
+              "html",
+              "markdown",
+              "json",
+              "api"
+            ],
+            "properties": {
+              "html": {
+                "type": "string"
+              },
+              "markdown": {
+                "type": "string"
+              },
+              "json": {
+                "type": "string"
+              },
+              "api": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "InvestorPublicPatch": {
+        "type": "object",
+        "description": "All fields optional. Owner edits are limited to the public\nwhitelist (display_name, bio, tagline, website, linkedin, slug\nwhen unverified). `verification_status` is admin/machine only.\n",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "maxLength": 80
+          },
+          "display_name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "tagline": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 200
+          },
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "linkedin": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "verification_status": {
+            "type": "string",
+            "enum": [
+              "unverified",
+              "verified"
+            ],
+            "description": "Admin / machine only."
+          }
+        }
+      },
+      "SavedCompany": {
+        "type": "object",
+        "required": [
+          "id",
+          "saved_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^sc_[a-z0-9]+$"
+          },
+          "saved_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "company": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "sector": {
+                "type": "string",
+                "nullable": true
+              },
+              "stage": {
+                "type": "string",
+                "nullable": true
+              },
+              "logo_url": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          }
+        }
+      },
+      "IntroRequestCreate": {
+        "type": "object",
+        "required": [
+          "target",
+          "message_text"
+        ],
+        "properties": {
+          "target": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "investor"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "pattern": "^inv_[a-z0-9]+$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "company"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "pattern": "^co_[a-z0-9]+$"
+                  }
+                }
+              }
+            ]
+          },
+          "message_text": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 2000
+          }
+        }
+      },
+      "IntroRequestPatch": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "declined",
+              "introduced"
+            ]
+          },
+          "admin_notes": {
+            "type": "string",
+            "maxLength": 2000,
+            "nullable": true
+          }
+        }
+      },
+      "IntroRequest": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "message_text",
+          "requester_role",
+          "target_type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^irq_[a-z0-9]+$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "declined",
+              "introduced"
+            ]
+          },
+          "message_text": {
+            "type": "string"
+          },
+          "admin_notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reviewed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "requester_role": {
+            "type": "string"
+          },
+          "requester_user_id": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "investor",
+              "company"
+            ]
+          },
+          "target_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "target_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "target_url": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "IntroRequestOutbound": {
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "declined",
+              "introduced"
+            ]
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reviewed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "admin_notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "message_text": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "investor",
+              "company"
+            ]
+          },
+          "target_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "target_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "target_url": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "IntroRequestInbound": {
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "introduced"
+            ]
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reviewed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "admin_notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "message_text": {
+            "type": "string"
+          },
+          "requester_role": {
+            "type": "string"
+          },
+          "requester_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "requester_email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
           }
         }
       }

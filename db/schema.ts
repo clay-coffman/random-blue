@@ -308,12 +308,102 @@ export const investorProfiles = sqliteTable(
     checkSizeMin: integer("check_size_min"),
     checkSizeMax: integer("check_size_max"),
     geoFocusJson: text("geo_focus_json"),
+    // Public-profile columns (Agent 8). Nullable so Phase-4 rows that
+    // pre-date publishing remain valid; populated when an investor
+    // first opens /me/investor and saves the editor.
+    slug: text("slug"),
+    displayName: text("display_name"),
+    bio: text("bio"),
+    tagline: text("tagline"),
+    website: text("website"),
+    linkedin: text("linkedin"),
+    verificationStatus: text("verification_status")
+      .default("unverified")
+      .notNull(),
+    verifiedAt: integer("verified_at", { mode: "timestamp_ms" }),
+    lastUpdatedBy: text("last_updated_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(now),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .$defaultFn(now)
       .$onUpdate(now),
   },
-  (t) => [uniqueIndex("investor_profiles_user_idx").on(t.userId)],
+  (t) => [
+    uniqueIndex("investor_profiles_user_idx").on(t.userId),
+    uniqueIndex("investor_profiles_slug_idx").on(t.slug),
+    index("investor_profiles_verification_idx").on(t.verificationStatus),
+  ],
+);
+
+// ─── Saved companies (investor watchlist) ────────────────────────────
+
+export const savedCompanies = sqliteTable(
+  "saved_companies",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => newId("sc")),
+    investorId: text("investor_id")
+      .notNull()
+      .references(() => investorProfiles.id, { onDelete: "cascade" }),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    note: text("note"),
+    savedAt: integer("saved_at", { mode: "timestamp_ms" })
+      .$defaultFn(now)
+      .notNull(),
+  },
+  (t) => [
+    index("saved_companies_investor_idx").on(t.investorId),
+    uniqueIndex("saved_companies_investor_company_idx").on(
+      t.investorId,
+      t.companyId,
+    ),
+  ],
+);
+
+// ─── Intro requests (admin-brokered) ─────────────────────────────────
+
+export const introRequests = sqliteTable(
+  "intro_requests",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => newId("irq")),
+    requesterUserId: text("requester_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // Snapshot of the requester's role at request time — the audit
+    // trail should reflect what they were when they asked, not what
+    // they are now.
+    requesterRole: text("requester_role").notNull(),
+    targetInvestorId: text("target_investor_id").references(
+      () => investorProfiles.id,
+      { onDelete: "set null" },
+    ),
+    targetCompanyId: text("target_company_id").references(
+      () => companies.id,
+      { onDelete: "set null" },
+    ),
+    messageText: text("message_text").notNull(),
+    status: text("status").default("pending").notNull(),
+    submittedAt: integer("submitted_at", { mode: "timestamp_ms" })
+      .$defaultFn(now)
+      .notNull(),
+    reviewedByUserId: text("reviewed_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    reviewedAt: integer("reviewed_at", { mode: "timestamp_ms" }),
+    adminNotes: text("admin_notes"),
+  },
+  (t) => [
+    index("intro_requests_requester_idx").on(t.requesterUserId),
+    index("intro_requests_target_investor_idx").on(t.targetInvestorId),
+    index("intro_requests_target_company_idx").on(t.targetCompanyId),
+    index("intro_requests_status_idx").on(t.status),
+  ],
 );
 
 // ─── Saved searches (T3 saved-search alerts) ────────────────────────

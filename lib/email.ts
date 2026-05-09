@@ -9,6 +9,45 @@ import { env } from "./cf";
 // delivers to the account holder's address).
 const FROM = "Startup State Atlas <noreply@startupstateatlas.dev>";
 
+function escapeHtml(s: string): string {
+  return s.replace(
+    /[&<>"']/g,
+    (c) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[c]!,
+  );
+}
+
+// Defense-in-depth for header injection. Display names are validated
+// at the schema boundary (max 120 chars, no length-by-line constraint),
+// so a malicious actor could embed `\r\n` and inject extra headers if
+// the downstream mailer ever concatenated raw. Stripping CRLF before
+// the subject interpolation is cheap.
+function stripCrlf(s: string): string {
+  return s.replace(/[\r\n]+/g, " ").trim();
+}
+
+function paragraphs(s: string): string {
+  return s
+    .split(/\n+/)
+    .map((p) => `<p>${escapeHtml(p)}</p>`)
+    .join("\n");
+}
+
+function publicOrigin(): string {
+  // Used to render absolute links in outbound mail. Override via the
+  // PUBLIC_BASE_URL Worker secret when a non-prod deploy needs it;
+  // otherwise we ship absolute startup.utah.gov links by default since
+  // this is the agreed deploy target.
+  const e = env() as unknown as { PUBLIC_BASE_URL?: string };
+  return e.PUBLIC_BASE_URL ?? "https://startup.utah.gov";
+}
+
 async function send(to: string, subject: string, html: string) {
   // Dev: if MAILPIT_URL is set, POST to mailpit's HTTP send API. Mailpit
   // serves both the send endpoint and the inbox UI on the same port
@@ -108,15 +147,6 @@ export async function sendSavedSearchAlertEmail(opts: {
   );
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 export async function sendAdminInviteEmail(email: string, link: string) {
   await send(
     email,
@@ -126,5 +156,101 @@ export async function sendAdminInviteEmail(email: string, link: string) {
      <p><a href="${link}" style="display:inline-block;padding:10px 16px;background:#c2410c;color:#fff;text-decoration:none;border-radius:6px">Accept your invite</a></p>
      <p>Or open: ${link}</p>
      <p>This link is single-use and expires in 7 days.</p>`,
+  );
+}
+
+// ─── Agent 8: intro-request emails ──────────────────────────────────
+
+export async function sendIntroPendingEmail(args: {
+  to: string;
+  name: string;
+  targetName: string;
+}) {
+  await send(
+    args.to,
+    "Your intro request is queued",
+    `<h2>Intro request received</h2>
+     <p>Hi ${escapeHtml(args.name)},</p>
+     <p>Your intro request to <strong>${escapeHtml(stripCrlf(args.targetName))}</strong> has been received and is queued for GOEO review.</p>
+     <p>We'll email you when there's an update — usually within a few business days.</p>
+     <p>— Utah GOED</p>`,
+  );
+}
+
+export async function sendIntroAcceptedEmail(args: {
+  to: string;
+  recipientName: string;
+  otherName: string;
+  otherEmail: string;
+  otherProfileUrl: string | null;
+  messageText: string;
+  adminNote: string | null;
+  reviewerName: string;
+}) {
+  const profileLink = args.otherProfileUrl
+    ? `<p>Profile: <a href="${publicOrigin()}${escapeHtml(args.otherProfileUrl)}">${publicOrigin()}${escapeHtml(args.otherProfileUrl)}</a></p>`
+    : "";
+  const noteBlock = args.adminNote
+    ? `<h3>Note from GOEO</h3>${paragraphs(args.adminNote)}`
+    : "";
+  await send(
+    args.to,
+    `Intro accepted: ${stripCrlf(args.otherName)}`,
+    `<h2>GOEO has connected you</h2>
+     <p>Hi ${escapeHtml(args.recipientName)},</p>
+     <p>The GOEO team reviewed and accepted an intro request between you and <strong>${escapeHtml(args.otherName)}</strong>.</p>
+     <p>Reach out directly:</p>
+     <ul>
+       <li>Name: ${escapeHtml(args.otherName)}</li>
+       <li>Email: <a href="mailto:${escapeHtml(args.otherEmail)}">${escapeHtml(args.otherEmail)}</a></li>
+     </ul>
+     ${profileLink}
+     <h3>Original request message</h3>
+     ${paragraphs(args.messageText)}
+     ${noteBlock}
+     <p>— Reviewed by ${escapeHtml(args.reviewerName)}, Utah GOED</p>`,
+  );
+}
+
+export async function sendIntroDeclinedEmail(args: {
+  to: string;
+  name: string;
+  targetName: string;
+  adminNote: string | null;
+  reviewerName: string;
+}) {
+  const noteBlock = args.adminNote
+    ? `<h3>Note from GOEO</h3>${paragraphs(args.adminNote)}`
+    : "";
+  await send(
+    args.to,
+    "Update on your intro request",
+    `<h2>Intro request update</h2>
+     <p>Hi ${escapeHtml(args.name)},</p>
+     <p>Your intro request to <strong>${escapeHtml(args.targetName)}</strong> wasn't a fit at this time. The GOEO team won't be making this connection.</p>
+     ${noteBlock}
+     <p>You can submit other requests through the directory.</p>
+     <p>— ${escapeHtml(args.reviewerName)}, Utah GOED</p>`,
+  );
+}
+
+export async function sendIntroIntroducedEmail(args: {
+  to: string;
+  name: string;
+  targetName: string;
+  adminNote: string | null;
+  reviewerName: string;
+}) {
+  const noteBlock = args.adminNote
+    ? `<h3>Note from GOEO</h3>${paragraphs(args.adminNote)}`
+    : "";
+  await send(
+    args.to,
+    `Intro made: ${stripCrlf(args.targetName)}`,
+    `<h2>Introduction made</h2>
+     <p>Hi ${escapeHtml(args.name)},</p>
+     <p>The GOEO team has introduced you to <strong>${escapeHtml(args.targetName)}</strong> directly. Watch for a separate email from us connecting both parties.</p>
+     ${noteBlock}
+     <p>— ${escapeHtml(args.reviewerName)}, Utah GOED</p>`,
   );
 }
