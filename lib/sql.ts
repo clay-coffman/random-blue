@@ -8,8 +8,9 @@
 // containing "100".
 //
 // Drizzle's `like()` doesn't expose ESCAPE — for routes that need
-// it, build the fragment with `sql\`${col} LIKE ${term} ESCAPE
-// '\\\\'\`` directly.
+// it, build the fragment with `` sql`${col} LIKE ${term} ESCAPE
+// '\\'` `` directly. The `\\` is two chars in JS source = one
+// runtime backslash, which is what SQLite's ESCAPE clause expects.
 export function escapeLikeWildcards(s: string): string {
   return s.replace(/[\\%_]/g, (m) => `\\${m}`);
 }
