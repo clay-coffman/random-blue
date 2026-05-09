@@ -21,7 +21,7 @@ export function ViewModeToggle({
     <div
       role="radiogroup"
       aria-label="Map view"
-      className="inline-flex h-10 min-h-[44px] items-center gap-1 rounded-pill border-[1.5px] border-ink/30 bg-paper-2 p-1"
+      className="inline-flex items-center gap-1 rounded-pill border-[1.5px] border-ink/30 bg-paper-2 p-1"
     >
       {OPTIONS.map((opt) => {
         const active = opt.value === value;
@@ -33,7 +33,7 @@ export function ViewModeToggle({
             aria-checked={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "inline-flex h-8 min-h-[36px] items-center gap-1.5 rounded-pill px-2 font-mono text-[11px] uppercase tracking-wider transition sm:px-3",
+              "inline-flex h-11 min-h-[44px] items-center gap-1.5 rounded-pill px-3 font-mono text-[11px] uppercase tracking-wider transition sm:px-3",
               active
                 ? "bg-ink text-paper"
                 : "text-ink-3 hover:text-ink-2",

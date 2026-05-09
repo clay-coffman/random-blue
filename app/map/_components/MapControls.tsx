@@ -33,7 +33,7 @@ export function MapControls() {
         <button
           type="button"
           onClick={resetView}
-          className="inline-flex h-8 min-h-[36px] items-center rounded-pill px-3 font-mono text-[11px] uppercase tracking-wider text-ink-2 transition hover:bg-paper"
+          className="inline-flex h-11 min-h-[44px] items-center rounded-pill px-3 font-mono text-[11px] uppercase tracking-wider text-ink-2 transition hover:bg-paper"
         >
           Reset view
         </button>

@@ -215,7 +215,7 @@ function FilterControls({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Name, slug, description…"
-          className="h-10 w-full rounded-md border-[1.5px] border-ink/30 bg-paper px-3 text-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ember/30"
+          className="h-11 min-h-[44px] w-full rounded-md border-[1.5px] border-ink/30 bg-paper px-3 text-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ember/30"
         />
       </label>
 
@@ -235,7 +235,7 @@ function FilterControls({
                 type="button"
                 onClick={() => toggleSector(s.csv)}
                 className={cn(
-                  "inline-flex h-8 min-h-[36px] items-center gap-1.5 rounded-pill border-[1.5px] px-2.5 font-mono text-[11px] uppercase tracking-wider transition",
+                  "inline-flex h-11 min-h-[44px] items-center gap-1.5 rounded-pill border-[1.5px] px-3 font-mono text-[11px] uppercase tracking-wider transition",
                   active
                     ? "border-ink bg-ink text-paper"
                     : "border-ink/20 bg-paper text-ink-2 hover:border-ink/40",
@@ -264,7 +264,7 @@ function FilterControls({
         <select
           value={stage}
           onChange={(e) => writeParam("stage", e.target.value || null)}
-          className="h-10 w-full rounded-md border-[1.5px] border-ink/30 bg-paper px-3 text-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ember/30"
+          className="h-11 min-h-[44px] w-full rounded-md border-[1.5px] border-ink/30 bg-paper px-3 text-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ember/30"
         >
           <option value="">Any stage</option>
           {STAGES.map((s) => (
@@ -283,7 +283,7 @@ function FilterControls({
         <select
           value={county}
           onChange={(e) => writeParam("county", e.target.value || null)}
-          className="h-10 w-full rounded-md border-[1.5px] border-ink/30 bg-paper px-3 text-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ember/30"
+          className="h-11 min-h-[44px] w-full rounded-md border-[1.5px] border-ink/30 bg-paper px-3 text-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ember/30"
         >
           <option value="">Any county</option>
           {COUNTIES.map((c) => (
@@ -302,7 +302,7 @@ function FilterControls({
         <select
           value={bucket}
           onChange={(e) => writeParam("employee_bucket", e.target.value || null)}
-          className="h-10 w-full rounded-md border-[1.5px] border-ink/30 bg-paper px-3 text-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ember/30"
+          className="h-11 min-h-[44px] w-full rounded-md border-[1.5px] border-ink/30 bg-paper px-3 text-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ember/30"
         >
           <option value="">Any size</option>
           {BUCKET_PRESETS.map((b) => (

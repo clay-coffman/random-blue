@@ -163,6 +163,20 @@ export function EcosystemMapShell({
     setSelectedSlug(null);
   }, []);
 
+  // Filters projection for the InvestorBrief endpoint. Our filter
+  // contract carries multi-value data via comma-joined strings (e.g.
+  // `sectors=FinTech,B2B Software`), so any single-value Object map is
+  // sufficient. Iterate explicitly so a future repeated-key URL gets
+  // reduced deterministically (last wins) rather than relying on
+  // Object.fromEntries's silent duplicate-drop.
+  const briefFilters = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const [k, v] of searchParams.entries()) {
+      out[k] = v;
+    }
+    return out;
+  }, [searchParams]);
+
   const empty = !loading && companies.length === 0;
 
   return (
@@ -267,7 +281,7 @@ export function EcosystemMapShell({
         {/* Investor brief sidecar */}
         <InvestorBrief
           companies={companies}
-          filters={Object.fromEntries(searchParams.entries())}
+          filters={briefFilters}
           open={briefOpen}
           onClose={() => setBriefOpen(false)}
         />

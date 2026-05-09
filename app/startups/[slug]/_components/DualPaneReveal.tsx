@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Tile, Chip } from "@/components/brand";
 import { Tabs, TabsList, TabsTrigger, TabsPanel } from "@/components/ui/tabs";
 import { sectorChipClass, sectorDisplayName } from "@/lib/sectors";
@@ -161,17 +161,24 @@ export function DualPaneReveal({ card }: { card: CompanyCard }) {
 function AgentTabs({ card }: { card: CompanyCard }) {
   const tabs: FormatTab[] = ["md", "json", "api", "llms"];
   const [active, setActive] = useState<FormatTab>("json");
-  const [content, setContent] = useState<Record<FormatTab, string | null>>({
+  // The two synchronous formats (json/api) are seeded inline; only
+  // the .md and llms.txt formats actually need a network round-trip.
+  // The cache lives in a ref so writes don't re-fire the fetch
+  // effect (the visible content state is what triggers re-render).
+  const cacheRef = useRef<Record<FormatTab, string | null>>({
     md: null,
     json: JSON.stringify(card, null, 2),
     api: JSON.stringify(card, null, 2),
     llms: null,
   });
+  const [, forceRender] = useState(0);
   const [loading, setLoading] = useState<FormatTab | null>(null);
 
   // Lazy-fetch .md / llms.txt the first time their tab is selected.
+  // Depends only on `active` + `card.slug` — the ref-cache check
+  // gates the fetch without forcing a state re-run on cache writes.
   useEffect(() => {
-    if (content[active] != null) return;
+    if (cacheRef.current[active] != null) return;
     let cancelled = false;
     setLoading(active);
     (async () => {
@@ -180,10 +187,15 @@ function AgentTabs({ card }: { card: CompanyCard }) {
         const res = await fetch(url);
         const text = await res.text();
         if (cancelled) return;
-        setContent((prev) => ({ ...prev, [active]: text }));
+        cacheRef.current = { ...cacheRef.current, [active]: text };
+        forceRender((n) => n + 1);
       } catch {
         if (!cancelled) {
-          setContent((prev) => ({ ...prev, [active]: "(failed to load)" }));
+          cacheRef.current = {
+            ...cacheRef.current,
+            [active]: "(failed to load)",
+          };
+          forceRender((n) => n + 1);
         }
       } finally {
         if (!cancelled) setLoading(null);
@@ -192,7 +204,9 @@ function AgentTabs({ card }: { card: CompanyCard }) {
     return () => {
       cancelled = true;
     };
-  }, [active, card.slug, content]);
+  }, [active, card.slug]);
+
+  const content = cacheRef.current;
 
   return (
     <div className="mt-3">
