@@ -129,6 +129,21 @@ curl -N https://startupstateatlas.dev/api/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
+Or wire it into an MCP-aware client (Claude Desktop, Claude Code, Cursor)
+by pasting this into the client's MCP config — `claude_desktop_config.json`,
+`.mcp.json`, etc. — and restarting:
+
+```json
+{
+  "mcpServers": {
+    "startup-state": {
+      "type": "http",
+      "url": "https://startupstateatlas.dev/api/mcp"
+    }
+  }
+}
+```
+
 Read tools (`recommend_resources`, `search_resources`, `get_resource`,
 `search_companies`, `get_company`, `generate_founder_plan`,
 `generate_investor_tour`) and `startupstate://…` resources are

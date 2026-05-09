@@ -206,11 +206,33 @@ export const mcpPrompts = [
   },
 ];
 
-// Local stdio config — points at a checkout via tsx so end users
-// don't need a published npm package. Replace `<absolute-path>` with
-// the path where you cloned the repo. Authentication is optional
-// (read tools work without it; only update_company_profile requires
-// ATLAS_ADMIN_TOKEN).
+// Remote MCP — zero install. Works in Claude Desktop, Claude Code,
+// Cursor, and any MCP client that supports HTTP transport. Read-only:
+// the public /api/mcp endpoint refuses write tools by design.
+export const remoteMcpClaudeConfig = `{
+  "mcpServers": {
+    "startup-state": {
+      "type": "http",
+      "url": "https://startupstateatlas.dev/api/mcp"
+    }
+  }
+}`;
+
+// Older clients without native HTTP transport can use the mcp-remote
+// stdio bridge instead.
+export const remoteMcpStdioBridgeConfig = `{
+  "mcpServers": {
+    "startup-state": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://startupstateatlas.dev/api/mcp"]
+    }
+  }
+}`;
+
+// Local stdio config — runs the in-repo MCP server via tsx. Use this
+// when you need write tools (update_company_profile) with an admin
+// token; the remote endpoint refuses writes by design. Replace
+// `<absolute-path>` with the path where you cloned the repo.
 export const claudeDesktopConfig = `{
   "mcpServers": {
     "startup-state": {
@@ -224,7 +246,7 @@ export const claudeDesktopConfig = `{
   }
 }`;
 
-export const remoteMcpExample = `# Streamable HTTP transport (no install required)
+export const remoteMcpExample = `# Raw Streamable HTTP transport (for clients without an MCP integration)
 curl -N https://startupstateatlas.dev/api/mcp \\
   -X POST \\
   -H 'Accept: application/json' \\

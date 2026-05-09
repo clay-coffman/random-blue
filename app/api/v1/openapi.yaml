@@ -906,7 +906,13 @@ components:
         Re-use a saved passport row by id. No other fields permitted.
 
     RecommendRequestByBody:
-      $ref: "#/components/schemas/FounderPassportInput"
+      # FounderPassportInput on the wire, plus an explicit forbid on
+      # `passport_id` so generated/static OpenAPI clients reject the
+      # "both fields" payload that the Zod runtime also rejects.
+      allOf:
+        - $ref: "#/components/schemas/FounderPassportInput"
+        - not:
+            required: [passport_id]
 
     RecommendRequest:
       oneOf:

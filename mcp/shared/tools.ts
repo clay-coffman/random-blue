@@ -104,13 +104,12 @@ export function registerReadTools(server: McpServer, client: AtlasClient) {
     },
     async (args) => {
       try {
-        const body: RecommendBody = { ...args };
-        if (body.passport_id) {
-          // Conflicting fields would 400; let the saved row win.
-          delete body.stage;
-          delete body.industry;
-          delete body.goal;
-        }
+        // When a passport_id is given, the recommend endpoint expects
+        // the id alone — its id-only schema is strict and rejects
+        // every other field. Drop the rest of the args.
+        const body: RecommendBody = args.passport_id
+          ? { passport_id: args.passport_id }
+          : { ...args };
         const result = await client.recommend(body);
         return jsonText(result);
       } catch (err) {
@@ -222,12 +221,11 @@ export function registerReadTools(server: McpServer, client: AtlasClient) {
     },
     async (args) => {
       try {
-        const body: RecommendBody = { ...args };
-        if (body.passport_id) {
-          delete body.stage;
-          delete body.industry;
-          delete body.goal;
-        }
+        // Same id-vs-body strictness as recommend_resources — when a
+        // passport_id is given, send only that.
+        const body: RecommendBody = args.passport_id
+          ? { passport_id: args.passport_id }
+          : { ...args };
         const r = await client.recommend(body);
         const groups: Record<string, typeof r.recommendations> = {
           now: [],

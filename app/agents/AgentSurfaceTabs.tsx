@@ -10,7 +10,9 @@ import {
   mcpPrompts,
   mcpResources,
   mcpTools,
+  remoteMcpClaudeConfig,
   remoteMcpExample,
+  remoteMcpStdioBridgeConfig,
 } from "./_data";
 
 type TabId = "api" | "cli" | "mcp";
@@ -210,17 +212,47 @@ function McpPanel() {
   return (
     <div className="space-y-4">
       <p className="text-base text-ink-2">
-        Two transports: a local stdio server for Claude Desktop / Cursor / MCP Inspector,
-        and a stateless remote endpoint at <code className="font-mono">/api/mcp</code> for clients that prefer HTTP.
-        The remote endpoint exposes 7 read tools, 6 resources, and 4 prompts;
-        the local stdio server adds <code className="font-mono">update_company_profile</code> for trusted operators
-        running it with <code className="font-mono">ATLAS_ADMIN_TOKEN</code> in env.
+        Two transports: a stateless remote endpoint at{" "}
+        <code className="font-mono">/api/mcp</code> (no install — just paste a
+        config snippet into your MCP client), and a local stdio server you run
+        from a checkout when you need write tools. The remote endpoint exposes
+        7 read tools, 6 resources, and 4 prompts; the local stdio server adds{" "}
+        <code className="font-mono">update_company_profile</code> for trusted
+        operators running it with <code className="font-mono">ATLAS_ADMIN_TOKEN</code>{" "}
+        in env.
       </p>
 
-      <h3 className="font-heading text-lg">Claude Desktop config</h3>
+      <h3 className="font-heading text-lg">
+        Remote MCP — paste into Claude Desktop / Claude Code / Cursor
+      </h3>
+      <p className="text-sm text-ink-3">
+        Drop this into your MCP client's config (Claude Desktop:{" "}
+        <code className="font-mono">claude_desktop_config.json</code>; Claude
+        Code: <code className="font-mono">.mcp.json</code> at your project
+        root). Restart the client.
+      </p>
+      <CodeBlock>{remoteMcpClaudeConfig}</CodeBlock>
+      <details className="text-sm text-ink-3">
+        <summary className="cursor-pointer font-mono text-xs uppercase tracking-wide">
+          older clients without native HTTP transport →
+        </summary>
+        <p className="mt-2">
+          Use the <code className="font-mono">mcp-remote</code> stdio bridge
+          instead.
+        </p>
+        <CodeBlock>{remoteMcpStdioBridgeConfig}</CodeBlock>
+      </details>
+
+      <h3 className="font-heading text-lg">Local stdio (write tools)</h3>
+      <p className="text-sm text-ink-3">
+        Required only if you need <code className="font-mono">update_company_profile</code>{" "}
+        — the public remote endpoint refuses writes by design. Replace{" "}
+        <code className="font-mono">&lt;absolute-path&gt;</code> with your
+        checkout path.
+      </p>
       <CodeBlock>{claudeDesktopConfig}</CodeBlock>
 
-      <h3 className="font-heading text-lg">Remote MCP (Streamable HTTP)</h3>
+      <h3 className="font-heading text-lg">Raw HTTP (no MCP client)</h3>
       <CodeBlock>{remoteMcpExample}</CodeBlock>
 
       <div className="grid gap-6 sm:grid-cols-2">
