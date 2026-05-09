@@ -2,11 +2,25 @@ import { db } from "@/lib/db";
 import { founderPassports } from "@/db/schema";
 import { newId } from "@/lib/ids";
 import { ApiError, errorResponse } from "@/lib/api-error";
+import { env } from "@/lib/cf";
 import { FounderPassportInput } from "@/schemas/founder-passport";
 
 
 export async function POST(req: Request) {
   try {
+    // Per-IP rate limit. The endpoint is cheap (D1 insert) but
+    // unauthenticated, so bound spam — without this an attacker can
+    // fill the founder_passports table at line speed.
+    const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+    const { success } = await env().PASSPORT_LIMIT.limit({ key: ip });
+    if (!success) {
+      return errorResponse(
+        "rate_limited",
+        "Too many passport submissions. Try again in a minute.",
+        429,
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const parsed = FounderPassportInput.safeParse(body);
     if (!parsed.success) {

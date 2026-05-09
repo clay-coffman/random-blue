@@ -42,16 +42,20 @@
       "bucket_name": "atlas-ownership-docs"
     }
   ],
-  // Cloudflare's native Rate Limiting binding. Fixed-window per key,
-  // evaluated in-edge with no DB writes. `key` is the IP supplied at
-  // call time (see app/api/v1/ownership-submissions/route.ts).
+  // Cloudflare's native Rate Limiting bindings. Fixed-window per key,
+  // evaluated in-edge with no DB writes. `key` is the IP (cf-connecting-ip)
+  // supplied at call time. Per-Worker `namespace_id` integers — no global
+  // registry, just don't collide within this Worker.
+  //
   // Better Auth's auth-route limits are separate and live in D1 — see
   // the `rateLimit` block in auth.ts.
   //
-  // GATE_LIMIT throttles the preview-password gate POST so an attacker
-  // with the URL can't hammer the (relatively low-entropy, shared-
-  // with-reviewers) password. 10 attempts per IP per minute matches
-  // the upload limit's tolerance.
+  // 1101 — UPLOAD_LIMIT          — POST /api/v1/ownership-submissions
+  // 1102 — GATE_LIMIT            — POST /api/gate (preview password gate)
+  // 1103 — RECOMMEND_LIMIT       — POST /api/v1/resources/recommend (Claude)
+  // 1104 — ENRICH_LIMIT          — POST /api/v1/founder-passports/enrich (Parallel.ai)
+  // 1105 — PASSPORT_LIMIT        — POST /api/v1/founder-passports
+  // 1106 — INVESTOR_BRIEF_LIMIT  — POST /api/v1/companies/investor-brief (Claude)
   "unsafe": {
     "bindings": [
       {
@@ -65,6 +69,30 @@
         "type": "ratelimit",
         "namespace_id": "1102",
         "simple": { "limit": 10, "period": 60 }
+      },
+      {
+        "name": "RECOMMEND_LIMIT",
+        "type": "ratelimit",
+        "namespace_id": "1103",
+        "simple": { "limit": 5, "period": 60 }
+      },
+      {
+        "name": "ENRICH_LIMIT",
+        "type": "ratelimit",
+        "namespace_id": "1104",
+        "simple": { "limit": 5, "period": 60 }
+      },
+      {
+        "name": "PASSPORT_LIMIT",
+        "type": "ratelimit",
+        "namespace_id": "1105",
+        "simple": { "limit": 10, "period": 60 }
+      },
+      {
+        "name": "INVESTOR_BRIEF_LIMIT",
+        "type": "ratelimit",
+        "namespace_id": "1106",
+        "simple": { "limit": 5, "period": 60 }
       }
     ]
   }
