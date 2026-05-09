@@ -9,7 +9,6 @@ import type {
   RecommendedResourceWire,
 } from "@/types/api";
 
-export const runtime = "edge";
 
 export async function GET(
   _req: Request,

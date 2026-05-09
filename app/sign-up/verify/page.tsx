@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { authClient } from "@/lib/auth-client";
 import { safeNext } from "@/lib/url";
@@ -10,6 +10,14 @@ const OTP_TTL_SECONDS = 600; // matches auth.ts emailOTP.expiresIn
 const RESEND_COOLDOWN_SECONDS = 30;
 
 export default function SignUpVerifyPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyForm />
+    </Suspense>
+  );
+}
+
+function VerifyForm() {
   const router = useRouter();
   const params = useSearchParams();
   const email = params.get("email") ?? "";

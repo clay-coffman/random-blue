@@ -4,7 +4,6 @@ import { newId } from "@/lib/ids";
 import { ApiError, errorResponse } from "@/lib/api-error";
 import { FounderPassportInput } from "@/schemas/founder-passport";
 
-export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {

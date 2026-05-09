@@ -2,7 +2,6 @@ import { ApiError, errorResponse } from "@/lib/api-error";
 import { EnrichRequest } from "@/schemas/recommend";
 import { enrichWebsite, isDenylistedHost } from "@/lib/website-enrich";
 
-export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {

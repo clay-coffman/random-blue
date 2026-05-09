@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { AuthFooterLink, AuthShell } from "@/components/auth/AuthShell";
 import { safeNext } from "@/lib/url";
 
@@ -37,6 +37,14 @@ const ROLES: Array<{
 ];
 
 export default function SignUpRolePage() {
+  return (
+    <Suspense fallback={null}>
+      <SignUpRoleForm />
+    </Suspense>
+  );
+}
+
+function SignUpRoleForm() {
   const router = useRouter();
   const params = useSearchParams();
   const intent = params.get("intent");
