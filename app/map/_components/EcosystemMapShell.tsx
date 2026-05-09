@@ -34,7 +34,6 @@ type Props = {
   initialCompanies: CompanyListItem[];
   initialTotal: number;
   initialFilters: CompanyFilters;
-  initialView: ViewMode;
   initialCamera: Camera;
 };
 
@@ -42,10 +41,6 @@ export function EcosystemMapShell({
   initialCompanies,
   initialTotal,
   initialFilters,
-  // initialView is propagated through the URL via the server
-  // component's searchParams reading; the client just observes the
-  // current `?view=` from useSearchParams() without a separate prop.
-  initialView: _initialView,
   initialCamera,
 }: Props) {
   const router = useRouter();

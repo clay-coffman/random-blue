@@ -86,9 +86,7 @@ function CompanyCard({
   onSelect: () => void;
 }) {
   const place =
-    [company.city, company.county && `${company.county} County`]
-      .filter(Boolean)
-      .join(", ") || null;
+    company.city ?? (company.county ? `${company.county} County` : null);
 
   return (
     <button
