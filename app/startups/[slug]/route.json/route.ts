@@ -1,26 +1,19 @@
 import { NextResponse } from "next/server";
-import { getCompanyCard, toWireCompanyCard } from "@/lib/company-card";
+import { companyCard } from "@/lib/company-card";
 
-export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ slug: string }> },
+  ctx: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = await params;
-  const card = await getCompanyCard(slug);
-  if (!card) {
+  const { slug } = await ctx.params;
+  const result = await companyCard(slug);
+  if (!result) {
     return NextResponse.json(
-      {
-        error: {
-          code: "company_not_found",
-          message: `No company with slug ${slug}`,
-        },
-      },
+      { error: { code: "not_found", message: "Company not found." } },
       { status: 404 },
     );
   }
-  return NextResponse.json(toWireCompanyCard(card), {
-    headers: { "Cache-Control": "public, max-age=60" },
-  });
+  return NextResponse.json(result.card);
 }

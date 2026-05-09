@@ -270,33 +270,131 @@ the front-end can quietly fall back to manual fill.
 
 ---
 
-## Agent 4 — companies + agent cards
+## Agent 4 — Ecosystem Map + Company Profiles
 
-**Owner:** Agent 4 (`feat/map`).
-**Status:** shipping.
-**Source of truth:** `lib/company-card.ts` (shared formatter for
-`/startups/{slug}` HTML, the markdown / JSON agent cards, and the
-JSON payload from `/api/v1/companies/{slug}`).
+**Owner:** Agent 4 (`feat/agent-4`).
+**Status:** PR open.
+**Source of truth:** `lib/companies-list.ts` (list shape),
+`lib/company-card.ts` (single-card shape),
+`lib/investor-brief.ts` (brief shape + zod validators), and
+`lib/company-filters.ts` (filter zod schema). All wire fields
+`snake_case`; agents never see camelCase.
+
+### Shared types
+
+```ts
+type CompanyStatus = "claimed" | "pending" | "unclaimed";
+type VerificationStatus = "verified" | "claimed" | "unclaimed";
+
+type CompanyListItemWire = {
+  id: string;                  // "co_…"
+  slug: string;
+  name: string;
+  website: string | null;
+  sector: string | null;       // CSV `Section` vocabulary, verbatim
+  stage: string | null;
+  employee_count: string | null; // bucket: "2-10", "11-50", "51-200", …
+  hiring_status: boolean;
+  logo_url: string | null;
+  summary: string | null;       // first sentence of description
+  lat: number | null;
+  lng: number | null;
+  city: string | null;
+  county: string | null;
+  last_updated_at: string | null; // ISO 8601
+  status: CompanyStatus;
+};
+
+type CompanyJobWire = {
+  title: string;
+  url: string | null;
+  posted_at: string | null;     // ISO 8601
+};
+
+type CompanyCardWire = {
+  id: string;
+  slug: string;
+  name: string;
+  website: string | null;
+  sector: string | null;
+  sector_display: string;       // human-friendly variant of `sector`
+  stage: string | null;
+  description: string | null;
+  what_they_sell: string | null; // first sentence
+  who_should_contact: string | null;
+  agent_brief: string;          // generated "what agents should know"
+  employee_count: string | null;
+  hiring_status: boolean;
+  founding_year: number | null;
+  linkedin: string | null;
+  logo_url: string | null;
+  founder_team: unknown | null; // parsed JSON or null
+  address_text: string | null;
+  city: string | null;
+  county: string | null;
+  lat: number | null;
+  lng: number | null;
+  jobs: CompanyJobWire[];
+  verification: {
+    status: VerificationStatus;
+    verified_at: string | null;
+    claimed_at: string | null;
+  };
+  last_updated_at: string | null;
+  canonical_url: string;        // "/startups/<slug>"
+  agent_card_urls: {
+    html: string;
+    markdown: string;
+    json: string;
+    api: string;
+  };
+};
+
+type CompanyFilterParamsWire = {
+  // Single-sector filter (legacy, still supported):
+  sector?: string;
+  // Multi-sector (preferred): comma-separated CSV sector strings.
+  sectors?: string;
+  stage?: string;
+  county?: string;
+  city?: string;
+  // Either pass a bucket directly or a numeric range — both supported.
+  employee_bucket?: string;
+  min_employees?: number;
+  max_employees?: number;
+  hiring_status?: boolean;
+  q?: string;                   // free-text LIKE on name/slug/website/description
+  limit?: number;               // capped at 500
+};
+
+type InvestorBriefThemeWire = {
+  title: string;
+  slugs: string[];              // verified — hallucinated slugs are dropped
+  summary: string;
+};
+
+type InvestorBriefRaiseWire = {
+  slug: string;
+  amount: string;
+  date: string | null;          // YYYY-MM or null
+};
+
+type InvestorBriefResponseWire = {
+  headline: string | null;
+  metadata: string | null;
+  themes: InvestorBriefThemeWire[];
+  notable_raises: InvestorBriefRaiseWire[];
+  hiring: { open_roles: number; top_hirers: string[] } | null;
+  degraded: boolean;            // true on LLM timeout / parse fail / empty input
+};
+```
 
 ### `GET /api/v1/companies`
 
-List + filter companies. Backs the `/map` view AND the
-`/onboarding/owner` company-search step (which needs `q`, `limit`,
-and the `status` field to surface claimed-vs-pending badges).
+List companies with filters. Powers the `/map` view AND the
+`/onboarding/owner` claim search (Agent 5's contract). Cap is 500 rows.
 
-**Query params (all optional):**
-
-| name | type | notes |
-| --- | --- | --- |
-| `sector` | string | exact match against `companies.sector` |
-| `stage` | string | exact match against `companies.stage` |
-| `county` | string | matches `company_locations.county` |
-| `city` | string | matches `company_locations.city` |
-| `min_employees` | int | min lower bound of the band |
-| `max_employees` | int | max upper bound of the band |
-| `hiring_status` | `"true" \| "false"` | |
-| `q` | string | LIKE `%term%` on name / slug / website / description / sector |
-| `limit` | int | default 500, max 500 |
+**Query params:** any subset of `CompanyFilterParamsWire`.
 
 **Response 200:**
 
@@ -304,21 +402,21 @@ and the `status` field to surface claimed-vs-pending badges).
 {
   "companies": [
     {
-      "id": "co_…",
+      "id": "co_xfxt0a4ovbpvgffq",
       "slug": "crew",
       "name": "Crew",
+      "website": "https://www.trycrew.com",
       "sector": "FinTech",
       "stage": "seed",
       "employee_count": "2-10",
       "hiring_status": false,
-      "lat": 40.39,
-      "lng": -111.85,
       "logo_url": null,
-      "website": "https://www.trycrew.com",
-      "summary": "Crew is a neobank for families…",
-      "county": "Utah",
+      "summary": "Crew is a neobank for families.",
+      "lat": 40.3916,
+      "lng": -111.8508,
       "city": "Lehi",
-      "claimed_by_user_id": null,
+      "county": "Utah",
+      "last_updated_at": null,
       "status": "unclaimed"
     }
   ],
@@ -326,131 +424,139 @@ and the `status` field to surface claimed-vs-pending badges).
 }
 ```
 
-`status` is `"claimed" | "pending" | "unclaimed"` derived from
-`claimed_by_user_id` plus a join to `business_ownership_submissions`
-(status='pending'). Map UI ignores it; owner onboarding uses it.
+**Errors:**
 
-### `POST /api/v1/companies`
+- `400 BAD_REQUEST` — invalid filter (zod details in `details`).
+- `500 INTERNAL` — DB error.
 
-Admin / machine-token-only company create. Used by `/admin/companies`
-and CLI/MCP tooling. Owned by **Agent 5** (auth/admin).
+**Examples:**
 
-**Request:**
-
-```json
-{ "slug": "acme", "name": "Acme", "website": "https://acme.test", … }
+```bash
+curl 'https://startup.utah.gov/api/v1/companies?sector=FinTech'
+curl 'https://startup.utah.gov/api/v1/companies?sector=FinTech&stage=seed&county=Salt%20Lake'
+curl 'https://startup.utah.gov/api/v1/companies?min_employees=11&max_employees=50&hiring_status=true'
+curl 'https://startup.utah.gov/api/v1/companies?q=labs'  # name/slug/website search
 ```
 
-**Response 201:** `{ "id": "co_…", "slug": "acme" }`.
+---
 
 ### `GET /api/v1/companies/{slug}`
 
-Single company. Same shape as `GET /startups/{slug}/route.json`.
-See "Company card shape" below.
+Full Agent Card for a single company. Same shape as
+`GET /startups/{slug}.json`. Joins jobs + locations + verification
+status.
 
-### `PATCH /api/v1/companies/{slug}`
+**Path params:** `slug` — URL-safe lowercase identifier.
 
-Owned by **Agent 5** (`feat/auth-claim-admin`). Three auth modes:
-owner session (whitelist), admin session (no whitelist), machine
-token (no whitelist). Writes a `profile_updates` audit row on every
-successful PATCH, capturing `source_client` (`owner` / `staff` /
-`machine` / custom via `X-Source-Client` header).
+**Response 200:** `CompanyCardWire` (see shared types above).
 
-### `DELETE /api/v1/companies/{slug}`
+**Errors:**
 
-Owned by **Agent 5**. Admin / machine token only. Returns `204`.
+- `404 NOT_FOUND` — slug doesn't match any company.
+- `500 INTERNAL` — DB error.
 
-### `POST /api/v1/companies/brief`
+---
 
-Source-bound LLM cluster summary for an investor. Always returns
-200 with `degraded: true` on Anthropic upstream failure.
+### `POST /api/v1/companies/investor-brief`
+
+Source-bound investor narrative over the currently-filtered company
+set. The endpoint **never throws** — on Anthropic timeout / parse
+failure it returns `{ degraded: true, themes: [], … }` so the UI can
+fall back gracefully.
 
 **Request:**
 
 ```json
 {
-  "filter": {
-    "sector": "FinTech",
-    "stage": "seed",
-    "county": "Salt Lake",
-    "hiring": "true",
-    "q": ""
-  },
-  "slugs": ["crew", "swyf", "elements"]
+  "filter": { "sector": "FinTech", "stage": "seed" },
+  "slugs": ["crew", "bracket-labs", "streamos"]
 }
 ```
 
-`slugs` is required and capped at 80 server-side. `filter` is
-descriptive only — used to compose `filter_summary`; the cluster
-reasoning runs against the slugs.
+- `filter` — any `CompanyFilterParamsWire`. Used as a fallback to
+  derive companies if `slugs` is empty.
+- `slugs` — explicit list of slugs to brief on (preferred; the map
+  passes its currently-rendered set). Capped at 120.
 
-**Response 200:**
+**Response 200:** `InvestorBriefResponseWire`.
 
 ```json
 {
-  "filter_summary": "Utah seed-stage FinTech, Salt Lake County, hiring.",
-  "total_in_view": 3,
-  "clusters": [
+  "headline": "Utah seed-stage fintech: consumer money tools meet finance-team automation",
+  "metadata": "5 companies · Utah & Salt Lake counties · ~19-70 employees",
+  "themes": [
     {
-      "title": "Consumer & family banking",
-      "count": 2,
+      "title": "Consumer & Family Neobanking",
       "slugs": ["crew", "swyf"],
-      "summary": "Neobanks targeting families and underserved consumers."
+      "summary": "Everyday-user financial apps focused on simple, life-oriented money management."
     }
   ],
-  "hiring_summary": "All three are actively hiring.",
+  "notable_raises": [],
+  "hiring": { "open_roles": 0, "top_hirers": [] },
   "degraded": false
 }
 ```
 
-### `GET /startups/{slug}/route.md`
+**Slug verification:** any slug returned by the model that wasn't in
+the input set is dropped before the response is sent. Empty themes
+are filtered out.
 
-Markdown agent card. `Content-Type: text/markdown; charset=utf-8`,
-`Cache-Control: public, max-age=60`. Body is whatever
-`formatCompanyCardMarkdown()` produces — hero, facts, links,
-location, team, open roles, plus a footer that lists the four
-canonical URLs (HTML, .md, .json, /api/v1).
+**Errors:**
 
-### `GET /startups/{slug}/route.json`
+- `400 BAD_REQUEST` — body isn't JSON or fails the zod schema.
+- `500 INTERNAL` — only on bugs in this handler, not upstream.
 
-JSON agent card. Same shape as `/api/v1/companies/{slug}` plus an
-`agent_card` object pointing to the canonical URLs.
+---
 
-### Company card shape
+### `GET /startups/{slug}.md`
 
-`lib/company-card.ts` `toWireCompanyCard()` emits:
+Markdown agent card. Same source as `/api/v1/companies/{slug}`
+formatted as Markdown via `lib/company-card.ts → toMarkdown()`.
 
-```json
-{
-  "id": "co_…",
-  "slug": "crew",
-  "name": "Crew",
-  "website": "https://www.trycrew.com",
-  "description": "…",
-  "sector": "FinTech",
-  "stage": "seed",
-  "employee_count": "2-10",
-  "hiring_status": false,
-  "founding_year": null,
-  "linkedin": "https://www.linkedin.com/company/trycrew",
-  "logo_url": null,
-  "founder_team": [{ "name": "…", "title": "…", "linkedin": "…" }],
-  "address_text": "2000 Ashton Boulevard, Lehi, UT",
-  "lat": 40.39,
-  "lng": -111.85,
-  "locations": [{ "county": "Utah", "city": "Lehi" }],
-  "jobs": [
-    { "id": 1, "title": "Engineer", "url": "…", "posted_at": "2026-01-…" }
-  ],
-  "verified_at": null,
-  "claimed_at": null,
-  "claimed": false,
-  "last_updated_by": null,
-  "last_updated_at": null,
-  "agent_card": {
-    "markdown_url": "/startups/crew/route.md",
-    "json_url": "/startups/crew/route.json",
-    "api_url": "/api/v1/companies/crew"
-  }
-}
-```
+**Response 200:** `Content-Type: text/markdown; charset=utf-8`.
+Includes a Facts table, About, "What agents should know", Open
+roles, Links, and a footer attribution line.
+
+**Errors:** `404 NOT_FOUND` (text/plain body).
+
+---
+
+### `GET /startups/{slug}.json`
+
+JSON agent card. **Identical shape** to `/api/v1/companies/{slug}`.
+Lives at the human-readable `/startups/<slug>.json` URL via Next.js
+rewrites in `next.config.ts` (the file-system route is at
+`app/startups/[slug]/route.json/route.ts`).
+
+**Response 200:** `CompanyCardWire`.
+
+**Errors:** `404 NOT_FOUND` with the standard error envelope.
+
+---
+
+### Coordination notes for Agent 6
+
+- Wire is byte-for-byte identical between `GET /api/v1/companies/:slug`
+  and `GET /startups/:slug.json` — point the OpenAPI ref at the same
+  schema.
+- `sector` is **verbatim** from the seeded CSV (`FinTech`,
+  `B2B Software`, `Aerospace and Defense`, `Bio/Medical Tech`, etc.).
+  Don't normalize at the wire boundary; agents need parity with the
+  underlying data.
+- `stage` is lower-cased on seed (`"seed"`, `"series a"`, `"pre-seed"`,
+  …); the GET filter handler also lower-cases incoming `stage`
+  parameters defensively.
+- `employee_count` is bucket-shaped text (`"2-10"`, `"11-50"`,
+  `"51-200"`, `"201-500"`, `"501-1K"`, `"1K-5K"`, `"5K+"`).
+  `lib/employee-bucket.ts` parses and intersects.
+- `lat` / `lng` are city/county centroids (Agent 1's `centroids.ts`
+  fallback) when the source doesn't provide explicit coordinates;
+  expect stacked pins for cities with several seeded companies.
+- The investor-brief endpoint is intentionally agent-native: an MCP
+  tool wrapper around it would expose the structured `themes[]` /
+  `notable_raises[]` shape directly, no parsing required.
+- The `.md` and `.json` URLs at `/startups/:slug.{md,json}` rely on
+  rewrites in `next.config.ts`. The native file-system path is
+  `/startups/:slug/route.{md,json}` — both work in production, the
+  rewrites just expose the cleaner URL the brief and product-plan
+  reference.

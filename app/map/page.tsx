@@ -1,112 +1,81 @@
-import { eq, sql } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { companies, companyLocations } from "@/db/schema";
-import { MapView } from "./_components/MapView";
-import type {
-  CompaniesListResponse,
-  CompanyListItem,
-  MapFacets,
-} from "./_components/types";
+import type { Metadata } from "next";
+import { listCompanies } from "@/lib/companies-list";
+import { parseFilters, type CompanyFilters } from "@/lib/company-filters";
+import { EcosystemMapShell } from "./_components/EcosystemMapShell";
 
-export const runtime = "edge";
-export const dynamic = "force-dynamic";
+type SearchParams = Record<string, string | string[] | undefined>;
 
-export const metadata = {
-  title: "Utah Startup Map · Atlas",
+export const metadata: Metadata = {
+  title: "Utah Startup Map — Atlas",
   description:
-    "Filter Utah startups by sector, stage, location, and hiring. Click any pin for the full profile.",
+    "An ecosystem map of every Utah startup. Filter by sector, stage, county, employee size, and hiring. Generate an investor brief on any subset.",
+  alternates: {
+    canonical: "/map",
+  },
+  openGraph: {
+    title: "Utah Startup Map",
+    description:
+      "An ecosystem map of every Utah startup. Filter and explore.",
+    url: "/map",
+    type: "website",
+    siteName: "Utah Startup State Atlas",
+  },
 };
 
-function summarize(text: string | null): string | null {
-  if (!text) return null;
-  const t = text.trim();
-  return t.length <= 200 ? t : t.slice(0, 197).trimEnd() + "…";
+function flatten(sp: SearchParams): URLSearchParams {
+  const out = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) {
+    if (Array.isArray(v)) {
+      if (v.length > 0 && v[0]) out.set(k, v[0]);
+    } else if (v) {
+      out.set(k, v);
+    }
+  }
+  return out;
 }
 
-export default async function MapPage() {
-  const d = db();
+type ViewMode = "companies" | "clusters" | "heat";
 
-  const rows = await d
-    .select({
-      id: companies.id,
-      slug: companies.slug,
-      name: companies.name,
-      sector: companies.sector,
-      stage: companies.stage,
-      employeeCount: companies.employeeCount,
-      hiringStatus: companies.hiringStatus,
-      lat: companies.lat,
-      lng: companies.lng,
-      logoUrl: companies.logoUrl,
-      website: companies.website,
-      description: companies.description,
-      county: companyLocations.county,
-      city: companyLocations.city,
-    })
-    .from(companies)
-    .leftJoin(companyLocations, eq(companyLocations.companyId, companies.id))
-    .limit(1000);
+function isViewMode(v: unknown): v is ViewMode {
+  return v === "companies" || v === "clusters" || v === "heat";
+}
 
-  const seen = new Set<string>();
-  const items: CompanyListItem[] = [];
-  for (const r of rows) {
-    if (seen.has(r.id)) continue;
-    seen.add(r.id);
-    items.push({
-      id: r.id,
-      slug: r.slug,
-      name: r.name,
-      sector: r.sector,
-      stage: r.stage,
-      employee_count: r.employeeCount,
-      hiring_status: r.hiringStatus,
-      lat: r.lat,
-      lng: r.lng,
-      logo_url: r.logoUrl,
-      website: r.website,
-      summary: summarize(r.description),
-      county: r.county,
-      city: r.city,
-    });
-  }
+export default async function MapPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const sp = await searchParams;
+  const params = flatten(sp);
+  const { filters: parsedFilters, errors } = parseFilters(params);
+  const filters: CompanyFilters = errors ? {} : parsedFilters;
 
-  const initial: CompaniesListResponse = {
-    companies: items,
-    total: items.length,
-  };
+  const initial = await listCompanies(filters, 500);
 
-  const [sectorRows, stageRows, countyRows] = await Promise.all([
-    d
-      .select({ v: companies.sector })
-      .from(companies)
-      .where(sql`${companies.sector} IS NOT NULL`)
-      .groupBy(companies.sector),
-    d
-      .select({ v: companies.stage })
-      .from(companies)
-      .where(sql`${companies.stage} IS NOT NULL`)
-      .groupBy(companies.stage),
-    d
-      .select({ v: companyLocations.county })
-      .from(companyLocations)
-      .where(sql`${companyLocations.county} IS NOT NULL`)
-      .groupBy(companyLocations.county),
-  ]);
+  const rawView = Array.isArray(sp.view) ? sp.view[0] : sp.view;
+  const view: ViewMode = isViewMode(rawView) ? rawView : "companies";
 
-  const facets: MapFacets = {
-    sectors: sectorRows
-      .map((r) => r.v)
-      .filter((v): v is string => !!v)
-      .sort(),
-    stages: stageRows
-      .map((r) => r.v)
-      .filter((v): v is string => !!v)
-      .sort(),
-    counties: countyRows
-      .map((r) => r.v)
-      .filter((v): v is string => !!v)
-      .sort(),
-  };
+  const initialCamera = (() => {
+    const lat = Array.isArray(sp.lat) ? sp.lat[0] : sp.lat;
+    const lng = Array.isArray(sp.lng) ? sp.lng[0] : sp.lng;
+    const zoom = Array.isArray(sp.zoom) ? sp.zoom[0] : sp.zoom;
+    if (!lat || !lng || !zoom) return null;
+    const parsed = {
+      lat: Number(lat),
+      lng: Number(lng),
+      zoom: Number(zoom),
+    };
+    if (Object.values(parsed).some((n) => !Number.isFinite(n))) return null;
+    return parsed;
+  })();
 
-  return <MapView initial={initial} facets={facets} />;
+  return (
+    <EcosystemMapShell
+      initialCompanies={initial.companies}
+      initialTotal={initial.total}
+      initialFilters={filters}
+      initialView={view}
+      initialCamera={initialCamera}
+    />
+  );
 }

@@ -188,7 +188,7 @@ node_modules + a dev server + a Claude session). Suggested batches:
 
 Agent 6 (agent-native) can start in parallel with Agent 2 because the
 OpenAPI spec is a contract Agent 2 is producing — keep them in sync
-via `docs/agent-tasks/openapi-additions.md` (Agent 2 writes shapes;
+via `docs/archive/agent-tasks/openapi-additions.md` (Agent 2 writes shapes;
 Agent 6 builds OpenAPI from them).
 
 Full phase-by-phase map with dependencies, coordination matrix, and

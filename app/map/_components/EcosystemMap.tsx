@@ -1,268 +1,459 @@
 "use client";
 
+import "maplibre-gl/dist/maplibre-gl.css";
+import { useEffect, useRef } from "react";
 import maplibregl, {
+  type Map as MapLibreMap,
   type GeoJSONSource,
   type LngLatLike,
-  type MapMouseEvent,
 } from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useMemo, useRef } from "react";
+import type { CompanyListItem } from "@/lib/companies-list";
 import {
-  FALLBACK_SECTOR_COLOR,
-  SECTOR_COLORS,
-  colorForSector,
-} from "./sector-colors";
-import type { CompanyListItem } from "./types";
+  FALLBACK_HEX,
+  SECTOR_PAINT_MATCH,
+  SECTOR_REGISTRY,
+  sectorKey,
+} from "@/lib/sectors";
+import { bucketMidpoint } from "@/lib/employee-bucket";
+import type { ViewMode } from "./ViewModeToggle";
+
+const VECTOR_STYLE_URL =
+  "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+
+const UTAH_CENTER: LngLatLike = [-111.5, 39.5];
+const UTAH_ZOOM = 6.5;
+const UTAH_BOUNDS: [[number, number], [number, number]] = [
+  [-114.3, 36.7], // SW
+  [-108.8, 42.2], // NE
+];
 
 type Props = {
   companies: CompanyListItem[];
+  view: ViewMode;
+  initialCamera: { lat: number; lng: number; zoom: number } | null;
   selectedSlug: string | null;
-  onSelect: (slug: string) => void;
+  onPinClick: (slug: string) => void;
 };
 
-const UTAH_CENTER: LngLatLike = [-111.5, 39.5];
-const SOURCE_ID = "companies";
-const CLUSTER_LAYER = "company-clusters";
-const POINT_LAYER = "company-points";
+const SECTOR_KEYS = SECTOR_REGISTRY.map((s) => s.key).filter(
+  (v, i, a) => a.indexOf(v) === i,
+);
+const KEY_HEX: Record<string, string> = Object.fromEntries(
+  SECTOR_REGISTRY.map((s) => [s.key, s.hex]),
+);
 
-// Stable per-slug jitter (±0.018°, ~2km) so co-centroid pins separate.
-function jitter(slug: string): { dx: number; dy: number } {
-  let h = 0;
-  for (let i = 0; i < slug.length; i++) {
-    h = (h * 31 + slug.charCodeAt(i)) | 0;
-  }
-  const a = (h & 0xffff) / 0xffff - 0.5;
-  const b = ((h >>> 16) & 0xffff) / 0xffff - 0.5;
-  return { dx: a * 0.036, dy: b * 0.036 };
+function buildGeoJson(companies: CompanyListItem[]) {
+  return {
+    type: "FeatureCollection" as const,
+    features: companies
+      .filter((c) => c.lat != null && c.lng != null)
+      .map((c) => ({
+        type: "Feature" as const,
+        geometry: {
+          type: "Point" as const,
+          coordinates: [c.lng!, c.lat!] as [number, number],
+        },
+        properties: {
+          slug: c.slug,
+          name: c.name,
+          sector: c.sector ?? "",
+          sector_key: sectorKey(c.sector),
+          stage: c.stage ?? "",
+          city: c.city ?? "",
+          county: c.county ?? "",
+          employee_count: c.employee_count ?? "",
+          hiring: c.hiring_status ? 1 : 0,
+          weight: bucketMidpoint(c.employee_count) || 5,
+        },
+      })),
+  };
 }
 
-function toFeatureCollection(
-  companies: CompanyListItem[],
-): GeoJSON.FeatureCollection<GeoJSON.Point> {
-  const features: GeoJSON.Feature<GeoJSON.Point>[] = [];
-  for (const c of companies) {
-    if (typeof c.lat !== "number" || typeof c.lng !== "number") continue;
-    const j = jitter(c.slug);
-    features.push({
-      type: "Feature",
-      geometry: { type: "Point", coordinates: [c.lng + j.dx, c.lat + j.dy] },
-      properties: {
-        slug: c.slug,
-        name: c.name,
-        sector: c.sector,
-        sector_color: colorForSector(c.sector),
-      },
-    });
+// Cluster property aggregations: for each sector key, count how many
+// features in the cluster carry that key. Used to drive the
+// dominant-sector circle color.
+function buildClusterProperties() {
+  const obj: Record<string, unknown> = {};
+  for (const k of SECTOR_KEYS) {
+    obj[`count_${k}`] = [
+      "+",
+      ["case", ["==", ["get", "sector_key"], k], 1, 0],
+    ];
   }
-  return { type: "FeatureCollection", features };
+  obj["count_other"] = [
+    "+",
+    ["case", ["==", ["get", "sector_key"], "other"], 1, 0],
+  ];
+  return obj;
 }
 
-export function EcosystemMap({ companies, selectedSlug, onSelect }: Props) {
+// Circle-color expression that picks the sector key with the largest
+// per-cluster count. MapLibre evaluates the `case` ladder top-down.
+function buildClusterColorExpression(): unknown[] {
+  // For each pair (a, b), if count_a >= count_b, prefer a, else b.
+  // We iteratively reduce by always comparing against the current "best".
+  // Since MapLibre paint expressions don't have variables, we compose
+  // a nested case/all expression by repeated binary comparisons.
+  const keys = [...SECTOR_KEYS, "other"];
+  const expr: unknown[] = ["case"];
+  // For each candidate key, emit:
+  //   ["all", count_k >= count_a, count_k >= count_b, ...] => HEX
+  for (const k of keys) {
+    const checks: unknown[] = ["all"];
+    for (const other of keys) {
+      if (other === k) continue;
+      checks.push([">=", ["get", `count_${k}`], ["get", `count_${other}`]]);
+    }
+    expr.push(checks);
+    expr.push(k === "other" ? FALLBACK_HEX : (KEY_HEX[k] ?? FALLBACK_HEX));
+  }
+  expr.push(FALLBACK_HEX);
+  return expr;
+}
+
+// "match nothing" filter for the pin-selected layer's initial state.
+// The effect below replaces this with a slug-equality predicate as
+// soon as the user picks a pin. Cast to `never` keeps the type
+// gymnastics out of the layer-init call site (mirroring the
+// `circle-color` paint expression cast above).
+const SELECTED_FILTER_NONE = [
+  "all",
+  ["!", ["has", "point_count"]],
+  ["==", ["get", "slug"], "__none__"],
+] as never;
+
+function selectedFilter(slug: string | null) {
+  return [
+    "all",
+    ["!", ["has", "point_count"]],
+    ["==", ["get", "slug"], slug ?? "__none__"],
+  ] as never;
+}
+
+export function EcosystemMap({
+  companies,
+  view,
+  initialCamera,
+  selectedSlug,
+  onPinClick,
+}: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
   const ready = useRef(false);
-  const onSelectRef = useRef(onSelect);
-  onSelectRef.current = onSelect;
+  const onPinClickRef = useRef(onPinClick);
+  onPinClickRef.current = onPinClick;
 
-  const data = useMemo(() => toFeatureCollection(companies), [companies]);
-
+  // Init map once.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    const center: LngLatLike = initialCamera
+      ? [initialCamera.lng, initialCamera.lat]
+      : UTAH_CENTER;
+    const zoom = initialCamera?.zoom ?? UTAH_ZOOM;
+
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: "raster",
-            tiles: [
-              "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-            ],
-            tileSize: 256,
-            attribution:
-              '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
-          },
-        },
-        layers: [
-          { id: "osm", type: "raster", source: "osm", minzoom: 0, maxzoom: 22 },
-        ],
-      },
-      center: UTAH_CENTER,
-      zoom: 6.2,
+      style: VECTOR_STYLE_URL,
+      center,
+      zoom,
       minZoom: 5,
       maxZoom: 16,
+      maxBounds: UTAH_BOUNDS,
       attributionControl: { compact: true },
     });
+    mapRef.current = map;
 
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
 
     map.on("load", () => {
-      map.addSource(SOURCE_ID, {
+      // Source — populated by the second effect below.
+      map.addSource("companies", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
         cluster: true,
-        clusterRadius: 40,
-        clusterMaxZoom: 12,
+        clusterRadius: 50,
+        clusterMaxZoom: 14,
+        clusterProperties: buildClusterProperties() as never,
       });
 
+      // ---- Companies (default) view layers ----
+      // Cluster bubbles, colored by dominant sector.
       map.addLayer({
-        id: CLUSTER_LAYER,
+        id: "clusters",
         type: "circle",
-        source: SOURCE_ID,
+        source: "companies",
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": "#0f1b2d",
-          "circle-stroke-color": "#fbf9f4",
+          "circle-color": buildClusterColorExpression() as never,
           "circle-stroke-width": 2,
+          "circle-stroke-color": "#0f1b2d",
           "circle-radius": [
             "step",
             ["get", "point_count"],
-            16,
+            18,
             5,
-            20,
+            24,
             15,
-            26,
-            40,
             32,
           ],
-          "circle-opacity": 0.92,
+          "circle-opacity": 0.85,
         },
       });
-
-      // (Cluster counts are communicated by circle radius — the
-      // raster basemap doesn't ship a glyphs URL, so a symbol layer
-      // with text-field would error at addLayer.)
-
       map.addLayer({
-        id: POINT_LAYER,
+        id: "cluster-count",
+        type: "symbol",
+        source: "companies",
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-size": 12,
+          "text-allow-overlap": true,
+        },
+        paint: {
+          "text-color": "#f7f4ed",
+          "text-halo-color": "#0f1b2d",
+          "text-halo-width": 1,
+        },
+      });
+      // Individual pins (unclustered).
+      map.addLayer({
+        id: "pin",
         type: "circle",
-        source: SOURCE_ID,
+        source: "companies",
         filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-color": [
-            "coalesce",
-            ["get", "sector_color"],
-            FALLBACK_SECTOR_COLOR,
-          ],
-          // Default radius / stroke-width — the selected pin's halo
-          // is patched in via setPaintProperty in the selection
-          // useEffect below.
-          "circle-radius": 7,
-          "circle-stroke-color": "#0f1b2d",
+            "match",
+            ["get", "sector"],
+            ...SECTOR_PAINT_MATCH,
+          ] as never,
           "circle-stroke-width": 1.5,
-          "circle-opacity": 0.95,
+          "circle-stroke-color": "#0f1b2d",
+          "circle-radius": 8,
+        },
+      });
+      // Selected pin highlight (rendered above pin layer). The filter is
+      // owned by the effect below — it's set to "match nothing" until the
+      // first selection lands.
+      map.addLayer({
+        id: "pin-selected",
+        type: "circle",
+        source: "companies",
+        filter: SELECTED_FILTER_NONE,
+        paint: {
+          "circle-color": [
+            "match",
+            ["get", "sector"],
+            ...SECTOR_PAINT_MATCH,
+          ] as never,
+          "circle-stroke-width": 3,
+          "circle-stroke-color": "#c2410c",
+          "circle-radius": 12,
         },
       });
 
-      map.on("click", CLUSTER_LAYER, (e) => {
-        const feature = e.features?.[0];
-        if (!feature) return;
-        const clusterId = feature.properties?.cluster_id;
-        const src = map.getSource(SOURCE_ID) as GeoJSONSource;
-        src
-          .getClusterExpansionZoom(clusterId)
-          .then((zoom) => {
-            const geom = feature.geometry as GeoJSON.Point;
-            map.easeTo({
-              center: geom.coordinates as [number, number],
-              zoom,
-              duration: 500,
-            });
-          })
-          .catch((err) => {
-            console.warn("cluster expansion zoom failed", err);
-          });
+      // ---- Clusters (gazetteer) view — soft halo + text label ----
+      map.addLayer({
+        id: "gazetteer-halo",
+        type: "circle",
+        source: "companies",
+        filter: ["has", "point_count"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": buildClusterColorExpression() as never,
+          "circle-radius": [
+            "step",
+            ["get", "point_count"],
+            36,
+            5,
+            48,
+            15,
+            64,
+          ],
+          "circle-opacity": 0.18,
+          "circle-stroke-width": 1.5,
+          "circle-stroke-color": buildClusterColorExpression() as never,
+          "circle-stroke-opacity": 0.45,
+        },
+      });
+      map.addLayer({
+        id: "gazetteer-label",
+        type: "symbol",
+        source: "companies",
+        filter: ["has", "point_count"],
+        layout: {
+          visibility: "none",
+          "text-field": [
+            "concat",
+            ["get", "point_count_abbreviated"],
+            " companies",
+          ],
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-size": 13,
+          "text-allow-overlap": false,
+          "text-offset": [0, 0.2],
+        },
+        paint: {
+          "text-color": "#0f1b2d",
+          "text-halo-color": "#f7f4ed",
+          "text-halo-width": 1.6,
+        },
       });
 
-      const onPointClick = (e: MapMouseEvent) => {
-        const feature = (e as MapMouseEvent & { features?: GeoJSON.Feature[] })
-          .features?.[0];
-        const slug = feature?.properties?.slug;
-        if (typeof slug === "string") onSelectRef.current(slug);
-      };
-      map.on("click", POINT_LAYER, onPointClick);
+      // ---- Heat view ----
+      map.addLayer(
+        {
+          id: "heat",
+          type: "heatmap",
+          source: "companies",
+          layout: { visibility: "none" },
+          paint: {
+            "heatmap-weight": [
+              "interpolate",
+              ["linear"],
+              ["get", "weight"],
+              0,
+              0.1,
+              500,
+              0.6,
+              5000,
+              1,
+            ],
+            "heatmap-intensity": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              5,
+              1,
+              12,
+              3,
+            ],
+            "heatmap-radius": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              5,
+              16,
+              12,
+              48,
+            ],
+            "heatmap-opacity": 0.75,
+            "heatmap-color": [
+              "interpolate",
+              ["linear"],
+              ["heatmap-density"],
+              0,
+              "rgba(33,102,172,0)",
+              0.2,
+              "rgb(103,169,207)",
+              0.4,
+              "rgb(252,141,89)",
+              0.7,
+              "rgb(239,108,41)",
+              1,
+              "rgb(178,24,43)",
+            ],
+          },
+        },
+        // Place beneath the labels so it doesn't paint over the
+        // basemap text.
+        "clusters",
+      );
 
-      map.on("mouseenter", CLUSTER_LAYER, () => {
+      // Cluster click → expand zoom.
+      map.on("click", "clusters", async (e) => {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ["clusters"],
+        });
+        const f = features[0];
+        if (!f) return;
+        const clusterId = f.properties?.cluster_id as number | undefined;
+        if (clusterId == null) return;
+        const source = map.getSource("companies") as GeoJSONSource;
+        const zoom = await source.getClusterExpansionZoom(clusterId);
+        const coords = (f.geometry as GeoJSON.Point).coordinates as [number, number];
+        map.easeTo({ center: coords, zoom });
+      });
+
+      // Pin click → bubble up the selected slug.
+      map.on("click", "pin", (e) => {
+        const f = e.features?.[0];
+        const slug = f?.properties?.slug as string | undefined;
+        if (slug) onPinClickRef.current(slug);
+      });
+      map.on("mouseenter", "pin", () => {
         map.getCanvas().style.cursor = "pointer";
       });
-      map.on("mouseleave", CLUSTER_LAYER, () => {
+      map.on("mouseleave", "pin", () => {
         map.getCanvas().style.cursor = "";
       });
-      map.on("mouseenter", POINT_LAYER, () => {
+      map.on("mouseenter", "clusters", () => {
         map.getCanvas().style.cursor = "pointer";
       });
-      map.on("mouseleave", POINT_LAYER, () => {
+      map.on("mouseleave", "clusters", () => {
         map.getCanvas().style.cursor = "";
       });
 
       ready.current = true;
-      const src = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
-      if (src) src.setData(data);
+      // Initial data load — caller's first companies prop.
+      const src = map.getSource("companies") as GeoJSONSource;
+      src.setData(buildGeoJson(companiesRef.current) as never);
     });
 
-    mapRef.current = map;
     return () => {
+      mapRef.current = null;
       ready.current = false;
       map.remove();
-      mapRef.current = null;
     };
+    // intentionally only initializes once; see companiesRef pattern below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Push new feature data into the source whenever filters change.
+  // Ref-companies pattern so the load handler reads the latest list
+  // without re-instantiating the map.
+  const companiesRef = useRef(companies);
   useEffect(() => {
+    companiesRef.current = companies;
     const map = mapRef.current;
     if (!map || !ready.current) return;
-    const src = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
-    if (src) src.setData(data);
-  }, [data]);
+    const src = map.getSource("companies") as GeoJSONSource | undefined;
+    if (src) src.setData(buildGeoJson(companies) as never);
+  }, [companies]);
 
-  // Highlight the selected pin via a halo using a runtime filter on
-  // the point layer's stroke width.
+  // Selected pin filter — re-applied when selectedSlug changes.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready.current) return;
-    if (!map.getLayer(POINT_LAYER)) return;
-    map.setPaintProperty(POINT_LAYER, "circle-stroke-width", [
-      "case",
-      ["==", ["get", "slug"], selectedSlug ?? ""],
-      3.5,
-      1.5,
-    ]);
-    map.setPaintProperty(POINT_LAYER, "circle-radius", [
-      "case",
-      ["==", ["get", "slug"], selectedSlug ?? ""],
-      10,
-      7,
-    ]);
+    map.setFilter("pin-selected", selectedFilter(selectedSlug));
   }, [selectedSlug]);
 
-  return (
-    <>
-      <div ref={containerRef} className="h-full w-full" />
-      <Legend />
-    </>
-  );
-}
+  // View mode → toggle layer visibility.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready.current) return;
+    const layers = {
+      clusters: ["clusters", "cluster-count", "pin", "pin-selected"],
+      gazetteer: ["gazetteer-halo", "gazetteer-label"],
+      heat: ["heat"],
+    };
+    const all = [...layers.clusters, ...layers.gazetteer, ...layers.heat];
+    const visible: string[] =
+      view === "companies"
+        ? layers.clusters
+        : view === "clusters"
+          ? layers.gazetteer
+          : layers.heat;
+    for (const id of all) {
+      if (!map.getLayer(id)) continue;
+      map.setLayoutProperty(
+        id,
+        "visibility",
+        visible.includes(id) ? "visible" : "none",
+      );
+    }
+  }, [view]);
 
-function Legend() {
-  const items = Object.entries(SECTOR_COLORS);
-  return (
-    <div className="pointer-events-none absolute bottom-4 left-4 z-10 hidden rounded-tile border-[1.5px] border-ink bg-paper-2/95 p-3 font-mono text-[10px] uppercase tracking-wider text-ink shadow-sketch md:block">
-      <div className="mb-1 text-ink-3">Sector</div>
-      <ul className="grid gap-1">
-        {items.map(([sector, color]) => (
-          <li key={sector} className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="inline-block h-2.5 w-2.5 rounded-full border border-ink"
-              style={{ backgroundColor: color }}
-            />
-            <span>{sector}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+  return <div ref={containerRef} className="h-full w-full" />;
 }

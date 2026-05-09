@@ -21,7 +21,7 @@ See `CLAUDE.md` § Source data for the file list and field notes.
 | Phase 2 — Brand & Shell | Agent 7 — Tailwind tokens, root layout, homepage, persona tiles | PR #11 |
 | Phase 3a — Recommend | Agent 2 — recommendation engine, founder-passport API, enrich endpoint | PR #16 |
 | Phase 3b — Navigator UI | Agent 3 — `/founder` intake, `/plan/:id` results, share link | PR #17 |
-| Phase 4a — Map + Profiles | Agent 4 — ecosystem map (MapLibre), company profiles, agent card routes | PR #24 |
+| Phase 4a — Map + Profiles | Agent 4 — ecosystem map (MapLibre), company profiles, agent card routes | PR #24 (initial); PR #28 (view modes, dual-pane reveal, dominant-sector cluster colors, scroll-spy tabs, mobile drawer) |
 | Phase 4b — Auth + Admin | Agent 5 — Better Auth, OTP, onboarding, claim flow, GOEO admin | PR #20 |
 
 Migration state on `main`: `0000_flaky_scarlet_spider` (Agent 1) +
