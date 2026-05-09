@@ -145,10 +145,10 @@ async function SiteNav() {
                 Sign in
               </Link>
               <Link
-                href="/sign-up?intent=claim"
+                href="/sign-up"
                 className="inline-flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-pill border-[1.5px] border-ember bg-ember px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:-translate-y-0.5"
               >
-                Claim a company →
+                Sign up →
               </Link>
             </>
           )}

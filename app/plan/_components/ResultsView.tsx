@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Chip, ScribbleDivider, Tile } from "@/components/brand";
 import {
@@ -20,9 +21,10 @@ type Props = {
   passportId: string;
   input: FounderPassportInput;
   result: RecommendResult;
+  cta?: ReactNode;
 };
 
-export function ResultsView({ passportId, input, result }: Props) {
+export function ResultsView({ passportId, input, result, cta }: Props) {
   const personaId = personaIdFromPassport(passportId);
   const persona = personaId ? personaById(personaId) : undefined;
 
@@ -32,7 +34,15 @@ export function ResultsView({ passportId, input, result }: Props) {
     .slice(0, 4);
   const ignore = result.recommendations.filter((r) => r.bucket === "ignore");
 
-  const headline = buildHeadline(persona?.displayName.split(",")[0], input);
+  const firstName = persona?.displayName.split(",")[0];
+  const headline = buildHeadline(firstName, input);
+  // Friendly label for the kicker / "plan id" footer. Persona fixture
+  // pages show e.g. "priya_founder_plan" instead of the raw fp_priya
+  // route token; real plans drop the random hash entirely (not useful
+  // to humans, the share button has the full URL anyway).
+  const planLabel = firstName
+    ? `${firstName.toLowerCase()}_founder_plan`
+    : null;
 
   return (
     <div className="mx-auto max-w-[1480px] px-4 pb-16 pt-8 sm:px-7">
@@ -41,7 +51,7 @@ export function ResultsView({ passportId, input, result }: Props) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">
-              90-day plan · for {passportId}
+              {planLabel ? `90-day plan · ${planLabel}` : "90-day plan"}
             </p>
             <h1 className="mt-2 font-serif text-3xl leading-tight tracking-tight sm:text-4xl">
               {headline}
@@ -115,12 +125,14 @@ export function ResultsView({ passportId, input, result }: Props) {
         <IgnoreColumn items={ignore} />
       </section>
 
+      {cta}
+
       <ScribbleDivider className="my-12" />
 
       <footer className="rounded-tile border-[1.5px] border-ink bg-ink px-5 py-4 text-paper">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="font-mono text-[11px] uppercase tracking-wider text-topo">
-            plan_id · {passportId} · saved
+            {planLabel ? `${planLabel} · saved` : "Saved · share via the link above"}
           </p>
           <p className="font-mono text-[11px] uppercase tracking-wider text-topo">
             same plan as JSON →{" "}
