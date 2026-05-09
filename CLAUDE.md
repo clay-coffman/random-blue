@@ -222,6 +222,24 @@ edits on `main`). Branch names follow `feat/*`, `fix/*`, `chore/*`,
 `docs/*`, or `refactor/*`. Commit messages use the matching
 conventional prefixes. PRs target `main` — squash-merge only.
 
+## Keep the planning docs in sync
+
+When your PR closes or advances anything tracked in
+`docs/implementation-plan.md` § Status snapshot — your agent slice
+moves from `NOT STARTED` → `PR #X OPEN` → `✅ DONE`, or your PR
+completes the last open slice in a phase — **flip the line in the
+same PR** that ships the work. The status snapshot is the contract
+for what's free to start; if it lags reality, the next agent reads
+stale state and either duplicates work or waits on something
+already done.
+
+Same rule for the per-PR coordination notes (e.g. migration
+collisions, in-flight branch references): if your PR resolves or
+changes them, update them.
+
+The `ship` skill checks this in Phase 1 before staging files —
+don't skip the prompt.
+
 ## Hooks
 
 Local safety + convenience hooks in `.claude/settings.json` and

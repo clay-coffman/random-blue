@@ -34,10 +34,27 @@ no `dev` branch.
    git log --oneline -5
    ```
 
-3. Stage only relevant files and commit with a conventional message. Do not
+3. **Sync the planning docs in this same commit, if applicable.**
+   For projects that track in-flight work in a status doc (this
+   repo: `docs/implementation-plan.md` § Status snapshot), check
+   whether your PR closes or advances any tracked line. If yes,
+   flip it now so the doc lands with the work — not in a follow-up.
+   Ask:
+
+   - Does this PR move my agent slice from `NOT STARTED` → `PR #X
+     OPEN` → `✅ DONE`?
+   - Does it complete the last open slice in a phase (so the phase
+     header should flip too)?
+   - Does it resolve a coordination note (migration collision,
+     blocking dependency, in-flight branch reference)?
+
+   If any of those apply, edit the doc, then continue. If the repo
+   has no such status doc, skip this step.
+
+4. Stage only relevant files and commit with a conventional message. Do not
    amend unless the user asks.
 
-4. Push the branch:
+5. Push the branch:
 
    ```bash
    git push -u origin "$(git branch --show-current)"
