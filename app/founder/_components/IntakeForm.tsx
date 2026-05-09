@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Chip } from "@/components/brand";
+import { PlanLoadingOverlay } from "@/components/PlanLoadingOverlay";
 import { cn } from "@/lib/utils";
 import {
   parseEnrichResponse,
@@ -174,11 +175,17 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
     let result: ReturnType<typeof recommendMock> | undefined;
     let resolvedPassportId: string | undefined;
 
+    // 30s ceiling so a hung fetch doesn't strand the user under the
+    // full-screen overlay forever. On abort/error we fall through to
+    // the mock + redirect path below, which is recoverable UX.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
     try {
       const res = await fetch("/api/v1/resources/recommend", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(toWirePassportInput(passport)),
+        signal: controller.signal,
       });
       if (res.ok) {
         const wire = (await res.json()) as RecommendResponseWire;
@@ -186,7 +193,9 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
         resolvedPassportId = result.passportId;
       }
     } catch {
-      // network or DNS failure — fall through to mock
+      // network / DNS / abort — fall through to mock
+    } finally {
+      clearTimeout(timeout);
     }
 
     if (!result || !resolvedPassportId) {
@@ -209,18 +218,16 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
       }
     }
 
-    try {
-      router.push(`/plan/${resolvedPassportId}`);
-    } finally {
-      // Reset so a back-navigation re-enables the submit button.
-      setSubmitting(false);
-    }
+    // Don't reset submitting — unmount on navigate; resetting flashes the old button label.
+    router.push(`/plan/${resolvedPassportId}`);
   }
 
   const isPrefilled = (key: PassportFieldName) => prefilledKeys.has(key);
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6 md:grid-cols-[1.4fr_1fr]">
+    <>
+      {submitting && <PlanLoadingOverlay />}
+      <form onSubmit={handleSubmit} className="grid gap-6 md:grid-cols-[1.4fr_1fr]">
       <div className="flex flex-col gap-6">
         {/* Section: website URL */}
         <FieldGroup
@@ -412,7 +419,8 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
           and the agent API consume.
         </p>
       </aside>
-    </form>
+      </form>
+    </>
   );
 }
 
