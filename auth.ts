@@ -1,13 +1,14 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { D1Database } from "@cloudflare/workers-types";
 import { z } from "zod";
 import * as authSchema from "@/db/schema.auth";
 import { getCookiePrefix } from "@/lib/auth-cookie";
-import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
+import { sendVerificationEmail } from "@/lib/email";
 
 // Self-serve roles only. goeo_admin/superadmin are gained via
 // /admin/admins invites + scripts/bootstrap-superadmin.ts respectively.
@@ -25,12 +26,6 @@ function buildAuth(env?: CloudflareEnv) {
   const db = env
     ? drizzle(env.DB as unknown as D1Database)
     : drizzle({} as D1Database);
-
-  // Dev DX: when AUTH_SKIP_OTP=true in .dev.vars, drop the OTP plugin
-  // and disable the email-verification gate so signups land
-  // authenticated immediately. NEVER set in production — see CLAUDE.md
-  // § Local authentication testing.
-  const skipOtp = env?.AUTH_SKIP_OTP === "true";
 
   const baseURL =
     env?.BETTER_AUTH_URL ?? process.env.BETTER_AUTH_URL ?? undefined;
@@ -92,11 +87,6 @@ function buildAuth(env?: CloudflareEnv) {
       provider: "sqlite",
       schema: authSchema,
     }),
-    emailAndPassword: {
-      enabled: true,
-      requireEmailVerification: !skipOtp,
-      minPasswordLength: 12,
-    },
     user: {
       // The DB column is `role TEXT DEFAULT 'owner' NOT NULL` (frozen by
       // Agent 1). We keep `required: true` so Better Auth always supplies
@@ -125,24 +115,41 @@ function buildAuth(env?: CloudflareEnv) {
         // confirm dialog is the safety net.
       },
     },
-    plugins: skipOtp
-      ? []
-      : [
-          emailOTP({
-            otpLength: 6,
-            expiresIn: 600, // 10 minutes
-            sendVerificationOnSignUp: true,
-            async sendVerificationOTP({ email, otp, type }) {
-              if (type === "forget-password") {
-                await sendPasswordResetEmail(email, otp);
-              } else {
-                // email-verification (signup) and sign-in both use the
-                // verification template.
-                await sendVerificationEmail(email, otp);
-              }
-            },
-          }),
-        ],
+    plugins: [
+      emailOTP({
+        otpLength: 6,
+        expiresIn: 600, // 10 minutes
+        // We pre-create users in /api/auth/start-signup before
+        // sending the sign-in OTP. disableSignUp: true means
+        // signIn.emailOtp won't auto-create accounts for unknown
+        // emails (anti-enumeration: unknown emails get the same
+        // INVALID_OTP response as a wrong code).
+        disableSignUp: true,
+        async sendVerificationOTP({ email, otp }) {
+          await sendVerificationEmail(email, otp);
+        },
+      }),
+    ],
+    databaseHooks: {
+      session: {
+        create: {
+          // First successful sign-in proves the user controls the
+          // email — flip emailVerified=true. Pre-created rows from
+          // /api/auth/start-signup land with emailVerified=false so
+          // a row with emailVerified=false + no sessions is an
+          // unclaimed pending signup, not a real account.
+          before: async (session) => {
+            if (env) {
+              await drizzle(env.DB as unknown as D1Database)
+                .update(authSchema.user)
+                .set({ emailVerified: true })
+                .where(eq(authSchema.user.id, session.userId));
+            }
+            return { data: session };
+          },
+        },
+      },
+    },
     session: {
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // sliding refresh once/day
@@ -174,12 +181,9 @@ function buildAuth(env?: CloudflareEnv) {
       window: 60,
       max: 60,
       customRules: {
-        "/sign-in/email": { window: 60, max: 5 },
-        "/sign-up/email": { window: 600, max: 5 },
+        "/sign-in/email-otp": { window: 60, max: 5 },
         "/email-otp/send-verification-otp": { window: 60, max: 3 },
         "/email-otp/verify-otp": { window: 60, max: 5 },
-        "/forget-password": { window: 600, max: 3 },
-        "/reset-password": { window: 600, max: 5 },
       },
     },
   });

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -18,19 +17,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const Schema = z.object({
   email: z.string().email("Enter a valid email"),
-  password: z.string().min(1, "Enter your password"),
-  remember: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof Schema>;
 
 export default function SignInPage() {
-  // useSearchParams() opts the page out of static prerendering; wrap
-  // in Suspense so Next can still produce the loading shell at build.
   return (
     <Suspense fallback={null}>
       <SignInForm />
@@ -50,27 +44,27 @@ function SignInForm() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(Schema),
-    defaultValues: { email: "", password: "", remember: true },
+    defaultValues: { email: "" },
   });
 
   async function onSubmit(values: FormValues) {
     setServerError(null);
     setSubmitting(true);
     try {
-      const result = await authClient.signIn.email({
+      // Anti-enumeration: Better Auth's send-verification-otp with
+      // disableSignUp:true returns success for unknown emails too
+      // (without actually sending mail). We always route to
+      // /sign-in/verify; an unknown email simply never receives a
+      // code and signIn.emailOtp returns INVALID_OTP at the verify
+      // step — same response a wrong-code attempt would get.
+      await authClient.emailOtp.sendVerificationOtp({
         email: values.email,
-        password: values.password,
-        rememberMe: values.remember ?? true,
+        type: "sign-in",
       });
-      if (result.error) {
-        setServerError(result.error.message ?? "Invalid email or password.");
-        setSubmitting(false);
-        return;
-      }
-      router.push(next);
-      // The header is rendered server-side from the session cookie;
-      // refresh so the new session is picked up without a full reload.
-      router.refresh();
+      const sp = new URLSearchParams();
+      sp.set("email", values.email);
+      if (next && next !== "/") sp.set("next", next);
+      router.push(`/sign-in/verify?${sp.toString()}`);
     } catch (err) {
       setServerError(
         err instanceof Error ? err.message : "Network error. Please retry.",
@@ -83,6 +77,7 @@ function SignInForm() {
     <AuthShell
       kicker="Welcome back"
       title="Log in to Atlas."
+      lede="Enter your email. We'll send a 6-digit code."
       footer={
         <AuthFooterLink
           prefix="No account yet?"
@@ -111,46 +106,6 @@ function SignInForm() {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex items-baseline justify-between">
-                  <FormLabel>Password</FormLabel>
-                  <Link
-                    href="/forgot-password"
-                    className="text-xs text-ember underline-offset-4 hover:underline"
-                  >
-                    Forgot?
-                  </Link>
-                </div>
-                <FormControl>
-                  <Input
-                    type="password"
-                    autoComplete="current-password"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="remember"
-            render={({ field }) => (
-              <FormItem>
-                <label className="flex items-center gap-2 text-sm text-ink-2">
-                  <Checkbox
-                    checked={field.value ?? true}
-                    onCheckedChange={(v) => field.onChange(v === true)}
-                  />
-                  Remember me
-                </label>
-              </FormItem>
-            )}
-          />
           {serverError ? (
             <p className="rounded-tile border border-danger bg-paper-2 px-3 py-2 text-sm text-danger">
               {serverError}
@@ -161,7 +116,7 @@ function SignInForm() {
             disabled={submitting}
             className="inline-flex min-h-[44px] w-full items-center justify-center rounded-tile border-[1.5px] border-ember bg-ember px-5 py-3 font-medium text-paper shadow-sketch transition-transform hover:-translate-y-0.5 hover:shadow-sketch-hover disabled:opacity-60"
           >
-            {submitting ? "Signing in…" : "Log in →"}
+            {submitting ? "Sending code…" : "Send sign-in code →"}
           </button>
         </form>
       </Form>

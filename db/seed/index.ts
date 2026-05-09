@@ -5,7 +5,7 @@ import path from "node:path";
 import { personas } from "./personas";
 import { loadResources } from "./resources";
 import { loadCompanies } from "./companies";
-import { buildAccounts, testUsers } from "./users";
+import { testUsers } from "./users";
 import { investorProfiles } from "./investor-profiles";
 
 const SOURCE = path.resolve(process.cwd(), "docs/source_data");
@@ -73,20 +73,24 @@ async function buildSql(): Promise<string> {
   // profile_updates, company_jobs, and company_photos are preserved.
   stmts.push("DELETE FROM company_locations;");
 
-  // ─── Test users + accounts (UPSERT — preserves downstream rows) ────
-  // First run: INSERT. Subsequent runs: refresh name/email/role but
-  // leave password + timestamps alone so existing sessions stay valid.
-  const accounts = await buildAccounts();
+  // ─── Test users (UPSERT — preserves downstream rows) ───────────────
+  // First run: INSERT. Subsequent runs: refresh name/email/role +
+  // emailVerified, leaving timestamps alone so existing sessions stay
+  // valid. Seeded users sign in via emailOTP delivered to mailpit; no
+  // `account` rows are needed (those only exist for OAuth providers).
   for (const u of testUsers) {
     stmts.push(
       `INSERT INTO "user" (id, name, email, email_verified, image, role, created_at, updated_at) VALUES (${sqlString(u.id)}, ${sqlString(u.name)}, ${sqlString(u.email)}, 1, NULL, ${sqlString(u.role)}, unixepoch() * 1000, unixepoch() * 1000) ON CONFLICT(id) DO UPDATE SET name=excluded.name, email=excluded.email, role=excluded.role, updated_at=excluded.updated_at;`,
     );
   }
-  for (const a of accounts) {
-    stmts.push(
-      `INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES (${sqlString(a.id)}, ${sqlString(a.userId)}, 'credential', ${sqlString(a.userId)}, ${sqlString(a.passwordHash)}, unixepoch() * 1000, unixepoch() * 1000) ON CONFLICT(id) DO UPDATE SET password=excluded.password, updated_at=excluded.updated_at;`,
-    );
-  }
+  // Clear vestigial credential `account` rows from older seed runs,
+  // scoped to the seeded test user IDs so a `--remote` run can't wipe
+  // any real human's credential row that may still be on prod from
+  // before the OTP-only migration.
+  const testUserIdList = sqlList(testUsers.map((u) => u.id));
+  stmts.push(
+    `DELETE FROM account WHERE provider_id = 'credential' AND user_id IN (${testUserIdList});`,
+  );
 
   // ─── Investor profiles (UPSERT keyed by user_id) ───────────────────
   // Tied to investor test users seeded above.

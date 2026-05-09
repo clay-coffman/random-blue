@@ -13,19 +13,16 @@ import {
 //
 // `inferAdditionalFields<typeof auth>()` is a type-only plugin —
 // `import type { auth }` doesn't drag server code into the bundle. It
-// surfaces our `additionalFields.role` on `signUp.email({ role })` so
-// callers don't need a `@ts-expect-error`.
+// surfaces our `additionalFields.role` on the user shape returned by
+// signIn / session helpers so callers don't need a `@ts-expect-error`.
 export const authClient = createAuthClient({
   plugins: [inferAdditionalFields<typeof auth>(), emailOTPClient()],
 });
 
 export const {
   signIn,
-  signUp,
   signOut,
   useSession,
   getSession,
   emailOtp,
-  forgetPassword,
-  resetPassword,
 } = authClient;

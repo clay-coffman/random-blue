@@ -48,13 +48,12 @@ ones.
 
 | URL | Agent | Wireframe variant | Role | Notes |
 |-----|-------|------------------|------|-------|
-| `/sign-in` | 5 | `project/Auth.html#login` (2.1) | anon | Email + password. Magic-link / Google buttons render as Phase-5 stubs. |
+| `/sign-in` | 5 | `project/Auth.html#login` (2.1) | anon | Email-only. Submits → `/sign-in/verify`. Magic-link / Google buttons render as Phase-5 stubs. |
+| `/sign-in/verify` | 5 | `project/Auth.html#signup` (1.3) | anon-with-token | 6-digit OTP (10-min expiry, 30-sec resend). Better Auth `emailOTP` plugin → `signIn.emailOtp`. |
 | `/sign-up` | 5 | `project/Auth.html#signup` (1.1) | anon | Step 1: role select (founder · owner · investor). Default role: `founder`. |
-| `/sign-up/account` | 5 | `project/Auth.html#signup` (1.2) | anon | Step 2: name + email + password (12+ chars, strength meter). |
-| `/sign-up/verify` | 5 | `project/Auth.html#signup` (1.3) | anon-with-token | Step 3: 6-digit OTP (10-min expiry, 30-sec resend). Better Auth `emailOTP` plugin. |
-| `/forgot-password` | 5 | `project/Auth.html#login` (2.2) | anon | Generic confirmation — does not leak whether email is on file. |
-| `/reset-password` | 5 | `project/Auth.html#login` (2.3) | anon-with-token | OTP-driven; same plugin as signup verify. |
-| `/login/sent` | 5 | `project/Auth.html#login` (2.3) | anon | Reset code confirmation. Magic-link is deferred indefinitely (2026-05-08 audit decision: email + password + OTP is the only ship path). |
+| `/sign-up/account` | 5 | `project/Auth.html#signup` (1.2) | anon | Step 2: name + email + terms. POSTs to `/api/auth/start-signup` (pre-creates user, sends sign-in OTP). |
+| `/sign-up/verify` | 5 | `project/Auth.html#signup` (1.3) | anon-with-token | Step 3: 6-digit OTP. Same OTP grid as sign-in/verify; calls `signIn.emailOtp` to start the session. |
+| `/api/auth/start-signup` | 5 | — | anon | Custom POST endpoint that creates a `user` row with the chosen role, then triggers the sign-in OTP. |
 | `/api/auth/[...all]` | 5 | — | varies | Better Auth catch-all handler (incl. OTP endpoints) |
 
 ## Onboarding screens (signed-in, role-specific)
@@ -222,7 +221,7 @@ Worth flagging — these need invented UI without a designer reference:
 - Loading / empty / error / 404 states across the app.
 - "Update via Claude/ChatGPT" claim-flow third act.
 - Ownership document file-upload UI (drag-and-drop, progress, error).
-- Settings sub-modals (change password, sign out other sessions,
+- Settings sub-modals (sign out other sessions,
   delete-account confirm) — `Auth.html#settings` shows the section
   layout but not the destructive-confirm dialogs.
 - Phase-5 stub appearance (greyed-out "coming soon" buttons) on

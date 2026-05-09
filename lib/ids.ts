@@ -14,6 +14,7 @@ export type IdPrefix =
   | 'ss'
   | 'sad'
   | 'sc'
-  | 'irq';
+  | 'irq'
+  | 'rl';
 
 export const newId = (prefix: IdPrefix) => `${prefix}_${generate()}`;

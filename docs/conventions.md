@@ -170,8 +170,8 @@ Agent 0 (Foundation)            wt0 (main) / feat/bootstrap          [DONE: PR #
  wt[1-3]  wt[1-3]
 ```
 
-Agent 5 expands `auth.ts` (email/password provider, email-OTP
-verification + reset hooks, role enum widening, role default
+Agent 5 expands `auth.ts` (email-OTP-only sign-in via Better
+Auth's `emailOTP` plugin, role enum widening, role default
 flipped to `founder`) **without** changing the generated Better
 Auth tables — those are set in stone after Agent 1. Agent 5 does
 add two **new** tables (`investor_profiles`, `admin_invites`) in

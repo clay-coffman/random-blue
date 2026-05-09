@@ -156,30 +156,15 @@ variable.
 
 ## Local authentication testing
 
-Auth uses Better Auth's `emailOTP` plugin (6-digit code, 10-min
-expiry) for sign-up verification, sign-in, and password reset.
-Two dev-only env vars in `.dev.vars` make iterating against
-authenticated routes painless. **NEVER set either in production.**
+Auth is **OTP-only** — no passwords. Better Auth's `emailOTP` plugin
+(6-digit code, 10-min expiry) is the sole credential for sign-up and
+sign-in. Sign-up pre-creates the user via
+`POST /api/auth/start-signup` and then drops the user on
+`/sign-up/verify`; sign-in posts an email to `/sign-in` and lands on
+`/sign-in/verify`. Both verify pages call `signIn.emailOtp` to start
+the session.
 
-### Inner loop: skip OTP entirely
-
-```
-AUTH_SKIP_OTP=true
-```
-
-When set, `auth.ts` drops the `emailOTP` plugin and flips
-`emailAndPassword.requireEmailVerification` to `false`. Sign-up
-auto-verifies and drops you on the authenticated page — no
-verify screen, no code to grab. Use this 90% of the time.
-
-Seed users (full list in `db/seed/README.md`) share the password
-`passport12345`. The 12-char floor is enforced by Better Auth
-(`auth.ts` `minPasswordLength: 12`) and mirrored in the sign-up
-zod schema, so any real account form (including admin-invite
-acceptance) needs ≥ 12 chars too. If you bump the seed value,
-update both files in lockstep.
-
-### Testing the real OTP flow: route mail to mailpit
+### Route mail to mailpit
 
 ```
 MAILPIT_URL=http://localhost:802(5+N)
@@ -212,18 +197,11 @@ Each worktree's OTPs land in *its own* inbox. wt1's signup
 verification doesn't pollute wt2's testing — important when several
 agents are exercising auth flows in parallel.
 
-### When to use which
+### Production parity
 
-- **Building or fixing any non-auth feature** → `AUTH_SKIP_OTP=true`.
-  Faster.
-- **Working on `app/sign-up/*`, `app/sign-in/*`, `app/forgot-password`,
-  `app/reset-password`, OTP edge cases** → unset `AUTH_SKIP_OTP`,
-  set `MAILPIT_URL`. Test the real shape.
-- **Production parity sanity check** → unset both. Falls back to
-  Resend (if `RESEND_API_KEY` set) or `console.log` (if not).
-
-The two flags are independent. Setting both = OTP skipped (the
-plugin isn't loaded, so no email gets sent at all).
+Unset `MAILPIT_URL`. `lib/email.ts` falls back to Resend (if
+`RESEND_API_KEY` is set) or `console.log` (if not). The auth flow
+itself is identical — only the transport differs.
 
 ## D1 is per-worktree local
 

@@ -7,7 +7,7 @@ import { OtpInputGrid } from "@/components/auth/OtpInputGrid";
 import { authClient } from "@/lib/auth-client";
 import { safeNext } from "@/lib/url";
 
-export default function SignUpVerifyPage() {
+export default function SignInVerifyPage() {
   return (
     <Suspense fallback={null}>
       <VerifyForm />
@@ -19,8 +19,7 @@ function VerifyForm() {
   const router = useRouter();
   const params = useSearchParams();
   const email = params.get("email") ?? "";
-  const role = params.get("role") ?? "founder";
-  const next = safeNext(params.get("next"), "");
+  const next = safeNext(params.get("next"));
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -37,8 +36,7 @@ function VerifyForm() {
         setSubmitting(false);
         return;
       }
-      const target = next || `/onboarding/${role}`;
-      router.push(target);
+      router.push(next);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed.");
@@ -66,13 +64,13 @@ function VerifyForm() {
     return (
       <AuthShell title="Missing email." kicker="Verify">
         <p className="text-sm text-ink-2">
-          Restart the sign-up flow to get a verification code.
+          Restart the sign-in flow to get a code.
         </p>
         <button
-          onClick={() => router.push("/sign-up")}
+          onClick={() => router.push("/sign-in")}
           className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-tile border-[1.5px] border-ember bg-ember px-5 py-3 font-medium text-paper shadow-sketch"
         >
-          Start over →
+          Back to log in →
         </button>
       </AuthShell>
     );
@@ -94,11 +92,6 @@ function VerifyForm() {
           </button>
         </>
       }
-      steps={[
-        { label: "Role", state: "done" },
-        { label: "Account", state: "done" },
-        { label: "Verify", state: "current" },
-      ]}
     >
       <OtpInputGrid
         onSubmit={verify}
