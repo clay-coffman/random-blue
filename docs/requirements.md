@@ -1,7 +1,12 @@
 # Requirements — Startup State Atlas
 
-Distilled from `docs/product-plan.md` (the full 870-line product spec
-remains the source of truth for any ambiguity).
+The canonical product spec. If something is ambiguous, this file is the
+source of truth — escalate to the user, don't fall back to the archived
+original.
+
+Architecture, frozen contracts, and conventions live in
+`docs/architecture.md` and `docs/agent-tasks/00-shared-context.md`. Build
+status (what's shipped vs. left) lives in `docs/implementation-plan.md`.
 
 ## Product summary
 
@@ -353,7 +358,7 @@ context obvious.
 
 ## Out of scope for the initial production ship (explicit cuts)
 
-Per `docs/product-plan.md`, do not invest in:
+Do not invest in:
 
 - Real OAuth with ChatGPT/Claude (Better Auth covers our user /
   admin login; agents use `X-Atlas-Admin-Token`).
@@ -388,7 +393,7 @@ ownership verification (admin manually reviews), email verification
 
 These are the load-bearing paths real users hit on the live site;
 they double as regression scenarios exercised by the seeded persona
-fixtures. Full narrative in `docs/product-plan.md`.
+fixtures.
 
 1. **Jordan (pre-seed)** — Click "Try Jordan". System produces a
    start-business checklist + student/community resources + "not
@@ -454,7 +459,7 @@ LinkedIn, or pampam.city. Use what's in `docs/source_data/`.
 
 - Implementation map: `docs/implementation-plan.md`.
 - Screens / sitemap: `docs/screens.md`.
-- Full product plan: `docs/product-plan.md`.
+- Original product plan (archived): `docs/archive/product-plan-original.md`.
 - Architecture: `docs/architecture.md`.
 - Customer brief (canonical): `docs/source_data/page-2026-05-08-19-38-24.md`.
 - Per-agent execution: `docs/agent-tasks/agent-<N>-<slice>.md`.

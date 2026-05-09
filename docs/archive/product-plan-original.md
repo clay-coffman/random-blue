@@ -1,3 +1,8 @@
+> **Archived.** This is the original Builder Day product plan. It has been superseded by [`docs/requirements.md`](../requirements.md) as the canonical product spec.
+>
+> Kept here for line-number citations from archived agent briefs and for historical context.
+> Stack references in this file (Supabase/Postgres, "5–6 Codex agents", etc.) are pre-pivot. Current stack is Cloudflare Workers + D1; see `docs/architecture.md`.
+
 > **Note on framing:** this document was drafted at the start of the
 > engagement (Utah GOED's AI Builder Day) when the work was scoped as
 > a 24-hour build. It is now the product spec for a real production

@@ -165,7 +165,7 @@ startup-state-atlas/
 │   ├── AGENTS.md                 # END-USER-FACING agent docs (Agent 6)
 │   └── llms.txt                  # /llms.txt (Agent 6)
 ├── docs/
-│   ├── product-plan.md
+│   ├── archive/product-plan-original.md
 │   ├── architecture.md           # this file
 │   ├── requirements.md
 │   └── agent-tasks/00-…6-…md
