@@ -14,19 +14,25 @@ briefs live in `docs/agent-tasks/`.
 
 ## Where to start
 
-If you're forking into a worktree:
+Most of this app has shipped. The active surface is **Agent 6** (the
+agent-native layer: CLI, MCP server, OpenAPI doc, `/llms.txt`, public
+`AGENTS.md`). **Agent 8** (investor public surface) is post-launch and
+scope-locked — don't pick it up unless asked. Everything else is shipped;
+historical briefs live under `docs/archive/agent-tasks/`.
 
-1. **`docs/implementation-plan.md`** — find your phase, your branch,
-   and what unblocks you.
-2. **`docs/agent-tasks/00-shared-context.md`** — port table, branch
-   protocol, blocker rules, frozen conventions.
-3. **`docs/agent-tasks/agent-<N>-<slice>.md`** — your detailed brief.
-4. **`docs/architecture.md`** — stack, bindings, frozen contracts.
-5. **`docs/screens.md`** — only if you own a UI surface (the URL
-   matrix maps screens to wireframes).
+Reading order for an agent picking up work:
+
+1. **`CLAUDE.md`** (this file) — policy and conventions.
+2. **`docs/architecture.md`** — stack and frozen contracts.
+3. **`docs/agent-tasks/00-shared-context.md`** — port table, ID prefixes,
+   branch protocol, schema ownership, dual-auth model.
+4. **The relevant brief** — `docs/agent-tasks/agent-6-agent-native.md`
+   for the agent-native layer, or
+   `docs/agent-tasks/agent-8-investor.md` for post-launch investor work.
+5. **`docs/screens.md`** — only if you own a UI surface.
 6. **`docs/design-guidelines.md`** — only if you own a UI surface.
-   Brand tokens, primitives, persona URL contract, and the responsive
-   non-negotiables. Frozen by Agent 7.
+
+For status (what's shipped vs. left): `docs/implementation-plan.md`.
 
 ## Project at a glance
 
@@ -280,8 +286,8 @@ PRs each add a migration), see
 
 ## Working in a worktree
 
-If you're a parallel Claude Code session spawned in a worktree, the
-reading order in "Where to start" above is the only thing you need.
+Worktrees are used for parallel Claude Code sessions. See
+"Where to start" above for reading order.
 
 `git checkout -b feat/<slice>` first (the `protect-main` hook blocks
 edits on `main`). Branch names follow `feat/*`, `fix/*`, `chore/*`,

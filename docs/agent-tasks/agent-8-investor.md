@@ -1,10 +1,6 @@
 # Agent 8 — Investor public surface + watchlists + intro brokerage
 
-> **Status: scope locked, implementation deferred.** Phase 6 docs
-> were merged to `main` ahead of code (PR #15) so Agents 4 and 5
-> could coordinate against the final schema shape. **No Phase 6 code
-> will land until Phase 5 production lock.** If you are looking for what
-> to build next, see `docs/implementation-plan.md` § Phases 3 / 4.
+> **Status: scope-locked, post-launch.** Agent 8 lands after Phases 1–5 ship. Don't pick this up unless the user explicitly asks.
 
 **Phase 6 — post-launch.** Not part of the initial production ship.
 

@@ -1,679 +1,96 @@
 # Implementation Plan — Startup State Atlas
 
-**This is the canonical execution map.** If you're a Claude Code agent
-forking into a worktree, read this file first to find your phase and
-your dependencies, then your assigned brief.
+**Status snapshot — what's shipped, what's left.**
 
-The product spec lives in `product-plan.md`. The frozen contracts
-live in `architecture.md` and `agent-tasks/00-shared-context.md`. This
-file does *not* restate either — it sequences the work.
+The product spec (what to build) lives in `docs/requirements.md`. Frozen
+contracts live in `docs/architecture.md` and
+`docs/agent-tasks/00-shared-context.md`. This file tracks build status
+only.
 
-## Source data (provided by Utah GOED — use as-is)
+Source data provided by Utah GOED — use as-is from `docs/source_data/`.
+See `CLAUDE.md` § Source data for the file list and field notes.
 
-Everything you need to seed the app lives in `docs/source_data/`:
+---
 
-- **`page-2026-05-08-19-38-24.md`** — the brief from Utah's
-  Governor's Office of Economic Development (delivered at AI Builder
-  Day). Authoritative product framing, required company-profile
-  fields, customer priorities (30% usability, 25% tech, 25% design,
-  20% innovation), exact persona descriptions, and the link to the
-  live site this build may replace or feed: <https://startup.utah.gov/>.
-  **Read this before reading `product-plan.md`** if you need to know
-  what the customer asked for.
-- **`Map Data for Builder Day  - Sheet1.csv`** — 254 companies. Note
-  the **double space** in the filename. Columns: `Display Type`,
-  `LinkedIn Link (...)`, `Startup Name `, `Full Address`,
-  `Description of startup`, `Website`, `Stage`, `# of Employees `,
-  `Section` (sector). Address-only — no lat/lng. Several columns have
-  trailing whitespace.
-- **`Resources List - Builder Day - Sheet1.csv`** — 226 resources.
-  Columns: `id`, `Title`, `description`, `Communities`, `Industries`,
-  `Locations`, `Topics`, `link`, `email`. Multi-values are
-  pipe-separated. Resource IDs come from upstream (start at 2543);
-  preserve them as `r_<id>` so re-imports don't duplicate.
+## Shipped
 
-> The GOED brief explicitly says: *"The state has prepared complete
-> datasets for both products. You don't need to research or compile
-> anything — focus every hour on the build."* Don't scrape
-> startup.utah.gov, don't enrich from LinkedIn, don't touch
-> pampam.city/utah-startup-map. Use what's in `docs/source_data/`.
+| Phase | Slice | PR |
+|-------|-------|----|
+| Phase 1 — Foundation | Agent 0 — Next.js scaffold, Cloudflare Workers, D1 binding, lib stubs, shadcn | PR #6 |
+| Phase 2 — Data | Agent 1 — schema + migrations + seed (companies, resources, personas) | PR #10 / #13 |
+| Phase 2 — Brand & Shell | Agent 7 — Tailwind tokens, root layout, homepage, persona tiles | PR #11 |
+| Phase 3a — Recommend | Agent 2 — recommendation engine, founder-passport API, enrich endpoint | PR #16 |
+| Phase 3b — Navigator UI | Agent 3 — `/founder` intake, `/plan/:id` results, share link | PR #17 |
+| Phase 4a — Map + Profiles | Agent 4 — ecosystem map (MapLibre), company profiles, agent card routes | PR #24 |
+| Phase 4b — Auth + Admin | Agent 5 — Better Auth, OTP, onboarding, claim flow, GOEO admin | PR #20 |
 
-**Agent 1 owns the loaders** — see Phase 2 below. Other agents
-consume seeded data; they don't need to re-read the CSVs.
+Migration state on `main`: `0000_flaky_scarlet_spider` (Agent 1) +
+`0001_brainy_sentinels` + `0002_slow_shotgun` (PR #16) +
+`0003_curious_fat_cobra` (PR #20, renumbered cleanly). Next free
+index is `0004`.
 
-## Reading order for a forking agent
+---
 
-1. **This file** — find your phase + agent number + dependencies.
-2. **`agent-tasks/00-shared-context.md`** — frozen conventions, port
-   table, branch protocol, blocker resolution.
-3. **`agent-tasks/agent-<N>-<slice>.md`** — your detailed brief.
-4. **`architecture.md`** — stack table, system diagram, bindings (skim
-   first; reference as needed).
-5. **`screens.md`** — sitemap, role gates, wireframe variant pointers
-   (only if you own a UI surface).
+## Active
 
-`CLAUDE.md` (root) is the policy doc — read it once at session start;
-it doesn't change per agent.
+### Phase 3c — Agent-native layer (Agent 6)
 
-## Phases at a glance
+Brief: `docs/agent-tasks/agent-6-agent-native.md`
 
-```
-Phase 1  Foundation                           Agent 0           [DONE]
-            │
-Phase 2  Data + Brand & Shell  (parallel ✕2)  Agents 1, 7       [DONE]
-            │
-Phase 3  Recommend + Nav + Agents-native  (parallel ✕3)  Agents 2, 3, 6   [IN FLIGHT]
-            │   3b navigator DONE (PR #17); 3a recommend OPEN (PR #16); 3c not started
-            │
-Phase 4  Map + Auth & Admin  (parallel ✕2)    Agents 4, 5       [IN FLIGHT]
-            │   4b auth+admin OPEN (PR #20); 4a map not started
-            │
-Phase 5a Production hardening                 (whoever has cycles)
-Phase 5b Polish + e2e + smoke test            (whoever has cycles)
-            │
-Phase 6  Investor public surface + intros     Agent 8           [POST-LAUNCH, scope locked]
-```
+Not yet started. Owns:
 
-**Phases 1–5 are the initial production ship.** Phase 6 lands as a
-post-launch follow-up. It builds **on top of** Agent 5's investor
-identity work (Phase 4): public investor directory and profile
-pages, saved-companies watchlists, and admin-brokered intro
-requests. If Phase 6 never ships, the product still works — Phase 4
-investors exist, they just don't have a public surface or
-watchlists.
+- `app/api/v1/openapi.yaml` — full OpenAPI 3.1 spec for all shipped
+  endpoints. Source-of-truth for external integrators.
+- `app/api/v1/openapi.json/route.ts` and `app/api/v1/search/route.ts`.
+- `cli/index.ts` + `cli/commands/*.ts` — the `startup-state` CLI bin.
+- `mcp/server.ts` + tools / resources / prompts — the `startup-state-mcp`
+  stdio MCP server.
+- `public/llms.txt` — machine-readable summary for LLM context windows.
+- `public/AGENTS.md` — end-user agent rules (served at `<host>/AGENTS.md`).
+- `app/agents/page.tsx` — human-readable `/agents` docs page.
 
-Concurrency cap is **3 active worktrees** (each is ~500MB node_modules
-+ a dev server + a Claude session). Phases 2 and 4 use 2 worktrees;
-Phase 3 saturates at 3.
+Agent 6 may ship the OpenAPI spec in two passes: Phase 3 endpoints first,
+then a refresh after Phase 4 company PATCH and ownership-submissions
+endpoints are confirmed stable. The archived `docs/archive/agent-tasks/openapi-additions.md`
+has the endpoint shapes Agents 2 and 4 wrote during parallel build.
 
-| Phase | Agents | Branches | Worktrees | Critical path |
-|-------|--------|----------|-----------|---------------|
-| 1 | 0 | `feat/bootstrap` | wt0 (main checkout) | done |
-| 2 | 1, 7 | `feat/data`, `feat/brand-shell` | wt1, wt2 | Agent 1 |
-| 3 | 2, 3, 6 | `feat/recommend`, `feat/navigator`, `feat/agent-layer` | wt1, wt2, wt3 | Agent 3 |
-| 4 | 4, 5 | `feat/map`, `feat/auth-claim-admin` | any 2 of wt1-3 | Agent 5 |
-| 5 | — | `chore/...` or `fix/...` per task | any | launch readiness |
-| 6 | 8 | `feat/investor-public` | any | post-launch |
+---
 
-Agents may reuse worktrees as earlier phases' PRs merge. Reset a
-worktree between phases with `git checkout main && git pull && git
-checkout -b feat/<next-slice>` and re-run `npm run db:migrate:local`
-+ `npm run seed`.
+## Post-launch (scope-locked)
 
-## Phase 1 — Foundation [DONE: PR #6, commit `37f49d1`]
+### Phase 6 — Investor public surface (Agent 8)
 
-**Agent 0** delivered the scaffold. Subsequent phases inherit:
+Brief: `docs/agent-tasks/agent-8-investor.md`
 
-- Next.js 15 (App Router) + `@opennextjs/cloudflare` build.
-- `wrangler.jsonc` with D1 binding `DB` and R2 binding
-  `OWNERSHIP_DOCS`.
-- `lib/cf.ts`, `lib/db.ts`, `lib/anthropic.ts`, `lib/api-error.ts`,
-  `lib/ids.ts` (typed stubs).
-- `drizzle.config.ts`, empty `db/migrations/`.
-- `tailwind.config.ts` (minimal — Agent 7 extends with brand tokens).
-- shadcn primitives in `components/ui/*`.
-- `.env.example`, `.env.local` gitignored.
-- Production D1 + Worker URL deployed.
-- Skill symlinks in `.claude/skills/` → `.agents/skills/`.
-- Per-worktree local D1 wiring (commit `6de3c4d`).
+Depends on all of Phases 1–5 being stable. Adds a public investor
+directory (`/investors`), public profile pages
+(`/investors/<slug>` + `.md` + `.json`), saved-companies watchlists
+(`/me/saved`), and admin-brokered intro requests
+(`/admin/intros`). None of this gates the initial production ship —
+Phase 4 already shipped the `investor_profiles` table and investor
+sign-up; Phase 6 surfaces them publicly.
 
-## Phase 2 — Data + Brand & Shell
+**Do not pick this up** unless the user explicitly asks.
 
-**Two agents in parallel.** Both unblock everything in Phase 3 and 4.
+---
 
-### Agent 1 — Data layer
+## Phase 5 — Launch readiness
 
-- **Branch:** `feat/data`
-- **Worktree:** wt1
-- **Brief:** `agent-tasks/agent-1-data.md`
-- **Depends on:** Agent 0 (done)
-- **Touches:**
-  - `db/schema.ts` (initial — 12 app tables + 4 Better Auth tables)
-  - `db/migrations/0000_*.sql` (generated)
-  - `db/seed/personas.ts` (6 personas — descriptions verbatim from
-    `docs/source_data/page-2026-05-08-19-38-24.md`)
-  - `db/seed/resources.ts` — loads
-    `docs/source_data/Resources List - Builder Day - Sheet1.csv`
-    (226 rows). Preserves upstream IDs as `r_<csv_id>`. Pipe-splits
-    Communities / Industries / Locations / Topics. Detects
-    "all 29 counties" → `statewide=true`.
-  - `db/seed/companies.ts` — loads
-    `docs/source_data/Map Data for Builder Day  - Sheet1.csv`
-    (note the **double space** in the filename, 254 rows). Trims
-    trailing whitespace on `Stage`, `Startup Name`, `# of Employees`.
-    Geocodes via `centroids.ts` (city/county → lat/lng); the source
-    has only `Full Address`, no coordinates.
-  - `db/seed/centroids.ts` (city/county geocoding fallback)
-  - `auth.ts` (minimal stub for Better Auth CLI codegen — Agent 5 expands)
-- **Frozen-after this PR:** Better Auth tables + the
-  `business_ownership_submissions` table + `companies.claimed_by_user_id`.
-  Other columns may be extended by later agents in their own
-  worktrees, with rebase-before-generate discipline.
-- **Coordination:** none in Phase 2. Doesn't touch Agent 7's files.
+Whoever has cycles after Phase 3c merges. Two tracks:
 
-### Agent 7 — Brand & Shell
+- **5a — hardening:** CI green on `main`, production deploy verified
+  (`wrangler deploy` + D1 remote migrated + secrets set), smoke test
+  against the live Worker URL, auth security review (session flags,
+  CSRF, rate limits), upstream failure handling (Anthropic / Parallel.ai
+  timeouts), privacy review on `founder_passports`.
+- **5b — polish:** mobile sweep at 375 / 768 / 1280px, empty / error /
+  loading states on every surface, end-to-end Playwright smoke test,
+  activity ticker wire-up, InvestorBrief prompt tuning.
 
-- **Branch:** `feat/brand-shell`
-- **Worktree:** wt2
-- **Brief:** `agent-tasks/agent-7-brand-shell.md`
-- **Depends on:** Agent 0 (done)
-- **Touches:**
-  - `tailwind.config.ts` (theme tokens — paper/ink/ember palette + sector colors)
-  - `app/globals.css` (CSS vars, font imports via `next/font`)
-  - `app/layout.tsx` (root nav + footer shell)
-  - `app/page.tsx` (hero — headline, persona tiles, activity ticker stub, secondary CTAs)
-  - `components/brand/*` (Tile, Chip, SectionHeader, ScribbleDivider, PersonaTile, ActivityTicker)
-  - `lib/personas.ts` (the six personas — display names + IDs)
-- **Frozen-after this PR:** brand tokens + root layout. UI agents
-  (3, 4, 5, 6) consume them.
-- **Coordination:** persona-tile target URL — see Agent 7 ↔ Agent 3
-  row in the coordination matrix below.
+---
 
-### Phase 2 → Phase 3 gate
+## Archived detail
 
-Phase 3 may start when **both** Agent 1 and Agent 7 have merged.
-Agent 3 may begin earlier with a stubbed nav and rebase Agent 7's
-shell in. Agents 2 and 6 don't depend on Agent 7 and may start as
-soon as Agent 1 merges.
-
-## Phase 3 — Recommend + Navigator + Agent-native
-
-**Three agents in parallel** — saturates the worktree cap.
-
-### Agent 2 — Recommendation engine
-
-- **Branch:** `feat/recommend`
-- **Worktree:** wt1, wt2, or wt3 (whichever is free)
-- **Brief:** `agent-tasks/agent-2-recommend.md`
-- **Depends on:** Agent 1 (schema + personas seeded)
-- **Touches:**
-  - `schemas/founder-passport.ts` (zod — incl. optional `website_url`)
-  - `lib/recommend.ts` (deterministic scoring — pure, testable)
-  - `lib/parallel.ts` (Parallel.ai client — mirrors `lib/anthropic.ts`)
-  - `app/api/v1/resources/recommend/route.ts` (POST)
-  - `app/api/v1/founder-passports/route.ts` (POST)
-  - `app/api/v1/founder-passports/[id]/plan/route.ts` (GET, cached)
-  - `app/api/v1/founder-passports/enrich/route.ts` (POST — website URL → partial passport for prefill)
-  - `types/api.ts` (RecommendRequest/Response/RecommendedResource + EnrichRequest/EnrichResponse)
-  - `tests/recommend.test.ts`
-- **Coordination:** writes endpoint shapes to
-  `docs/agent-tasks/openapi-additions.md` for Agent 6 to consume.
-- **Production enables:** Real founders' first-touch UX on
-  `/founder` (URL → prefill → review → submit). Persona test
-  fixtures bypass enrich.
-
-### Agent 3 — Founder Navigator UI
-
-- **Branch:** `feat/navigator`
-- **Worktree:** wt1, wt2, or wt3
-- **Brief:** `agent-tasks/agent-3-navigator-ui.md`
-- **Depends on:** Agent 1 (personas), Agent 2 (real or mocked API),
-  Agent 7 (brand tokens + root layout — degrade gracefully if not yet
-  merged).
-- **Touches:**
-  - `app/founder/page.tsx` (intake)
-  - `app/plan/[id]/page.tsx` (saved plan — shareable URL)
-  - `app/founder/_components/IntakeForm.tsx` (incl. optional URL
-    field at the top → calls enrich → prefills the form; manual
-    fill always works)
-  - `app/founder/_components/PersonaButtons.tsx` (consumes
-    `lib/personas.ts` from Agent 7)
-  - `app/plan/_components/ResultsView.tsx`
-  - `app/plan/_components/ShareLink.tsx`
-- **URL note:** the saved plan lives at `/plan/:id`, not
-  `/founder/results/:id`. The intake stays at `/founder`. See
-  `screens.md` for the full URL map.
-- **Production enables:** the live `/founder` flow for founders
-  who don't match a persona test fixture. The optional URL prefill is
-  the primary first-touch friction-reducer.
-
-### Agent 6 — Agent-native layer
-
-- **Branch:** `feat/agent-layer`
-- **Worktree:** wt1, wt2, or wt3
-- **Brief:** `agent-tasks/agent-6-agent-native.md`
-- **Depends on:** Agent 1 (schemas to document), Agent 2 (recommend
-  endpoint shape via `openapi-additions.md`), Agent 4 (company
-  endpoint shapes — Phase 4; may stub initially and refresh after).
-- **Touches:**
-  - `app/api/v1/openapi.yaml`
-  - `app/api/v1/openapi.json/route.ts`
-  - `app/api/v1/search/route.ts`
-  - `cli/index.ts` + `cli/commands/*.ts` (the `startup-state` bin)
-  - `mcp/server.ts` + `mcp/tools/*.ts` + `mcp/resources/*.ts` +
-    `mcp/prompts/*.ts` (the `startup-state-mcp` bin)
-  - `public/llms.txt`
-  - `public/AGENTS.md` (end-user agent rules — distinct from this repo's
-    `/AGENTS.md` which is for coding agents)
-  - `app/agents/page.tsx` (`/agents` docs page)
-- **Coordination:** Agent 6 watches `openapi-additions.md` for shape
-  changes from Agents 2 and 4. Agent 6 may ship the spec in two
-  passes — first with Phase 3 endpoints, then a refresh after Phase 4
-  lands company PATCH and ownership-submissions endpoints.
-- **Production enables:** the agent-native surface — external agents,
-  CLI users, and integrators reach the live API/MCP through the
-  documented OpenAPI spec, the `/agents` page, and `llms.txt`.
-
-### Phase 3 → Phase 4 gate
-
-Phase 4 may start when Agent 1 has merged. Phase 3 doesn't have to
-finish first — Agents 4 and 5 only depend on Agent 1. In practice the
-worktree cap (3 concurrent) means Phase 4 starts as Phase 3 PRs
-merge and free up worktrees.
-
-## Phase 4 — Map + Auth & Admin
-
-**Two agents in parallel.**
-
-### Agent 4 — Ecosystem Map + Company Profiles
-
-- **Branch:** `feat/map`
-- **Worktree:** any free of wt1-3
-- **Brief:** `agent-tasks/agent-4-map.md`
-- **Depends on:** Agent 1 (companies + locations + jobs seeded),
-  Agent 7 (root layout + tokens).
-- **Touches:**
-  - `app/map/page.tsx` + `app/map/_components/EcosystemMap.tsx`,
-    `FilterSidebar.tsx`, `InvestorBrief.tsx`, `ProfileDrawer.tsx`
-  - `app/startups/[slug]/page.tsx`
-  - `app/startups/[slug]/route.md/route.ts` (markdown agent card)
-  - `app/startups/[slug]/route.json/route.ts` (JSON agent card)
-  - `app/api/v1/companies/route.ts` (GET list + filters)
-  - `app/api/v1/companies/[slug]/route.ts` — **GET only.** Agent 5 adds PATCH.
-  - `lib/company-card.ts` (shared formatter for HTML / .md / .json)
-- **Coordination:** GET method on `[slug]/route.ts` is Agent 4's;
-  PATCH is Agent 5's. Land Agent 4's PR first; Agent 5 adds PATCH on
-  top. If Agent 5 is ready first, they may stub a placeholder GET in
-  their PR — Agent 4 replaces it on merge.
-- **Production enables:** the live ecosystem map and company-profile
-  surfaces — investors filtering startups, founders looking up peers,
-  the public profile pages that ownership claims hang off of.
-
-### Agent 5 — Auth + Onboarding + Claim + Admin
-
-- **Branch:** `feat/auth-claim-admin`
-- **Worktree:** any free of wt1-3
-- **Brief:** `agent-tasks/agent-5-claim.md`
-- **Design reference:** `design/startup-state-atlas-wireframes/project/Auth.html`
-  — five tabs (Sign up · Log in · Onboarding · Settings · Admin)
-  carry the full visual scope. Read top-to-bottom before coding.
-- **Depends on:** Agent 0 (better-auth installed, OWNERSHIP_DOCS
-  binding, secrets), Agent 1 (auth tables + `business_ownership_submissions`),
-  Agent 4 (Claim button on profile page; coordinates on `[slug]/route.ts`),
-  Agent 7 (root layout + tokens).
-- **Schema extensions Agent 5 adds** (Better Auth tables stay
-  frozen; Agent 5 extends `db/schema.ts` per the schema-collaborative
-  rule and ships its own migration):
-  - `investor_profiles` (`id` `inv_*`, `user_id` UNIQUE FK,
-    `firm_name`, `investor_type`, `stages_json`, `sectors_json`,
-    `check_size_min`, `check_size_max`, `geo_focus_json`,
-    `created_at`, `updated_at`).
-  - `admin_invites` (`id`, `email`, `role`, `token_hash`,
-    `invited_by` FK, `created_at`, `expires_at`, `consumed_at`).
-- **Auth wiring delta:** flip `auth.ts` `additionalFields.role`
-  default from `'owner'` to `'founder'`; turn on Better Auth's
-  `emailOTP` plugin (6-digit code, 10-min expiry, 30-sec resend).
-  Magic-link plugin and Google social provider stay off in Phase 4
-  (the buttons render as Phase-5 stubs).
-- **Touches:**
-  - `auth.ts` (full Better Auth config — expanded from Agent 1's stub
-    with `emailOTP` plugin + role default change)
-  - `lib/auth-client.ts`, `lib/email.ts`, `middleware.ts`
-  - `db/schema.ts` (extension — investor_profiles + admin_invites)
-  - `db/migrations/000N_*.sql` (generated; rebase before generate)
-  - `db/seed/investor-profiles.ts` (3 seed rows)
-  - `app/api/auth/[...all]/route.ts`
-  - `app/sign-in/page.tsx`, `app/sign-up/page.tsx` (step 1),
-    `app/sign-up/account/page.tsx` (step 2),
-    `app/sign-up/verify/page.tsx` (step 3 — OTP),
-    `app/login/sent/page.tsx`,
-    `app/forgot-password/page.tsx`,
-    `app/reset-password/page.tsx`
-  - `app/onboarding/founder/page.tsx` (server-redirect to
-    `/founder?onboard=1` — Agent 3 owns the page itself),
-    `app/onboarding/owner/page.tsx`,
-    `app/onboarding/investor/page.tsx`,
-    `app/onboarding/done/page.tsx`
-  - `app/settings/page.tsx`
-  - `app/companies/[slug]/claim/page.tsx`,
-    `app/companies/[slug]/edit/page.tsx`,
-    `app/companies/[slug]/_components/EditorForm.tsx`
-  - `app/me/submissions/page.tsx`
-  - `app/api/v1/ownership-submissions/route.ts`,
-    `app/api/v1/ownership-submissions/[id]/route.ts`
-  - `app/api/v1/companies/[slug]/route.ts` (PATCH — three auth paths)
-  - `app/api/v1/investor-profiles/route.ts`
-  - `app/api/v1/admin/invites/route.ts`,
-    `app/api/v1/admin/invites/[token]/route.ts`
-  - `app/api/v1/admin/users/[id]/route.ts`
-  - `app/admin/layout.tsx` (dark sidebar shell from Auth.html#admin)
-  - `app/admin/page.tsx` (dashboard: stats + claim queue + edits feed),
-    `app/admin/{submissions,users,admins,resources,companies,map}/page.tsx`
-  - `scripts/bootstrap-superadmin.ts`
-- **Three auth paths on PATCH `/api/v1/companies/:slug`:**
-  1. Better Auth session, `user.id === companies.claimed_by_user_id` →
-     owner edit (whitelist applied).
-  2. Better Auth session, role `goeo_admin | superadmin` → admin edit
-     (no whitelist).
-  3. `X-Atlas-Admin-Token` header matches `env.ATLAS_ADMIN_TOKEN` →
-     machine edit (no whitelist).
-- **Time budget:** ~210 minutes (was 150 — absorbs Auth.html scope
-  + investor type). If you hit ~150 min and aren't through admin,
-  start the cuts cascade below.
-- **Production enables:** real founder/owner/investor sign-up, the
-  business-owner claim → admin review → edit loop where every public
-  surface (HTML, `.md`, `.json`, API) reflects the same canonical
-  source, and ongoing GOEO admin operation.
-
-## Phase 5 — Production hardening + Polish
-
-Whoever has cycles after Phase 4 merges. Split into two tracks
-with different DONE-when criteria. **This is a real ship to
-startup.utah.gov** — Phase 5a's hardening items gate any traffic;
-Phase 5b is craft.
-
-### Phase 5a — Production hardening (preconditions for any traffic)
-
-1. **CI green on `main`.** `lint` + `typecheck` + `test` pass on
-   every PR (workflow at `.github/workflows/ci.yml`). At minimum one
-   Playwright golden path runs against a deploy preview.
-2. **Production deploy verified.** `wrangler deploy` succeeds
-   end-to-end; D1 remote migrated (`npm run db:migrate:remote`); R2
-   bucket provisioned; secrets set via `wrangler secret put`
-   (`ANTHROPIC_API_KEY`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`,
-   `RESEND_API_KEY`, `ATLAS_ADMIN_TOKEN`, `PARALLEL_API_KEY`).
-3. **Smoke test against the deployed Worker URL** — `/`, `/founder`,
-   `/api/v1/resources/recommend`, a company profile, and one auth
-   round-trip (sign up → verify → sign in).
-4. **Auth security review.** Session cookie flags (Secure,
-   HttpOnly, SameSite); CSRF on PATCH endpoints; ownership-check
-   coverage on `/api/v1/companies/[slug]` PATCH; rate-limit on
-   sign-in / OTP endpoints.
-5. **Failure-mode handling for upstream calls.** Anthropic and
-   Parallel.ai timeouts, rate limits, and 5xxs all degrade
-   gracefully (Agent 3 already does this for enrich; verify it for
-   recommend explanations and InvestorBrief too).
-6. **Privacy review on `founder_passports`.** Stores PII (county,
-   stage, communities, free-text goal). Confirm we're OK with the
-   retention model and that share URLs don't leak across users.
-7. **Observability decision recorded.** Sentry vs. Workers built-in
-   only — write the choice down (currently neither is wired).
-
-### Phase 5b — Polish + production smoke test (craft)
-
-1. **Production-readiness sweep.** Every shipped surface needs:
-   working empty state, working error state, loading state, mobile
-   layout, basic a11y (semantic HTML + keyboard reachability + alt
-   text). The persona test fixtures make the happy path easy to
-   regression-check; real users hit the failure paths first.
-2. **Mobile sweep.** Open every shipped page at 375 / 768 / 1280px
-   and fix horizontal-scroll / tap-target violations. Use
-   `mcp__playwright__browser_resize` or agent-browser device toolbar.
-3. **End-to-end smoke test against the deployed Worker** — exercise
-   each canonical user flow (founder intake → plan, investor map
-   filter → company profile, business owner claim → admin review →
-   edit propagating through HTML/.md/.json/API, terminal/MCP probe).
-   Catch broken share URLs, persona-tile flows, R2 doc previews, MCP
-   tool listing.
-4. **Activity ticker wire-up** — Agent 7 stubbed it with three fake
-   strings. Real wiring pulls last-N events (claim approvals, new
-   passports) from D1.
-5. **InvestorBrief polish** — Agent 4 ships a basic version; tune
-   the prompt and cap citation count.
-6. **Fixture coverage** — ensure every persona test fixture produces
-   a meaningfully-different top-3.
-7. **`/agents` page polish** — code samples, copy-button on curl
-   blocks, MCP install snippet for Claude Desktop.
-8. **Wireframe-variant complement passes** — for screens where a v2
-   complement variant adds value (e.g., the printable memo for the
-   plan page), implement as an opt-in toggle.
-
-## Phase 6 — Investor public surface + watchlists + intro brokerage
-
-**Post-launch. Not part of the initial production ship.** Picks up
-after Phase 5 once the launch surfaces are stable. Single agent.
-Builds **on top of** Phase 4's investor identity (sign-up, role,
-onboarding, `investor_profiles` preferences) — does not duplicate
-any of it.
-
-### Agent 8 — Investor public surface
-
-- **Branch:** `feat/investor-public`
-- **Worktree:** any free of wt1-3
-- **Brief:** `agent-tasks/agent-8-investor.md`
-- **Depends on:** Agents 1, 4, 5, 7 all merged. Phase 5 polish
-  ideally landed (so investor sign-up + map filter integration is
-  stable before you build on it).
-- **What's already done by Phase 4 (don't redo):** investor role,
-  sign-up, OTP verify, `/onboarding/investor`, `/settings`
-  Investor section, `investor_profiles` table (preferences-shaped),
-  `POST/GET /api/v1/investor-profiles`, seed rows for the test
-  fixtures.
-- **Touches:**
-  - `db/schema.ts` extensions:
-    - **Add columns to `investor_profiles`** (rebase before
-      generate): `slug TEXT UNIQUE` (nullable until first publish),
-      `display_name`, `bio`, `tagline`, `website`, `linkedin`,
-      `verification_status` ('unverified' | 'verified', default
-      'unverified'), `verified_at`, `last_updated_by`.
-    - **New tables:** `saved_companies` (id `sc_*`), `intro_requests`
-      (id `irq_*`).
-  - `lib/ids.ts` — extend with `'sc'`, `'irq'`.
-  - `app/investors/page.tsx` (public directory),
-    `app/investors/[slug]/page.tsx` (public profile),
-    `app/investors/[slug]/edit/page.tsx` (owner self-edit, links
-    out from `/settings` Investor section),
-    `app/investors/[slug]/route.md/route.ts`,
-    `app/investors/[slug]/route.json/route.ts`.
-  - `app/me/saved/page.tsx`, `app/me/intros/page.tsx`.
-  - `app/admin/intros/page.tsx`, `app/admin/intros/[id]/page.tsx`
-    (new admin queue alongside `/admin/submissions`).
-  - `app/api/v1/investor-profiles/[slug]/route.ts` — `GET` (public),
-    `PATCH` (three-auth-mode like `companies/[slug]`).
-  - `app/api/v1/saved-companies/route.ts` (POST/DELETE/GET own).
-  - `app/api/v1/intro-requests/{,[id]}/route.ts`.
-  - `app/companies/[slug]/page.tsx` (Agent 4's surface) — add
-    "Save" + "Request intro through GOEO" buttons (signed-in
-    only). Coordinate with Agent 4.
-  - `lib/email.ts` — extend with intro-pending / -accepted /
-    -declined / -introduced templates (mirrors Agent 5's
-    verification mail wiring).
-  - `lib/investor-card.ts` — shared formatter for HTML / .md /
-    .json (mirrors `lib/company-card.ts`).
-- **Coordination:** see new Agent 5 ↔ Agent 8 and Agent 4 ↔ Agent 8
-  rows in the matrix below.
-- **Production enables:** investor public surface (directory +
-  profile pages), saved-companies watchlists, and admin-brokered
-  intros. Lands as a follow-up after the initial production ship; no
-  impact on the five canonical user flows from Phases 1–5.
-
-## Coordination matrix
-
-Where two agents touch the same file, contract, or downstream
-deliverable. **Read this before starting your phase if you're in
-Phase 3 or Phase 4.**
-
-| Agent A | Agent B | Shared surface | Resolution |
-|---------|---------|----------------|------------|
-| Agent 1 | Agent 5 | `auth.ts` | Agent 1 ships a minimal stub (Drizzle adapter + `additionalFields.role`, default `'owner'`). Agent 5 expands with email-OTP plugin, password-reset hooks, role enum expansion, and **flips the default to `'founder'`**. **Better Auth tables stay frozen after Agent 1.** |
-| Agent 1 | Agent 5 | `db/schema.ts` extensions | Better Auth tables (`user`, `session`, `account`, `verification`) and `business_ownership_submissions` stay frozen after Agent 1. Agent 5 adds `investor_profiles` and `admin_invites` in its own migration (rebase before generate). |
-| Agent 3 | Agent 5 | `/founder?onboard=1` query param | Agent 3 reads the param on `/founder` and renders a stepper chrome (1 role · 2 account · 3 *intake*); submitting from onboarding mode redirects to `/onboarding/done` instead of straight to `/plan/[id]`. Agent 5's `/onboarding/founder` is a server-side redirect to `/founder?onboard=1`. If Agent 3 ships before Agent 5, Agent 3 stubs the param handling no-op-ily (no behavior change). |
-| Agent 4 | Agent 5 | investor map filters | **Phase 5 polish.** Agent 5 ships `investor_profiles` data + the form. Agent 4 (or whoever has cycles in Phase 5) wires the preferences into `/map` filter chips and a saved-filters affordance. No coordination required for Phase 4 — investor data lands without map integration. |
-| Agent 2 | Agent 6 | `docs/agent-tasks/openapi-additions.md` | Agent 2 writes endpoint shapes there; Agent 6 builds OpenAPI from it. Create the file when first needed. |
-| Agent 2 | Agent 3 | `POST /api/v1/founder-passports/enrich` shape | Agent 2 owns the endpoint and the `EnrichRequest` / `EnrichResponse` types in `types/api.ts`. The response is a partial `FounderPassportInput` plus a `confidence` per field (so Agent 3 can render the "filled from your site" chips). Agent 2 publishes the shape in `openapi-additions.md`; Agent 3 consumes via `types/api.ts`. If Agent 2 hasn't shipped enrich yet, Agent 3 stubs the call to return `{}` so the form falls back to manual fill — that's the always-works path. |
-| Agent 3 | Agent 7 | persona tile click target | Persona tiles on `/` (Agent 7) link to `/founder?persona=<id>`. Agent 3's `/founder` page reads the query param, prefills the form (or routes directly to `/plan/fp_<persona>` if Agent 2's seeded recommendations are loaded). `lib/personas.ts` (Agent 7) is the typed source for persona names + IDs. |
-| Agent 3 | Agent 7 | nav + footer in root layout | Agent 7 owns `app/layout.tsx`. Agent 3 places its routes under it. If Agent 3 starts before Agent 7 merges, stub a minimal nav and rebase. |
-| Agent 4 | Agent 5 | `app/api/v1/companies/[slug]/route.ts` | Agent 4 owns GET; Agent 5 adds PATCH. Land Agent 4 first, then Agent 5 PR adds PATCH method to the same file. |
-| Agent 4 | Agent 5 | "Claim this company" button on profile | Agent 4 places the button (links to `/companies/:slug/claim`). Agent 5 owns the handler. |
-| Agent 4 | Agent 6 | `lib/company-card.ts` | Agent 4 owns the formatter. Agent 6's MCP `get_company` tool calls the `/api/v1/companies/:slug` endpoint, not the formatter directly. |
-| Agent 4, 5 | Agent 7 | layout + tokens | Both consume Agent 7's nav + footer + theme. Coordinate only if their pages need new brand primitives Agent 7 hasn't shipped. |
-| Agent 5 | Agent 8 | `investor_profiles` schema | Phase 4 ships the table preferences-shaped (`firm_name`, `investor_type`, `stages_json`, `sectors_json`, `check_size_min/max`, `geo_focus_json`). Phase 6 (Agent 8) **adds columns** for the public surface: `slug` UNIQUE, `display_name`, `bio`, `tagline`, `website`, `linkedin`, `verification_status`, `verified_at`, `last_updated_by`. New tables `saved_companies` and `intro_requests` are Agent 8's alone. Rebase before `db:generate`. |
-| Agent 5 | Agent 8 | `/settings` Investor section | Phase 4 owns `/settings` with an Investor section that edits **preferences** (firm, type, stages, sectors, check size, geo focus). Phase 6 adds a "Manage your public profile" link from that section out to `/investors/<slug>/edit` — the public-facing fields live there, not in `/settings`. No structural change to `/settings`. |
-| Agent 4 | Agent 8 | `app/companies/[slug]/page.tsx` | Agent 4 owns the profile page. Agent 8 (Phase 6) adds a small "Save" + "Request intro through GOEO" button group (signed-in only). Agent 8 PR adds buttons + handlers without touching Agent 4's data flow. |
-| Agent 5 | Agent 8 | `/admin` shell + role gate | Agent 5 owns `/admin` layout + middleware. Agent 8 adds `/admin/intros` under the same shell, gated on the same `goeo_admin | superadmin` rule. No middleware changes needed. |
-| Any | Agent 1 | `db/schema.ts` extensions | Any agent may extend schema in their own worktree. **Rebase against `main` before `db:generate`.** Number collision rule: rename the loser's migration file to next free index. |
-| Any | Agent 1 | new schema column they can't add themselves | Append a request to `docs/agent-tasks/schema-requests.md`. |
-
-## Frozen contracts
-
-This file does **not** restate them. Sources of truth:
-
-- **Stack table** — `architecture.md` § Stack
-- **System diagram** — `architecture.md` § System diagram
-- **Repo layout** — `architecture.md` § Repo layout
-- **API contract** — `app/api/v1/openapi.yaml` (Agent 6 owns) +
-  `architecture.md` § Contracts
-- **Error shape** `{ error: { code, message, details? } }` — use
-  `lib/api-error.ts`
-- **ID prefixes** `fp_*`, `co_*`, `r_*`, `rec_*`, `bos_*` — use
-  `lib/ids.ts`
-- **Casing** snake_case wire ↔ camelCase TS — convert at
-  Drizzle/zod boundary
-- **Dual auth model** — `architecture.md` § Contracts and
-  `agent-tasks/agent-5-claim.md`
-- **Worktree port table** — `agent-tasks/00-shared-context.md` §
-  Worktree port table
-- **Branch protocol** — `agent-tasks/00-shared-context.md` § Branch
-  protocol
-- **Responsive design (375 / 768 / 1280px)** — `CLAUDE.md` § Coding
-  Style
-
-## User-flow coverage
-
-The five canonical user flows below double as both production-load
-mapping and the test scenarios we exercise with seeded personas.
-Anything that gates flows 1–4 is production-blocking — those flows
-are the live product's primary surfaces. Flow 5 (CLI/MCP) is the
-agent-native surface; if it slips, the human-facing product still
-ships.
-
-| Flow | Story | Required agents |
-|------|-------|-----------------|
-| 1 | Jordan (pre-seed) — start-business plan | 1, 2, 3, 7 |
-| 2 | Priya (raising) — capital plan | 1, 2, 3, 7 |
-| 3 | Investor map — filter, click, brief | 1, 4, 7 |
-| 4 | Business owner as website — claim → approve → edit → all surfaces update | 1, 4, 5, 7 |
-| 5 | Terminal / MCP proof | 1, 2, 4, 6 |
-
-If a phase slips, drop production scope in this order: 5 → 4 → 3 →
-2 → 1. Keep the founder Navigator flows if at all possible — they
-are the highest-traffic surface for real founders hitting
-startup.utah.gov. Flow 5 is the agent-native surface and the cheapest
-to defer.
-
-The **investor user type** does not gate any of the five flows. It's
-production scaffolding (sign-up, onboarding, profile persistence,
-admin user-table representation) for a real user class GOEO will
-have on the live site. If Agent 5 takes its cuts cascade, investor
-features drop *before* any user-facing surface that founders /
-investors / business owners interact with.
-
-## Cuts cascade — when behind, take these in order
-
-These are **production cuts**. The mental model is "what can the
-live site live without." Drawn from each brief's "Cuts allowed if
-time-pressed" sections, prioritized.
-
-0. **Phase 6 entirely.** Phase 6 (investor public surface +
-   watchlists + intros) is post-launch by design — it never gates
-   the initial production ship. If you're behind, don't even start
-   it.
-1. **Phase 5 entirely** — only do Phase 5 if every Phase 4 PR has
-   merged with time to spare.
-2. **Agent 6** — skip remote MCP, skip MCP prompts/resources (8 tools
-   only), skip CLI's `profile build`, skip search endpoint, stub
-   OpenAPI to Phase 3 endpoints only.
-3. **Agent 7** — skip activity ticker, skip Caveat font, skip brand
-   primitives folder (inline as needed), skip footer.
-4. **Agent 5** — cuts cascade in priority order:
-   1. Drop the **coverage-gaps strip** on `/admin`.
-   2. Drop the **stats row** on `/admin` (5 cards).
-   3. Drop **`/admin/admins`** — promote admins via the bootstrap
-      script + manual `wrangler d1 execute` at launch.
-   4. Drop **investor onboarding persistence** — collect the form
-      inputs but skip writing `investor_profiles` (the row never
-      gets created; map personalization is Phase 5 anyway).
-   5. Drop **`/onboarding/investor`** entirely — investor users
-      land on `/onboarding/done` immediately.
-   6. Drop **role select on signup** — default everyone to
-      `founder`, and don't render onboarding role-specific
-      branches.
-   7. Drop **`/settings`** — replace with a single profile-edit
-      form (display name + email).
-   8. Drop **email-OTP plugin** — fall back to Better Auth's
-      default link-based verification (the wireframe matches less
-      well, but auth still works).
-   9. Drop **email-verification hard gate** — sign-up immediately
-      yields a session.
-   10. Collapse admin to **submissions queue + resources CRUD**
-       (drop `/admin/companies`, `/admin/map`, `/admin/users`);
-       skip AI draft button; skip `profile_updates` review tab.
-   11. **Last resort:** cosmetic-only ownership upload (no R2
-       persistence).
-
-   The investor flow is **production scaffolding**, not one of the
-   five canonical user flows — its drops are first because cutting
-   it doesn't damage any of the user-facing surfaces founders /
-   investors / business owners hit on the live site.
-5. **Agent 4** — skip vector tiles (raster basemap), skip
-   InvestorBrief panel, skip clustering (individual pins), skip
-   "Update with Claude/ChatGPT" button.
-6. **Agent 3** — skip the URL-prefill UX (manual fill is the
-   always-works path; cut early if Parallel.ai integration slips),
-   skip "Ignore for now" bucket, skip field-level modal, skip share
-   URL (deep-link still works), skip skeleton loaders. **Mobile is
-   not optional** — never cut responsive.
-7. **Agent 2** — skip the enrich endpoint and `lib/parallel.ts`
-   (front-end falls back to manual fill — coordinate with Agent 3),
-   skip persistence (recompute on every GET), skip LLM explanation
-   (reasons[] only), skip prompt caching, skip "Ignore for now"
-   bucket.
-8. **Agent 1** — skip embedding column, skip FTS5 (LIKE %term%
-   instead), skip `company_photos`, drop malformed CSV rows silently.
-
-Cut earliest from agents whose work is *least* user-facing on the
-live site.
-
-## Time budget (advisory, not contractual)
-
-| Phase | Wall clock | Worktree-hours |
-|-------|-----------|----------------|
-| 1 | done | — |
-| 2 | ~90 min (Agent 1 critical; Agent 7 ~60 min in parallel) | ~150 min |
-| 3 | ~120 min (longest of Agents 2, 3, 6) | ~330 min |
-| 4 | ~210 min (Agent 5 critical — Auth.html scope + investor; Agent 4 ~120 min in parallel) | ~330 min |
-| 5 | remainder, capped at 3 hr | varies |
-| 6 | post-launch — ~150 min when picked up | ~150 min |
-
-Launch buffer for deploy validation, smoke tests, and slippage: at
-least 2 hr before any traffic is sent.
-
-## Status snapshot (update as phases complete)
-
-> **Discipline:** if your PR closes or advances any line in the
-> snapshot below, flip the line **in the same PR**. The doc is the
-> contract for what's free to start; stale state actively misleads
-> the next agent. The `ship` skill (Phase 1) checks for this before
-> committing.
-
-```
-Phase 1:  ✅ DONE  (PR #6, 2026-05-08)
-Phase 2:  ✅ DONE  (Agent 1: PR #10/#13; Agent 7: PR #11)
-Phase 3:  🟡 IN FLIGHT
-            Agent 2 — recommend:     ✅ DONE (PR #16, c4273a6)
-            Agent 3 — navigator:     ✅ DONE (PR #17, 513ae26)
-            Agent 6 — agent-native:  ⬜ NOT STARTED
-Phase 4:  🟡 IN FLIGHT
-            Agent 4 — map+profiles:  ⬜ NOT STARTED (wt3 picking up next on `feat/map`)
-            Agent 5 — auth+admin:    ✅ DONE (PR #20, 1b4d56b)
-Phase 5a: ⬜ PENDING — production hardening (CI, deploy, secrets, security review)
-Phase 5b: ⬜ PENDING — polish + production smoke test
-Phase 6:  📝 DOCS-ONLY — scope locked (PR #15); implementation deferred to post-launch
-```
-
-**Migration state on `main`:** `0000_flaky_scarlet_spider` (Agent 1)
-+ `0001_brainy_sentinels` + `0002_slow_shotgun` (PR #16) +
-`0003_curious_fat_cobra` (PR #20, renumbered cleanly per the
-recipe in
-`docs/agent-tasks/00-shared-context.md` § Schema ownership). The
-next free index is `0004`.
+Shipped agent briefs (Agents 0–5, 7) and the parallel-build coordination
+matrix are under `docs/archive/agent-tasks/`. Read them for historical
+context or line-number citations — they are not operational.
