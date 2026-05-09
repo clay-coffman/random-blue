@@ -55,29 +55,25 @@ export function registerRecommend(program: Command) {
           return;
         }
 
-        // Path B: build a recommend body (persona id + overrides, or
-        // raw body if no persona).
-        const body: RecommendBody = {};
-        if (opts.persona) body.passport_id = resolvePersona(opts.persona);
-        if (opts.county) body.county = opts.county;
-        if (opts.city) body.city = opts.city;
-        if (opts.stage) body.stage = opts.stage;
-        if (opts.industry) body.industry = opts.industry;
-        if (opts.goal) body.goal = opts.goal;
-        if (opts.urgency) body.urgency = opts.urgency;
-        if (opts.websiteUrl) body.website_url = opts.websiteUrl;
-        body.communities = [];
-        body.needs = [];
-        body.constraints = [];
-
-        // The recommend endpoint rejects a passport_id together with a
-        // full passport body that conflicts with the saved row. When
-        // both are present we strip stage/industry/goal so the saved
-        // values win.
-        if (body.passport_id) {
-          delete body.stage;
-          delete body.industry;
-          delete body.goal;
+        // Path B: build a recommend body. When a persona id is given,
+        // the saved row wins — send the id alone and ignore any
+        // body-shaped flags. The recommend endpoint's id-only schema
+        // is strict and rejects extra fields.
+        let body: RecommendBody;
+        if (opts.persona) {
+          body = { passport_id: resolvePersona(opts.persona) };
+        } else {
+          body = {};
+          if (opts.county) body.county = opts.county;
+          if (opts.city) body.city = opts.city;
+          if (opts.stage) body.stage = opts.stage;
+          if (opts.industry) body.industry = opts.industry;
+          if (opts.goal) body.goal = opts.goal;
+          if (opts.urgency) body.urgency = opts.urgency;
+          if (opts.websiteUrl) body.website_url = opts.websiteUrl;
+          body.communities = [];
+          body.needs = [];
+          body.constraints = [];
         }
 
         const result = await client.recommend(body);

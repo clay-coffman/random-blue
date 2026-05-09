@@ -1494,7 +1494,18 @@
         "description": "Re-use a saved passport row by id. No other fields permitted.\n"
       },
       "RecommendRequestByBody": {
-        "$ref": "#/components/schemas/FounderPassportInput"
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/FounderPassportInput"
+          },
+          {
+            "not": {
+              "required": [
+                "passport_id"
+              ]
+            }
+          }
+        ]
       },
       "RecommendRequest": {
         "oneOf": [
