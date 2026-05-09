@@ -315,7 +315,7 @@ function ResourceCta({
 }) {
   // Prefer mailto when the resource has a contact address — the action
   // text on capital cards reads "Email info@…", and a website href is a
-  // visible lie (B8 in docs/e2e-findings-2026-05-09.md). Falls through to
+  // visible lie (B8 in docs/archive/e2e-findings-2026-05-09.md). Falls through to
   // sourceUrl for non-email CTAs ("Apply", "Book a call", etc.).
   const href = resource.contactEmail
     ? buildMailto(resource.contactEmail, resource, input)

@@ -5,7 +5,7 @@ source of truth — escalate to the user, don't fall back to the archived
 original.
 
 Architecture, frozen contracts, and conventions live in
-`docs/architecture.md` and `docs/agent-tasks/00-shared-context.md`. Build
+`docs/architecture.md` and `docs/conventions.md`. Build
 status (what's shipped vs. left) lives in `docs/implementation-plan.md`.
 
 ## Product summary
@@ -220,7 +220,7 @@ preferences personalize, they don't gate.
 ### Investor public surface + watchlists + intros (Phase 6 / post-launch)
 
 **Not part of the initial production ship.** Phase 6 builds on top of
-Phase 4's investor identity. See `docs/agent-tasks/agent-8-investor.md`.
+Phase 4's investor identity. See `docs/archive/agent-tasks/agent-8-investor.md`.
 
 - **Public investor directory** at `/investors`. Anonymous-readable.
   Lists profiles with `verification_status = 'verified'` only.
@@ -497,5 +497,5 @@ bucket policy, and moderation flow follow from that decision.
 - Architecture: `docs/architecture.md`.
 - Customer brief (canonical): `docs/source_data/page-2026-05-08-19-38-24.md`.
 - Per-agent execution: `docs/agent-tasks/agent-<N>-<slice>.md`.
-- Shared conventions: `docs/agent-tasks/00-shared-context.md`.
+- Shared conventions: `docs/conventions.md`.
 - GOEO operator runbook: `docs/operator-runbook.md`.

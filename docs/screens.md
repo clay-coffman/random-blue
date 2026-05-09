@@ -136,7 +136,7 @@ handler — see the Agent 5 brief for the dual-auth precedence on
 
 Not part of the initial production ship. Documented here so the URL
 matrix stays the source of truth when Agent 8 picks up the work.
-See `agent-tasks/agent-8-investor.md` for the brief and
+See `archive/agent-tasks/agent-8-investor.md` for the brief and
 `requirements.md` § Investor public surface for the feature spec.
 Phase 4 already ships the investor sign-up, role, onboarding
 preferences, and `/settings` Investor section.

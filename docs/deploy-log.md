@@ -1,118 +1,37 @@
 # Deploy log
 
-## 2026-05-09 — first production deploy (Phase 5a)
+Per-deploy chronology lives on the Cloudflare Workers dashboard
+(Deployments tab) and in `git log` on `main`. This file documents
+the **current production state** plus the production-readiness
+fixes worth keeping for debugging context.
 
-**Live URL:** https://startup-state-atlas.claymcoffman.workers.dev (Worker on the
-`claymcoffman.workers.dev` subdomain; custom domain — `startup.utah.gov` or
-similar — is a follow-up after GOEO points DNS at Cloudflare).
+## Production state
 
-**Git SHA at deploy:** `ac84dd1` (post PR #27 merge) plus the production-
-readiness fixes in this PR.
+| Resource | Value |
+|----------|-------|
+| **Live URL** | <https://startupstateatlas.dev> (and `https://www.startupstateatlas.dev`) |
+| **Custom domain** | managed via `wrangler.jsonc` `routes` with `custom_domain: true`; Cloudflare auto-manages DNS + SSL |
+| **Worker** | `startup-state-atlas` (single Worker; OpenNext bundle) |
+| **D1** | `startup-state-atlas-db` — binding `DB`, id `698139c1-1b46-456f-a4fe-6206a8c204bb`. Migrations `0000`–`0007` applied (see `docs/implementation-plan.md` § Migration state). |
+| **R2** | `atlas-ownership-docs` — binding `OWNERSHIP_DOCS`. Proof-of-ownership uploads for company claims. |
+| **Observability** | Cloudflare Workers built-in (free tier). `observability.enabled = true` in `wrangler.jsonc`. Live tail via `wrangler tail`. |
+| **Email FROM** | `Startup State Atlas <noreply@startupstateatlas.dev>` (Resend, with DKIM + SPF + DMARC on Cloudflare DNS) |
+| **Site gate** | `SITE_PASSWORD` secret active. Rotate via `wrangler secret put SITE_PASSWORD`; drop the gate with `wrangler secret delete SITE_PASSWORD`. |
+| **Bootstrap superadmin** | `claymcoffman@gmail.com` |
 
-**Cloudflare resources:**
-- Worker: `startup-state-atlas`
-- D1 binding `DB` → `startup-state-atlas-db` (`698139c1-1b46-456f-a4fe-6206a8c204bb`)
-- R2 binding `OWNERSHIP_DOCS` → `atlas-ownership-docs` (created during this
-  session via `wrangler r2 bucket create`)
-- Observability: enabled in `wrangler.jsonc` (free Cloudflare Workers logs)
+### Workers secrets
 
-**Workers secrets** (9 total, all set via `wrangler secret put`):
-`ANTHROPIC_API_KEY`, `ATLAS_ADMIN_TOKEN` (fresh prod value; not the dev one),
-`BETTER_AUTH_SECRET` (fresh prod value), `BETTER_AUTH_URL`
-(`https://startup-state-atlas.claymcoffman.workers.dev`), `PARALLEL_API_KEY`,
-`R2_ACCESS_KEY_ID`, `R2_ACCOUNT_ID`, `R2_SECRET_ACCESS_KEY`, `RESEND_API_KEY`.
-`wrangler secret list` confirms all nine.
+Set via `wrangler secret put <NAME>`. Verify the full set with
+`wrangler secret list`.
 
-**D1 state:** all 4 migrations applied (`0000_flaky_scarlet_spider`,
-`0001_brainy_sentinels`, `0002_slow_shotgun`, `0003_curious_fat_cobra`).
-Seeded: 220 companies, 213 resources, 6 personas, 3 investor_profiles.
+`ANTHROPIC_API_KEY`, `ATLAS_ADMIN_TOKEN`, `BETTER_AUTH_SECRET`,
+`BETTER_AUTH_URL`, `PARALLEL_API_KEY`, `RESEND_API_KEY`,
+`R2_ACCESS_KEY_ID`, `R2_ACCOUNT_ID`, `R2_SECRET_ACCESS_KEY`,
+`SITE_PASSWORD`.
 
-**First superadmin:** `claymcoffman@gmail.com`, minted via
-`npm run bootstrap-superadmin claymcoffman@gmail.com -- --remote` after the
-sign-up + OTP-verify round-trip succeeded.
-
-**Email FROM:** `Startup State Atlas <noreply@startupstateatlas.dev>` —
-`startupstateatlas.dev` is verified in Resend (DKIM + SPF + DMARC on
-Cloudflare DNS). When GOEO verifies `startup.utah.gov` in Resend we'll flip
-`lib/email.ts` to `noreply@startup.utah.gov`.
-
-## Production-readiness fixes applied during this deploy
-
-These were flushed out by the first `npm run deploy` invocation; none of them
-had been hit by `npm run dev` because the Next.js / OpenNext / Workers-runtime
-build path is only exercised at deploy time.
-
-1. **Suspense boundaries on 5 auth pages.** `useSearchParams()` opt-out
-   pages were prerender-erroring because Next 15 needs an explicit
-   `<Suspense>` wrapper around any client component that reads search
-   params. Wrapped `/sign-in`, `/sign-up`, `/sign-up/account`,
-   `/sign-up/verify`, `/login/sent`, `/reset-password`.
-2. **Stripped `export const runtime = "edge"` from 6 API routes.**
-   OpenNext-Cloudflare bundles the entire app as a single Worker
-   function — Workers IS the edge runtime — and refuses to ship a
-   route alongside the default function when it's marked edge.
-   Removed from `/api/mcp`, `/api/v1/founder-passports/*`,
-   `/api/v1/openapi.json`, `/api/v1/resources/recommend`. The Workers
-   runtime IS edge; the annotation was a no-op cargo-cult from
-   templating examples.
-3. **Anthropic SDK fetch shim.** The SDK auto-detects an HTTP client
-   that doesn't work on Workers, surfacing as "Connection error" on
-   every Claude call. Fixed by passing `fetch:
-   globalThis.fetch.bind(globalThis)` in the `Anthropic` constructor
-   in `lib/anthropic.ts`. Both `recommend-explain.ts` and
-   `lib/investor-brief.ts` now produce real Claude output on the
-   deployed Worker.
-4. **Resend FROM swap.** `noreply@startup.utah.gov` isn't verified in
-   Resend yet — the test sender `onboarding@resend.dev` only
-   delivers to the Resend account holder's email. Verified
-   `startupstateatlas.dev` in Resend (DNS records on Cloudflare),
-   set `FROM` to `noreply@startupstateatlas.dev` with a TODO to flip
-   to `noreply@startup.utah.gov` when GOEO is ready.
-
-## Smoke test — what passed
-
-Programmatic (curl):
-- `/`, `/founder`, `/map`, `/agents`, `/llms.txt`, `/AGENTS.md`,
-  `/sign-in`, `/sign-up`, `/forgot-password` — all 200.
-- `/startups/crew`, `/startups/crew.md`, `/startups/crew.json`,
-  `/startups/alcomy?view=dual` — all 200. 404 paths return 404.
-- `/api/v1/openapi.json` — 200, 11 paths, OpenAPI 3.1.0.
-- `/api/v1/companies` — 220 total. `?sector=FinTech&stage=seed&county=Salt%20Lake`
-  returns 3 companies (`streamos`, `swyf`, `elements`), matching Flow 3.
-- `/api/v1/resources/recommend` with `passport_id=fp_priya` returns
-  12 scored recs with non-empty `because` sentences (Anthropic round-trip).
-- `/api/v1/companies/investor-brief` returns 4 themes for a FinTech
-  filter (Anthropic structured output round-trip).
-- `/api/mcp` `initialize` returns valid MCP capabilities (tools +
-  resources + prompts list-changed flags).
-
-Visual:
-- `/map` at 1280px renders MapLibre + CARTO Voyager vector tiles,
-  Utah-centered, sector-colored cluster, filter sidebar, view toggle,
-  attribution. Browser tested via Playwright.
-
-Auth round-trip:
-- Sign-up at `/sign-up` (Founder role) → account page → OTP email
-  arrives from `noreply@startupstateatlas.dev` → verify → land
-  signed-in.
-- Bootstrap script flipped `claymcoffman@gmail.com` to `superadmin`.
-- Sign out + back in → `/admin` loads.
-
-## Out of scope (deferred)
-
-- **Custom domain (`startup.utah.gov`):** awaiting GOEO DNS
-  coordination. Once they point DNS at Cloudflare and we add the
-  custom domain via the dashboard, we'll flip `BETTER_AUTH_URL` and
-  the email FROM.
-- **GitHub Actions deploy workflow** (`cloudflare/wrangler-action`):
-  separate small PR. For now, deploy is manual via `npm run deploy`
-  from a developer machine.
-- **Rest of Phase 5a:** auth security review, upstream failure
-  handling check, privacy review on `founder_passports`,
-  observability decision (Sentry vs Workers built-in).
-- **Phase 5b polish:** mobile sweep on every surface, full Playwright
-  e2e suite, InvestorBrief prompt tuning. The map and profile
-  surfaces have been swept; the rest haven't.
+`BETTER_AUTH_URL` must match the public origin (currently
+`https://startupstateatlas.dev`); `auth.ts` boot-checks this and
+refuses to start if the cookie prefix would silently downgrade.
 
 ## Operator quick-ref
 
@@ -126,6 +45,9 @@ wrangler d1 execute startup-state-atlas-db --remote --command "SELECT …"
 # Re-deploy after a code change
 npm run deploy
 
+# Apply pending migrations to prod
+npm run db:migrate:remote
+
 # Promote a new admin (after they sign up via UI)
 npm run bootstrap-superadmin <email> -- --remote
 
@@ -136,57 +58,53 @@ echo "<new-value>" | wrangler secret put <NAME>
 See `docs/operator-runbook.md` for the full ops loop (claim review,
 admin invites, debugging incidents, etc.).
 
-## 2026-05-09 (later) — custom domain + preview gate
+## Production-readiness fixes (debugging context)
 
-**Live URL flipped to:** `https://startupstateatlas.dev` (and
-`https://www.startupstateatlas.dev`). `wrangler.jsonc` now declares
-`routes` with `custom_domain: true` so Cloudflare manages DNS + SSL
-automatically. The previous workers.dev URL stops serving because
-`workers_dev` defaults off when a Wrangler config carries
-custom-domain routes — the custom domain is now the only entry
-point.
+These were flushed out by the first `npm run deploy` invocation and
+the subsequent custom-domain switchover. None had been hit by
+`npm run dev` because the Next.js / OpenNext / Workers-runtime
+build path is only exercised at deploy time. Worth knowing if a
+future deploy hiccup looks similar.
 
-`BETTER_AUTH_URL` Workers secret rotated to
-`https://startupstateatlas.dev`.
-
-**Preview password gate.** A site-wide password gate sits in front
-of every Next route + every API handler while we're pre-launch.
-Driven entirely by the `SITE_PASSWORD` Workers secret — drop the
-secret + redeploy and the gate vanishes:
-
-```bash
-wrangler secret delete SITE_PASSWORD
-npm run deploy
-```
-
-Implementation:
-
-- `lib/site-gate.ts` — sha256 helper, cookie name + max-age,
-  `siteGatePassword()` reads `process.env.SITE_PASSWORD`,
-  `isGateAllowed(pathname)` for the bypass list.
-- `app/gate/page.tsx` — minimal centered form, server component,
-  `robots: { index: false, follow: false }`.
-- `app/api/gate/route.ts` — POST validates with `timingSafeEqual`,
-  sets `atlas_gate` cookie = `sha256Hex(SITE_PASSWORD)`, redirects
-  to the original `next` target (same-origin only).
-- `middleware.ts` runs the gate FIRST (matcher widened to
-  `/((?!_next/static|_next/image|favicon.ico).*)`); the auth gate
-  for protected routes still fires after.
-
-Cookie design: value is `SHA-256(current SITE_PASSWORD)`. Rotating
-the password invalidates every existing cookie automatically — no
-session store, no separate JWT secret. `HttpOnly`, `Secure`,
-`SameSite=Lax`, 30-day max-age.
-
-Caveat: Cloudflare's `ASSETS` binding serves `/public/*` BEFORE
-middleware runs, so `/llms.txt`, `/AGENTS.md`, `/favicon.ico` are
-not gated. The actual app surfaces (every Next route + every API
-handler, including `/api/v1/*` and `/api/mcp`) all are.
-
-The current preview password lives outside the repo (rotate via
-`wrangler secret put SITE_PASSWORD`).
-
-Bonus fix: `eslint.config.mjs` now also ignores `.open-next/**`
-(generated build output that ESLint shouldn't lint). Without this
-fix any lint run after a local `npm run deploy` fails on 1400+
-errors in compiled JS.
+1. **Suspense boundaries on 5 auth pages.** Next 15 prerender
+   requires an explicit `<Suspense>` wrapper around any client
+   component that reads search params via `useSearchParams()`.
+   Wrapped `/sign-in`, `/sign-up`, `/sign-up/account`,
+   `/sign-up/verify`, `/login/sent`, `/reset-password`.
+2. **Stripped `export const runtime = "edge"` from API routes.**
+   OpenNext-Cloudflare bundles the entire app as a single Worker
+   function; the Workers runtime IS the edge runtime. The
+   annotation was a no-op cargo-cult that breaks the bundle.
+   Removed from `/api/mcp`, `/api/v1/founder-passports/*`,
+   `/api/v1/openapi.json`, `/api/v1/resources/recommend`.
+3. **Anthropic SDK fetch shim.** The SDK auto-detects an HTTP
+   client that doesn't work on Workers, surfacing as "Connection
+   error" on every Claude call. Fixed by passing
+   `fetch: globalThis.fetch.bind(globalThis)` in the `Anthropic`
+   constructor in `lib/anthropic.ts`.
+4. **Async `getAuth()` (PR #57).** `getCloudflareContext()` is
+   sync by default, which Next 15 forbids at the top level of
+   a non-static route during prerender. After PR #46 added
+   `await getAuth().api.getSession(...)` to the root layout, every
+   subsequent `npm run deploy` failed at prerender of any static
+   auth page (`/forgot-password`, `/reset-password`,
+   `/login/sent`, `/_not-found`). Fix: switch `getAuth()` to
+   `async` and use `getCloudflareContext({ async: true })`. All
+   15 callers updated to `await (await getAuth()).api...`.
+5. **Build env requirement.** The prerender step needs
+   `BETTER_AUTH_SECRET` in the build environment. `npm run deploy`
+   is normally invoked from a worktree where Wrangler auto-loads
+   `.dev.vars`; if you're invoking the bare build
+   (`npx opennextjs-cloudflare build`) you must
+   `set -a; source .dev.vars; set +a` first or every Better Auth
+   page errors with "default secret".
+6. **Custom-domain CF API token scope.** `wrangler deploy` calls
+   `GET /zones/<zone_id>/workers/routes` to verify the routes
+   config; the token needs `Zone:Workers Routes:Read` (or `Edit`)
+   on the `startupstateatlas.dev` zone. The "Edit Cloudflare
+   Workers" template in the CF dashboard bundles every scope
+   needed for routine deploys + D1 + R2.
+7. **Resend FROM.** `noreply@startup.utah.gov` isn't verified in
+   Resend yet. Current FROM is `noreply@startupstateatlas.dev`;
+   flip `lib/email.ts` once GOEO ships DNS records for
+   `startup.utah.gov`.
