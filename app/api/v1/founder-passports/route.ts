@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     }
     const input = parsed.data;
     const id = newId("fp");
+    const now = new Date();
 
     await db()
       .insert(founderPassports)
@@ -37,7 +38,11 @@ export async function POST(req: Request) {
         needsJson: JSON.stringify(input.needs),
         constraintsJson: JSON.stringify(input.constraints),
         websiteUrl: input.website_url ?? null,
-        createdAt: new Date(),
+        // Stamp enrich provenance only if the front-end opted in by
+        // sending `enrichment_source`. Otherwise both stay null.
+        enrichmentSource: input.enrichment_source ?? null,
+        enrichedAt: input.enrichment_source ? now : null,
+        createdAt: now,
       });
 
     return Response.json({ passport_id: id }, { status: 201 });

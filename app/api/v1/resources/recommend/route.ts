@@ -129,6 +129,7 @@ export async function POST(req: Request) {
       }
       passport = fullParsed.data;
       passportId = newId("fp");
+      const createdAt = new Date();
       await d.insert(founderPassports).values({
         id: passportId,
         county: passport.county ?? null,
@@ -143,7 +144,11 @@ export async function POST(req: Request) {
         needsJson: JSON.stringify(passport.needs),
         constraintsJson: JSON.stringify(passport.constraints),
         websiteUrl: passport.website_url ?? null,
-        createdAt: new Date(),
+        // Mirror POST /founder-passports: stamp enrich provenance only
+        // when the front-end opts in via `enrichment_source`.
+        enrichmentSource: passport.enrichment_source ?? null,
+        enrichedAt: passport.enrichment_source ? createdAt : null,
+        createdAt,
       });
     }
 
@@ -197,8 +202,7 @@ export async function POST(req: Request) {
       action_text: "",
       kind: s.resource.kind ?? undefined,
       source_url: s.resource.sourceUrl ?? undefined,
-      // Resources loader doesn't currently surface contact_email; left
-      // for a follow-up if/when downstream needs it.
+      contact_email: s.resource.contactEmail ?? undefined,
     }));
 
     const payload: RecommendResponseWire = {

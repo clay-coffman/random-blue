@@ -30,6 +30,7 @@ export async function loadAllResourceRows(): Promise<ResourceRow[]> {
       title: r.title,
       description: r.description,
       sourceUrl: r.sourceUrl,
+      contactEmail: r.contactEmail,
       kind: r.kind,
       topics: [],
       industries: [],

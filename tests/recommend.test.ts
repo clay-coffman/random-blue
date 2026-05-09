@@ -9,6 +9,7 @@ const r = (overrides: Partial<ResourceRow> & { id: string }): ResourceRow => ({
   title: overrides.id,
   description: null,
   sourceUrl: null,
+  contactEmail: null,
   kind: null,
   topics: [],
   industries: [],

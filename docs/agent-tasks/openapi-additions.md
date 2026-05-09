@@ -57,6 +57,10 @@ type FounderPassportInputWire = {
   business_type?: string;
   needs: string[];               // default []
   constraints: string[];         // default []
+  // Provider id (e.g. "anthropic-fetch") — set by the front-end when
+  // the enrich path ran. Server stamps `enriched_at = now` on the
+  // persisted row.
+  enrichment_source?: string;
 };
 
 type RecommendedResourceWire = {

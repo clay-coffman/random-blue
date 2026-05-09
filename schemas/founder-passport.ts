@@ -56,5 +56,9 @@ export const FounderPassportInput = z.object({
       message: "website_url must use http or https.",
     })
     .optional(),
+  // Front-end sets this to the provider id (e.g. "anthropic-fetch")
+  // when the enrich path ran before submission. Server stamps
+  // `enriched_at = now` on the persisted row when this is present.
+  enrichment_source: z.string().min(1).max(64).optional(),
 });
 export type FounderPassportInput = z.infer<typeof FounderPassportInput>;

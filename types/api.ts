@@ -30,15 +30,19 @@ export type FounderPassportInputWire = {
   goal?: string;
   urgency?: string;
   business_size?: string;
+  business_type?: string;
   needs: string[];
   constraints: string[];
+  // When the front-end ran the enrich path before submitting, it sets
+  // this to the provider id (e.g. "anthropic-fetch"). The route
+  // handler then stamps `enriched_at = now` on the persisted row.
+  enrichment_source?: string;
 };
 
 export type FounderPassportWire = FounderPassportInputWire & {
   id: string;
   created_at: string;
   enriched_at?: string;
-  enrichment_source?: string;
 };
 
 export type RecommendRequestWire = FounderPassportInputWire & {

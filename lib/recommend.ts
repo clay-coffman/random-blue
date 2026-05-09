@@ -19,6 +19,7 @@ export type ResourceRow = {
   title: string;
   description: string | null;
   sourceUrl: string | null;
+  contactEmail: string | null;
   kind: string | null;
   topics: string[]; // pre-joined; lowercased recommended
   industries: string[]; // GOED canonical vocabulary
