@@ -191,6 +191,22 @@ function BucketColumn({
   );
 }
 
+// Pick the reason most useful for an ignore card — prefer the
+// disqualifying signal (community / industry / geo gate) over generic
+// positive matches that aren't what got the resource ignored.
+const NEGATIVE_REASON_MARKERS = [
+  "that's not your profile",
+  "Industry-specific",
+  "Limited to",
+];
+
+function ignoreReason(reasons: string[]): string {
+  const negative = reasons.find((r) =>
+    NEGATIVE_REASON_MARKERS.some((m) => r.includes(m)),
+  );
+  return negative ?? reasons[0] ?? "Low fit on your passport.";
+}
+
 function IgnoreColumn({ items }: { items: RecommendedResource[] }) {
   if (items.length === 0) return null;
   return (
@@ -230,9 +246,7 @@ function IgnoreColumn({ items }: { items: RecommendedResource[] }) {
                 <p className="text-sm line-through decoration-ink-3">
                   {r.title}
                 </p>
-                <p className="text-xs text-ink-3">
-                  {r.reasons[0] ?? "Low fit on your passport."}
-                </p>
+                <p className="text-xs text-ink-3">{ignoreReason(r.reasons)}</p>
               </div>
             </li>
           ))}

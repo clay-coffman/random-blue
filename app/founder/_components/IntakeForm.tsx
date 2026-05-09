@@ -138,7 +138,11 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
         setEnrich({ status: "degraded" });
         return;
       }
-      const filled: PassportFieldName[] = [];
+      // Compute outside the updater — React Strict Mode double-invokes
+      // updaters, so any mutation inside would land twice.
+      const filled = parsed.fields.map(
+        (f) => f.name as PassportFieldName,
+      );
       setPassport((p) => {
         const next = { ...p };
         for (const f of parsed.fields) {
@@ -151,7 +155,6 @@ export function IntakeForm({ initial, personaId }: IntakeFormProps) {
           } else {
             next[k] = f.value as string;
           }
-          filled.push(k);
         }
         return next;
       });

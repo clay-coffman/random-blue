@@ -8,6 +8,7 @@
 // Day - Sheet1.csv` so deep links survive the merge.
 
 import {
+  COMMUNITY_TAGS,
   GOALS,
   INDUSTRIES,
   NEEDS,
@@ -372,13 +373,17 @@ function score(
   const communityHits = overlap(m.communities, input.communities);
   if (communityHits.length > 0) {
     s += 10 * communityHits.length;
-    reasons.push(
-      `Built for: ${communityHits.join(", ")} founders.`,
-    );
+    const labels = communityHits
+      .map((c) => labelFor(COMMUNITY_TAGS, c) ?? c)
+      .join(", ");
+    reasons.push(`Built for: ${labels} founders.`);
   } else if (m.communities?.length && m.communities.length <= 2) {
     s -= 100;
+    const labels = m.communities
+      .map((c) => labelFor(COMMUNITY_TAGS, c) ?? c)
+      .join(" / ");
     reasons.push(
-      `Built for ${m.communities.join(" / ")} founders — that's not your profile.`,
+      `Built for ${labels} founders — that's not your profile.`,
     );
   }
 

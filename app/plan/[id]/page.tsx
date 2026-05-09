@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import {
-  isPersonaId,
   personaFixtures,
   personaIdFromPassport,
 } from "@/lib/intake-fixtures";
@@ -30,7 +29,7 @@ export default async function PlanPage({ params }: PageProps) {
 
   // Persona fixture? (`fp_jordan`, `fp_priya`, …)
   const personaId = personaIdFromPassport(id);
-  if (personaId && isPersonaId(personaId)) {
+  if (personaId) {
     const input = personaFixtures[personaId];
     const result = recommendMock(input, id);
     return <ResultsView passportId={id} input={input} result={result} />;
