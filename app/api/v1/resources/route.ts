@@ -5,6 +5,10 @@ import { resources } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
 import { authorizeWrite, isAdminRole } from "@/lib/auth-utils";
 import { escapeLikeWildcards } from "@/lib/sql";
+import {
+  replaceResourceAffinities,
+  type ResourceAffinitiesPatch,
+} from "@/lib/resource-affinities";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +73,11 @@ export async function POST(req: Request) {
     source_url?: string;
     kind?: string;
     contact_email?: string;
+    industries?: string[];
+    communities?: string[];
+    topics?: string[];
+    counties?: string[];
+    statewide?: boolean;
   } | null;
   if (!body || !body.id || !body.title) {
     return errorResponse(
@@ -85,5 +94,19 @@ export async function POST(req: Request) {
     kind: body.kind ?? null,
     contactEmail: body.contact_email ?? null,
   });
+  // Affinity arrays / statewide are optional on create. Only invoke the
+  // helper if at least one field was sent — otherwise a brand-new
+  // resource just gets the scalar row, no join inserts.
+  const affinityPatch: ResourceAffinitiesPatch = {};
+  if (Array.isArray(body.industries)) affinityPatch.industries = body.industries;
+  if (Array.isArray(body.communities))
+    affinityPatch.communities = body.communities;
+  if (Array.isArray(body.topics)) affinityPatch.topics = body.topics;
+  if (Array.isArray(body.counties)) affinityPatch.counties = body.counties;
+  if (typeof body.statewide === "boolean")
+    affinityPatch.statewide = body.statewide;
+  if (Object.keys(affinityPatch).length > 0) {
+    await replaceResourceAffinities(body.id, affinityPatch);
+  }
   return NextResponse.json({ id: body.id }, { status: 201 });
 }

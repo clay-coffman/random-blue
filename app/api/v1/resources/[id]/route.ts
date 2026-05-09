@@ -4,6 +4,11 @@ import { db } from "@/lib/db";
 import { resources } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
 import { authorizeWrite, isAdminRole } from "@/lib/auth-utils";
+import {
+  loadResourceAffinities,
+  replaceResourceAffinities,
+  type ResourceAffinitiesPatch,
+} from "@/lib/resource-affinities";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +40,17 @@ export async function GET(
     .where(eq(resources.id, id))
     .limit(1);
   if (!row) return errorResponse("not_found", "Resource not found.", 404);
-  return NextResponse.json({ resource: row });
+  const affinities = await loadResourceAffinities(id);
+  return NextResponse.json({
+    resource: {
+      ...row,
+      industries: affinities.industries,
+      communities: affinities.communities,
+      topics: affinities.topics,
+      counties: affinities.counties,
+      statewide: affinities.statewide,
+    },
+  });
 }
 
 async function adminOnly(req: Request) {
@@ -51,6 +66,39 @@ async function adminOnly(req: Request) {
     return errorResponse("forbidden", "Admin role required.", 403);
   }
   return null;
+}
+
+// Pull only the affinity-shaped keys out of a freeform body. Each key is
+// optional — a save touching only `title` should not nuke topics. Returns
+// the trimmed patch (no normalization yet; the affinity helper handles it)
+// plus a flag indicating whether any join-table replacement is requested.
+function extractAffinityPatch(body: Record<string, unknown>): {
+  patch: ResourceAffinitiesPatch;
+  hasAny: boolean;
+} {
+  const patch: ResourceAffinitiesPatch = {};
+  let hasAny = false;
+  if (Array.isArray(body.industries)) {
+    patch.industries = body.industries as string[];
+    hasAny = true;
+  }
+  if (Array.isArray(body.communities)) {
+    patch.communities = body.communities as string[];
+    hasAny = true;
+  }
+  if (Array.isArray(body.topics)) {
+    patch.topics = body.topics as string[];
+    hasAny = true;
+  }
+  if (Array.isArray(body.counties)) {
+    patch.counties = body.counties as string[];
+    hasAny = true;
+  }
+  if (typeof body.statewide === "boolean") {
+    patch.statewide = body.statewide;
+    hasAny = true;
+  }
+  return { patch, hasAny };
 }
 
 export async function PATCH(
@@ -70,11 +118,17 @@ export async function PATCH(
     const col = FIELDS[k];
     if (col) patch[col] = v;
   }
-  if (Object.keys(patch).length === 0) {
+  const { patch: affinityPatch, hasAny: hasAffinity } =
+    extractAffinityPatch(body);
+
+  if (Object.keys(patch).length === 0 && !hasAffinity) {
     return errorResponse("bad_request", "No editable fields supplied.", 400);
   }
   patch.lastUpdatedAt = new Date();
   await db().update(resources).set(patch as never).where(eq(resources.id, id));
+  if (hasAffinity) {
+    await replaceResourceAffinities(id, affinityPatch);
+  }
   return NextResponse.json({ id });
 }
 

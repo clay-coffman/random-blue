@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { businessOwnershipSubmissions, companies } from "@/db/schema";
 import { user as userTable } from "@/db/schema.auth";
-import { presignOwnershipDocGet } from "@/lib/r2-presign";
+import { hasR2Credentials, presignOwnershipDocGet } from "@/lib/r2-presign";
 import { isSubdomainOf } from "@/lib/url";
 import { ScribbleDivider } from "@/components/brand";
 import { ReviewActions } from "./_actions";
@@ -66,13 +66,21 @@ export default async function AdminSubmissionReviewPage({
     isSubdomainOf(websiteHost, submitterDomain);
   const mode = domainMatch ? "auto" : "manual";
 
-  // 60-second signed URL for the doc preview.
+  // Doc preview source: signed URL when R2 S3 creds exist (prod path),
+  // otherwise stream through the admin-only binding proxy (dev path).
   let docUrl: string | null = null;
   let docError: string | null = null;
-  try {
-    docUrl = await presignOwnershipDocGet(submission.r2Key, 60);
-  } catch (err) {
-    docError = err instanceof Error ? err.message : "Doc preview unavailable.";
+  let usingProxy = false;
+  if (hasR2Credentials()) {
+    try {
+      docUrl = await presignOwnershipDocGet(submission.r2Key, 60);
+    } catch (err) {
+      docError =
+        err instanceof Error ? err.message : "Doc preview unavailable.";
+    }
+  } else {
+    docUrl = `/api/v1/admin/submissions/${submission.id}/document`;
+    usingProxy = true;
   }
 
   const isPdf = (submission.mimeType ?? "").includes("pdf");
@@ -147,7 +155,8 @@ export default async function AdminSubmissionReviewPage({
 
       <section>
         <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-3">
-          Document preview · 60-sec signed URL
+          Document preview ·{" "}
+          {usingProxy ? "local R2 binding (dev)" : "60-sec signed URL"}
         </p>
         <div className="overflow-hidden rounded-tile border-[1.5px] border-ink bg-paper">
           {docError ? (
@@ -176,7 +185,10 @@ export default async function AdminSubmissionReviewPage({
           {submission.fileSize
             ? `${Math.round(submission.fileSize / 1024)} KB`
             : "—"}{" "}
-          · signed link expires in 60s
+          ·{" "}
+          {usingProxy
+            ? "streamed through Worker — set R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY for prod-style signed URLs"
+            : "signed link expires in 60s"}
         </p>
       </section>
 
