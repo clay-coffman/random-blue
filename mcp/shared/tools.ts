@@ -1,5 +1,6 @@
 // 8 MCP tools that the local stdio server (mcp/server.ts) and the
-// remote Cloudflare McpAgent (app/api/mcp/...) both expose. Each tool
+// remote Streamable-HTTP endpoint (app/api/mcp/route.ts, stateless
+// `WebStandardStreamableHTTPServerTransport`) both expose. Each tool
 // wraps an HTTP call to the deployed Worker via `AtlasClient`.
 
 import { z } from "zod";

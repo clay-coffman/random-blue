@@ -180,8 +180,7 @@ function CliPanel() {
   return (
     <div className="space-y-4">
       <p className="text-base text-ink-2">
-        For the launch, the CLI ships from the repo. Run <code className="font-mono">npm run cli -- &lt;args&gt;</code> from a checkout. The bin entries also let you{" "}
-        <code className="font-mono">npx startup-state ...</code> when installed.
+        For the launch, the CLI ships from the repo. Run <code className="font-mono">npm run cli -- &lt;args&gt;</code> from a checkout — there is no published npm package and no global binary.
       </p>
 
       <h3 className="font-heading text-lg">Install</h3>

@@ -1,6 +1,8 @@
 // Plain-Node HTTP client for the Startup State Atlas API. Shared
-// between the CLI (`startup-state`) and the stdio MCP server
-// (`startup-state-mcp`).
+// between the CLI (`cli/index.ts`, run via `npm run cli`) and the
+// stdio MCP server (`mcp/server.ts`, run via `npm run mcp`). Also
+// imported by the remote MCP endpoint at `app/api/mcp/route.ts`,
+// where it self-targets the deployed worker.
 //
 // IMPORTANT: this module must NOT import from `@/lib/*` — that path
 // pulls in `lib/cf.ts` which transitively imports

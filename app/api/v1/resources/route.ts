@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { resources } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
 import { getApiSession, hasMachineToken, isAdminRole } from "@/lib/auth-utils";
+import { stripLikeWildcards } from "@/lib/sql";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +18,7 @@ export async function GET(req: Request) {
     Number(url.searchParams.get("limit") ?? "50") || 50,
   );
 
-  // Strip LIKE wildcards (`%`, `_`, `\`) from the user input so the
-  // search behaves as a substring match, not a glob — values are
-  // parameterised by Drizzle so this is not a SQL-injection defense,
-  // it's a correctness defense (a search for `100%` should match the
-  // literal "100%", not everything).
-  const safeQ = q.replace(/[%_\\]/g, "");
+  const safeQ = stripLikeWildcards(q);
 
   const baseQuery = db()
     .select({

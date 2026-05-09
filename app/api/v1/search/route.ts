@@ -3,18 +3,9 @@ import { like, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { resources, companies } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
+import { stripLikeWildcards } from "@/lib/sql";
 
 export const dynamic = "force-dynamic";
-
-// `%` and `_` are LIKE wildcards; `\` is the escape character we'd
-// need to introduce to handle them. Easiest defense: strip these
-// from caller input so the search behaves as a substring match,
-// not a glob. Drizzle parameterises the value (no SQL injection),
-// but unescaped wildcards still let `100%` match everything that
-// contains "100".
-function stripWildcards(s: string) {
-  return s.replace(/[%_\\]/g, "");
-}
 
 type SearchResult = {
   kind: "resource" | "company";
@@ -58,7 +49,7 @@ export async function GET(req: Request) {
   }
 
   const out: SearchResult[] = [];
-  const safeQ = stripWildcards(q);
+  const safeQ = stripLikeWildcards(q);
 
   if (type === "resources" || type === "all") {
     const rRows = await db()

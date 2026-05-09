@@ -42,9 +42,11 @@ PR #27 OPEN (`feat/agent-layer`). Owns:
 - `app/api/v1/openapi.yaml` — full OpenAPI 3.1 spec for all shipped
   endpoints. Source-of-truth for external integrators.
 - `app/api/v1/openapi.json/route.ts` and `app/api/v1/search/route.ts`.
-- `cli/index.ts` + `cli/commands/*.ts` — the `startup-state` CLI bin.
-- `mcp/server.ts` + tools / resources / prompts — the `startup-state-mcp`
-  stdio MCP server.
+- `cli/index.ts` + `cli/commands/*.ts` — the local CLI, invoked via
+  `npm run cli -- <args>` from a checkout (no global bin).
+- `mcp/server.ts` + tools / resources / prompts — the local stdio MCP
+  server (`npm run mcp`) + the stateless Streamable-HTTP endpoint at
+  `app/api/mcp/route.ts` for remote clients.
 - `public/llms.txt` — machine-readable summary for LLM context windows.
 - `public/AGENTS.md` — end-user agent rules (served at `<host>/AGENTS.md`).
 - `app/agents/page.tsx` — human-readable `/agents` docs page.

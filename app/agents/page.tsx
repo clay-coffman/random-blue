@@ -26,10 +26,10 @@ export default function AgentsPage() {
           <Link href="/api/v1/openapi.json" className="text-ember underline">
             OpenAPI 3.1
           </Link>{" "}
-          surface, a local CLI (<code className="font-mono">startup-state</code>), and
-          two MCP transports — stdio for Claude Desktop, plus a stateless Streamable
-          HTTP endpoint at <code className="font-mono">/api/mcp</code>. Same data layer
-          underneath, four ways to call it.
+          surface, a local CLI runnable via <code className="font-mono">npm run cli</code>{" "}
+          from a checkout, and two MCP transports — stdio for Claude Desktop, plus a
+          stateless Streamable HTTP endpoint at <code className="font-mono">/api/mcp</code>.
+          Same data layer underneath, four ways to call it.
         </p>
       </header>
 
