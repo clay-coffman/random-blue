@@ -85,7 +85,7 @@ export function loadCompanies(csvPath: string): CompanySeed[] {
       sector: (row.Section ?? "").trim() || null,
       stage: (row.Stage ?? "").trim().toLowerCase() || null,
       employeeCount: (row[COL_EMP] ?? "").trim() || null,
-      linkedin: (row[COL_LINKEDIN] ?? "").trim() || null,
+      linkedin: normalizeUrl(row[COL_LINKEDIN]),
       addressText: address,
       lat: geo.lat,
       lng: geo.lng,

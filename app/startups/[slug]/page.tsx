@@ -125,6 +125,15 @@ function VariantAProfile({
   isSaved: boolean;
 }) {
   const jobsCount = card.jobs.length;
+  // Defensive normalization: seed runs through normalizeUrl, but admin
+  // edits via EditorForm don't enforce a protocol prefix. Without this,
+  // a bare `linkedin.com/...` href would resolve relative to the
+  // current `/startups/<slug>` path.
+  const linkedinUrl = card.linkedin
+    ? /^https?:\/\//i.test(card.linkedin)
+      ? card.linkedin
+      : `https://${card.linkedin}`
+    : null;
   // Tab labels track render order in the main column. The Agent Card
   // teaser lives in the right rail, not the main column — so it's
   // omitted from the tab strip (clicking it on desktop would scroll
@@ -153,7 +162,7 @@ function VariantAProfile({
     url: card.website ?? undefined,
     description: card.description ?? undefined,
     logo: card.logo_url ?? undefined,
-    sameAs: card.linkedin ? [card.linkedin] : undefined,
+    sameAs: linkedinUrl ? [linkedinUrl] : undefined,
     address:
       card.city || card.county
         ? {
@@ -259,9 +268,9 @@ function VariantAProfile({
               ↗ Visit website
             </a>
           ) : null}
-          {card.linkedin ? (
+          {linkedinUrl ? (
             <a
-              href={card.linkedin}
+              href={linkedinUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-10 min-h-[44px] items-center justify-center gap-2 rounded-pill border-[1.5px] border-ink bg-paper px-4 font-mono text-xs uppercase tracking-wider transition hover:-translate-y-0.5"
