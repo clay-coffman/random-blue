@@ -89,7 +89,7 @@ export default async function OnboardingDonePage() {
         ✓
       </span>
       <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">
-        {role.toUpperCase()} · all set
+        {role.replace(/_/g, " ").toUpperCase()} · all set
       </p>
       <h1 className="font-serif text-3xl leading-tight tracking-tight sm:text-4xl">
         {copy.title}
