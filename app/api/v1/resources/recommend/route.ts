@@ -16,7 +16,12 @@ import {
   type Scored,
 } from "@/lib/recommend";
 import { loadAllResourceRows } from "@/lib/resources-loader";
-import { explainRecommendations } from "@/lib/recommend-explain";
+import {
+  explainRecommendations,
+  explainSkip,
+  type SkipFacets,
+} from "@/lib/recommend-explain";
+import type { ResourceRow } from "@/lib/recommend";
 import { safeParseJson } from "@/lib/json-safe";
 import type {
   Bucket,
@@ -190,14 +195,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. Shape response.
+    // 5. Shape response. Ignore-bucket items get a deterministic
+    //    *negative* skip explanation; positive buckets get the LLM
+    //    "Because…" (or empty if the LLM call failed/timed out).
     const recs: RecommendedResourceWire[] = labelled.map((s) => ({
       resource_id: s.resource.id,
       title: s.resource.title,
       score: s.score,
       bucket: s.bucket,
       reasons: s.reasons,
-      because: explanations.get(s.resource.id) ?? "",
+      because:
+        s.bucket === "ignore"
+          ? explainSkip(facetsFor(s.resource), passport)
+          : (explanations.get(s.resource.id) ?? ""),
       action_text: "",
       kind: s.resource.kind ?? undefined,
       source_url: s.resource.sourceUrl ?? undefined,
@@ -215,4 +225,21 @@ export async function POST(req: Request) {
     console.error("[recommend POST]", err);
     return errorResponse("INTERNAL", "Unexpected error", 500);
   }
+}
+
+// ResourceRow → SkipFacets adapter. `stages` is intentionally omitted —
+// stage info lives in `topics` (CSV `Topics` lifecycle markers) and the
+// other four signals (community/industry/geo/needs) carry the load for
+// the skip-bucket explainer.
+function facetsFor(r: ResourceRow): SkipFacets {
+  const counties = r.locations
+    .map((l) => l.county)
+    .filter((c): c is string => c !== null);
+  const statewide = r.locations.some((l) => l.statewide);
+  return {
+    industries: r.industries,
+    communities: r.communities,
+    counties: counties.length > 0 ? counties : undefined,
+    statewide,
+  };
 }
