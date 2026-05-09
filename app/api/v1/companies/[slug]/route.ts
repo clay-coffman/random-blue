@@ -68,19 +68,9 @@ export async function PATCH(
 ) {
   const { slug } = await ctx.params;
 
-  const [company] = await db()
-    .select()
-    .from(companies)
-    .where(eq(companies.slug, slug))
-    .limit(1);
-  if (!company) return errorResponse("not_found", "Company not found.", 404);
-
-  const body = (await req.json().catch(() => null)) as Record<
-    string,
-    unknown
-  > | null;
-  if (!body) return errorResponse("bad_request", "Body required.", 400);
-
+  // Auth gate first — refuses unauth callers before any DB lookup or
+  // body parse, so an attacker can't probe slug existence (404 vs
+  // 400) or force JSON parsing on every request.
   const auth = await authorizeWrite(req);
   if (auth.kind === "denied") {
     if (auth.reason === "csrf") {
@@ -95,6 +85,20 @@ export async function PATCH(
   const machine = auth.kind === "machine";
   const sessionUser = auth.kind === "session" ? auth.user : null;
   const isAdmin = !!sessionUser && isAdminRole(sessionUser.role);
+
+  const [company] = await db()
+    .select()
+    .from(companies)
+    .where(eq(companies.slug, slug))
+    .limit(1);
+  if (!company) return errorResponse("not_found", "Company not found.", 404);
+
+  const body = (await req.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
+  if (!body) return errorResponse("bad_request", "Body required.", 400);
+
   const isOwner =
     !!sessionUser &&
     !!company.claimedByUserId &&

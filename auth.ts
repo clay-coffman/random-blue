@@ -36,6 +36,19 @@ function buildAuth(env?: CloudflareEnv) {
   // __Host- prefix requires Secure + Path=/ + no Domain. Browsers reject
   // it over plain HTTP, so fall back to a plain prefix in dev.
   const isHttps = baseURL?.startsWith("https://") ?? false;
+  const isLocalhost =
+    !!baseURL &&
+    (baseURL.includes("localhost") || baseURL.includes("127.0.0.1"));
+
+  // Fail loud if a real Worker boots with a non-https BETTER_AUTH_URL.
+  // Without this, the cookie silently downgrades to the plain `atlas`
+  // prefix and drops Secure, defeating the __Host- protection. The
+  // codegen path (env undefined) skips the check.
+  if (env && baseURL && !isHttps && !isLocalhost) {
+    throw new Error(
+      `BETTER_AUTH_URL must be https:// in non-localhost environments. Got: ${baseURL}`,
+    );
+  }
 
   return betterAuth({
     baseURL,

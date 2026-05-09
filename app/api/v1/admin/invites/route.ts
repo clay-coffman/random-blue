@@ -51,7 +51,10 @@ export async function POST(req: Request) {
       parsed.error.flatten(),
     );
   }
-  const { email } = parsed.data;
+  // Normalize so `Admin@x.com` and `admin@x.com` don't generate two
+  // separate invite rows. Token redemption already compares
+  // case-insensitively, but we want a clean unique key in the table.
+  const email = parsed.data.email.toLowerCase();
 
   const id = newId("aiv");
   const token = generateToken();

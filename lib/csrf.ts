@@ -9,9 +9,14 @@
 export function isSameOriginRequest(req: Request): boolean {
   const fetchSite = req.headers.get("sec-fetch-site");
   if (fetchSite) {
-    // "none" = user typed the URL or used a bookmark.
-    // "same-origin" = page script on the same origin.
-    return fetchSite === "same-origin" || fetchSite === "none";
+    // Real browsers send "same-origin" for page-script POSTs to the
+    // same origin. "none" only fires on top-level user-typed
+    // navigations, which are GETs — so on a state-changing request
+    // it would be a non-browser caller faking the header (machine
+    // clients should use X-Atlas-Admin-Token, not session cookies).
+    // Reject and let the Origin path handle stripped-header
+    // legitimate clients.
+    return fetchSite === "same-origin";
   }
 
   // Older browsers / proxies that strip Sec-Fetch-* fall through to

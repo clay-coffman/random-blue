@@ -46,8 +46,10 @@ export async function POST(req: Request) {
 
   // Per-IP rate limit on uploads (10 / minute). Cloudflare's native
   // ratelimit binding is fixed-window in-edge — no DB writes, no
-  // KV calls. The check happens BEFORE we read the multipart body so
-  // an attacker can't burn bandwidth probing the limit.
+  // KV calls. The auth gate above already drops unauthenticated
+  // callers; this throttle's job is bounding *authenticated* upload
+  // abuse (stolen session, misbehaving owner) before we pay the
+  // multipart-parse + R2 cost.
   const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
   const { success } = await env().UPLOAD_LIMIT.limit({ key: ip });
   if (!success) {
