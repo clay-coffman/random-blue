@@ -25,9 +25,8 @@ Set via `wrangler secret put <NAME>`. Verify the full set with
 `wrangler secret list`.
 
 `ANTHROPIC_API_KEY`, `ATLAS_ADMIN_TOKEN`, `BETTER_AUTH_SECRET`,
-`BETTER_AUTH_URL`, `PARALLEL_API_KEY`, `RESEND_API_KEY`,
-`R2_ACCESS_KEY_ID`, `R2_ACCOUNT_ID`, `R2_SECRET_ACCESS_KEY`,
-`SITE_PASSWORD`.
+`BETTER_AUTH_URL`, `RESEND_API_KEY`, `R2_ACCESS_KEY_ID`,
+`R2_ACCOUNT_ID`, `R2_SECRET_ACCESS_KEY`, `SITE_PASSWORD`.
 
 `BETTER_AUTH_URL` must match the public origin (currently
 `https://startupstateatlas.dev`); `auth.ts` boot-checks this and
