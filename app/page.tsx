@@ -7,7 +7,10 @@ import {
   SectionHeader,
   Tile,
 } from "@/components/brand";
+import { recentActivity } from "@/lib/activity";
 import { personas } from "@/lib/personas";
+
+export const dynamic = "force-dynamic";
 
 const ctaBase =
   "inline-flex min-h-[44px] items-center justify-center gap-1 rounded-tile border-[1.5px] border-ink px-5 py-3 font-medium shadow-sketch transition-transform hover:-translate-y-0.5 hover:shadow-sketch-hover";
@@ -48,7 +51,8 @@ const audienceCards = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const activity = await recentActivity(6);
   return (
     <div>
       {/* Hero */}
@@ -166,7 +170,7 @@ export default function Home() {
               </li>
             ))}
           </ul>
-          <ActivityTicker className="md:ml-auto" />
+          <ActivityTicker className="md:ml-auto" events={activity} />
         </div>
       </section>
 
