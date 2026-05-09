@@ -61,9 +61,36 @@ is `N=0`.
      **not** silently overwrite — surface the mismatch to the user.
    - **Backfill missing keys (additive only):** if either `PORT` or
      `WRANGLER_PORT` is absent, append it. Leave any other keys
-     (shared secrets) alone.
+     (CLI tokens, etc.) alone.
+   - If a non-main worktree's `.env.local` contains lib/ secrets
+     (`ANTHROPIC_API_KEY`, `PARALLEL_API_KEY`, `RESEND_API_KEY`,
+     `ATLAS_ADMIN_TOKEN`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`),
+     surface that as a mismatch — those belong in `.dev.vars`, and
+     the secrets file is what lib/ code actually reads via `env()`.
+     Do not silently move them.
 
-   ### b. Symlink shared local config files
+   ### b. `.dev.vars` exists and matches main (skip the main checkout)
+
+   `.dev.vars` carries provider secrets read by `env()` in lib/ code.
+   Main is the source of truth.
+
+   - If main has no `.dev.vars`, skip this step and warn the user
+     that lib/ secrets are not configured anywhere.
+   - For each non-main worktree:
+     - If `.dev.vars` is missing, copy main's verbatim, then rewrite
+       the `BETTER_AUTH_URL` line so its port is `3000+N`:
+
+       ```bash
+       sed "s|^BETTER_AUTH_URL=.*|BETTER_AUTH_URL=http://localhost:$((3000+N))|" \
+         <main>/.dev.vars > <worktree>/.dev.vars
+       ```
+
+     - If it exists, verify the non-`BETTER_AUTH_URL` lines match
+       main. If they differ, surface the mismatch — do not
+       overwrite. Verify `BETTER_AUTH_URL` ends with `:<3000+N>`;
+       if not, surface that too.
+
+   ### c. Symlink shared local config files
 
    Skip the main checkout — it holds the canonical files.
 
@@ -101,6 +128,8 @@ is `N=0`.
 6. **Report** for each worktree:
    - Path, branch, dirty/clean
    - `.env.local` status (created / verified / backfilled / mismatch)
+   - `.dev.vars` status (created / verified / port-corrected /
+     mismatch / "main has none")
    - Which symlinks were created or already correct
    - Whether `npm install` updated packages
    - Whether `db:migrate:local` ran and produced new migrations
