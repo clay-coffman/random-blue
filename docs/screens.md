@@ -195,7 +195,7 @@ budget.
 
 Every screen above must work at **375 / 768 / 1280px**. The wireframes
 are desktop-only; mobile layouts are designer's-discretion within
-the rules from `AGENTS.md` § Coding Style:
+the rules from `CLAUDE.md` § Coding Style:
 
 - No horizontal scroll at 375px.
 - Tap targets ≥ 44×44 px.

@@ -1,9 +1,10 @@
 name: CI
 
 # Lint, typecheck, and tests on every PR. Catches schema/type/test
-# drift before it lands on main. `npm run --if-present test` so this
-# passes on commits that don't include a test script (e.g. before
-# PR #16 brings vitest); it runs the suite once present.
+# drift before it lands on main. `npm run --if-present test` is a
+# no-op until a `test` script exists in package.json (PR #16 brings
+# vitest); drop --if-present once that lands so missing-test
+# regressions aren't silently swallowed.
 on:
   pull_request:
     branches: [main]
@@ -21,9 +22,12 @@ on:
       - 'auth.ts'
       - 'middleware.ts'
       - 'next.config.ts'
-      - 'tailwind.config.ts'
       - 'drizzle.config.ts'
       - 'vitest.config.ts'
+      - 'eslint.config.mjs'
+      - 'postcss.config.mjs'
+      - 'open-next.config.ts'
+      - 'wrangler.jsonc'
       - 'tsconfig.json'
       - 'package.json'
       - 'package-lock.json'
@@ -37,6 +41,7 @@ jobs:
   ci:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,7 +49,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install

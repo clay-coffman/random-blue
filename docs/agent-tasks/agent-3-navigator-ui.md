@@ -247,7 +247,7 @@ owner). This is the headline of the hackathon presentation.
 - **Skip the field-level "Why we recommended these" modal** — show
   reasons inline only.
 - ~~Skip mobile polish~~ — **NOT a valid cut.** Mobile is a hard
-  requirement (see `00-shared-context.md` and `AGENTS.md`).
+  requirement (see `00-shared-context.md` and `CLAUDE.md`).
   Judges, founders, and GOEO staff will all open this on phones.
 - **Skip the share URL** — just keep the deep-link working.
 - **Skip skeleton loaders** — simple "Loading…" text is fine.

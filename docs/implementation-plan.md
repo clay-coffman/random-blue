@@ -52,7 +52,7 @@ consume seeded data; they don't need to re-read the CSVs.
 5. **`screens.md`** — sitemap, role gates, wireframe variant pointers
    (only if you own a UI surface).
 
-`AGENTS.md` (root) is the policy doc — read it once at session start;
+`CLAUDE.md` (root) is the policy doc — read it once at session start;
 it doesn't change per agent.
 
 ## Phases at a glance
@@ -525,7 +525,7 @@ This file does **not** restate them. Sources of truth:
   Worktree port table
 - **Branch protocol** — `agent-tasks/00-shared-context.md` § Branch
   protocol
-- **Responsive design (375 / 768 / 1280px)** — `AGENTS.md` § Coding
+- **Responsive design (375 / 768 / 1280px)** — `CLAUDE.md` § Coding
   Style
 
 ## Demo gating
@@ -650,10 +650,14 @@ Phase 5b: ⬜ PENDING — polish + demo dry-run
 Phase 6:  📝 DOCS-ONLY — scope locked (PR #15); implementation deferred to post-MVP
 ```
 
-**Migration collision pending:** PRs #16 and #20 both add
-`db/migrations/0001_*.sql`. Whichever merges first keeps `0001`;
-the second rebases and renumbers to `0002` (rename the SQL file,
-update `db/migrations/meta/_journal.json`, rename the snapshot).
+**Migration collision pending:** PR #16 ships **two** migrations
+(`0001_brainy_sentinels.sql` + `0002_slow_shotgun.sql`); PR #20
+ships one (`0001_magenta_roughhouse.sql`). Whichever PR merges
+first keeps its indexes; the other rebases and renumbers to the
+**next free index** — rename the SQL file(s), update
+`db/migrations/meta/_journal.json`, rename each snapshot.
+Concretely: if PR #16 lands first, PR #20's `0001` → `0003`. If
+PR #20 lands first, PR #16's `0001`/`0002` → `0002`/`0003`.
 
 When you merge a PR, flip its status here in the same commit (or
 in the immediate follow-up). Future agents read this to know

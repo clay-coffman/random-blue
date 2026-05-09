@@ -1,8 +1,16 @@
 # CLAUDE.md
 
-Claude Code-specific notes. Project policy lives in `AGENTS.md` —
-read that first. The phase-by-phase execution map lives in
-`docs/implementation-plan.md`.
+The single coding-agent policy doc for this repo. The phase-by-phase
+execution map lives in `docs/implementation-plan.md`; the per-agent
+briefs live in `docs/agent-tasks/`.
+
+> Agent infrastructure (skills, hooks, workflows, agents) lives as
+> real files under `.agents/skills/`, `.claude/hooks/`,
+> `.claude/agents/`, and `.github/workflows/`. They were vendored
+> from [`clay-coffman/agent-kit`](https://github.com/clay-coffman/agent-kit)
+> at hackathon kickoff but are now repo-local — edit them in place.
+> The corresponding `.claude/skills/<name>` entries are relative
+> symlinks into `.agents/skills/<name>`.
 
 ## Where to start
 
@@ -11,13 +19,12 @@ If you're forking into a worktree:
 1. **`docs/implementation-plan.md`** — find your phase, your branch,
    and what unblocks you.
 2. **`docs/agent-tasks/00-shared-context.md`** — port table, branch
-   protocol, blocker rules.
+   protocol, blocker rules, frozen conventions.
 3. **`docs/agent-tasks/agent-<N>-<slice>.md`** — your detailed brief.
-4. **`AGENTS.md`** (root) — repo policy.
-5. **`docs/architecture.md`** — stack, bindings, frozen contracts.
-6. **`docs/screens.md`** — only if you own a UI surface (the URL
+4. **`docs/architecture.md`** — stack, bindings, frozen contracts.
+5. **`docs/screens.md`** — only if you own a UI surface (the URL
    matrix maps screens to wireframes).
-7. **`docs/design-guidelines.md`** — only if you own a UI surface.
+6. **`docs/design-guidelines.md`** — only if you own a UI surface.
    Brand tokens, primitives, persona URL contract, and the responsive
    non-negotiables. Frozen by Agent 7.
 
@@ -35,13 +42,6 @@ App Router on Cloudflare Workers via `@opennextjs/cloudflare`,
 D1 + Drizzle, R2 for ownership docs, MapLibre GL, Anthropic Claude
 `claude-opus-4-7` for source-bound explanations, Better Auth for
 human users, `X-Atlas-Admin-Token` for machine clients.
-
-**Every UI must be responsive.** Design mobile-first (Tailwind base
-= ≤375px), then layer up `sm: md: lg:`. Test every page at
-375 / 768 / 1280px before calling it done. Full policy in
-`AGENTS.md` § Coding Style. Brand tokens, primitives, and the
-persona URL contract live in `docs/design-guidelines.md` — read it
-before adding any new UI.
 
 ## Source data (provided — don't research, build)
 
@@ -67,76 +67,150 @@ ownership map (URL → wireframe variant → owning agent → role gate)
 is in `docs/screens.md`. Read the HTML/CSS directly; don't render
 or screenshot unless asked.
 
+## Runtime and tooling
+
+- **Node.js 24** (pinned via `package.json` `engines.node` and
+  the asdf install).
+- **Package manager:** npm.
+- **Search:** ripgrep (`rg`). Prefer project scripts over ad-hoc
+  commands.
+- **Cloudflare:** wrangler CLI for D1 / R2 / Workers ops.
+- **Third-party SaaS provisioning:** `stripe projects` —
+  see `.agents/skills/stripe-projects/SKILL.md`.
+- **Don't run destructive git, database, secrets, or infra
+  operations** unless the user explicitly asks for that operation.
+
 ## Commands
 
-The repo bootstrap is merged (Agent 0). Target npm scripts (full
-list in `AGENTS.md` § Commands):
+```bash
+# Development
+npm run dev                       # Next.js dev (port 3000+N)
+npm run preview                   # local Cloudflare Worker preview (port 8787+N)
 
-```
-npm run dev                # next dev (port 3000+N — see worktree formula)
-npm run preview            # local Cloudflare Worker preview (port 8787+N)
-npm run db:generate        # drizzle-kit generate
-npm run db:migrate:local   # wrangler d1 migrations apply --local
-npm run db:migrate:remote  # wrangler d1 migrations apply --remote
-npm run seed               # load personas + read CSVs from docs/source_data/
-npm run cli                # local CLI entry (startup-state ...)
-npm run mcp                # local stdio MCP server
-npm test                   # vitest
-npm run test:e2e           # playwright
-npm run lint / typecheck
-npm run deploy             # wrangler deploy
-```
+# Database (D1 via wrangler + Drizzle)
+npm run db:generate               # drizzle-kit generate
+npm run db:migrate:local          # wrangler d1 migrations apply --local
+npm run db:migrate:remote         # wrangler d1 migrations apply --remote
+npm run seed                      # load personas + read CSVs from docs/source_data/
 
-`postinstall` runs `agent-kit sync` to refresh symlinks under
-`.agents/skills/` and `.claude/`. Don't disable it.
+# Agent-native surfaces (Phase 3 / Agent 6)
+npm run cli                       # exec local CLI (startup-state ...)
+npm run mcp                       # local stdio MCP server
+
+# Quality gates
+npm run lint
+npm run typecheck
+npm test                          # vitest (lands with PR #16)
+npm run test:e2e                  # playwright (Phase 5)
+
+# Deploy
+npm run deploy                    # wrangler deploy
+```
 
 ## Hard rules
 
 Frozen contracts are documented once in `docs/architecture.md` §
 Contracts and `docs/agent-tasks/00-shared-context.md` § Pre-decided
-conventions. Don't restate them here. The names so you know what's
-locked:
+conventions. Don't restate them; just know what's locked:
 
 - API path prefix `/api/v1/...`
 - Error shape `{ error: { code, message, details? } }` via
   `lib/api-error.ts`
-- ID prefixes `fp_*`, `co_*`, `r_*`, `rec_*`, `bos_*` via
-  `lib/ids.ts`
-- snake_case on the wire, camelCase in TS
+- ID prefixes `fp_*`, `co_*`, `r_*`, `rec_*`, `bos_*`, `inv_*` via
+  `lib/ids.ts` (Better Auth's own IDs are generated by Better Auth
+  — leave them alone)
+- snake_case on the wire, camelCase in TS — convert at the
+  Drizzle/zod boundary
 - Dual auth model (Better Auth for humans, `X-Atlas-Admin-Token`
-  for machines)
+  for machines) — full detail in `00-shared-context.md` § Auth-for-write
 - Worktree port formula `PORT = 3000 + N`,
   `WRANGLER_PORT = 8787 + N` — see
   `docs/agent-tasks/00-shared-context.md` § Worktree port table
 
-Two cross-cutting rules that are easy to get wrong:
+## Two env files, two purposes
 
-- **Two env files, two purposes.** `.env.local` (per-worktree, gitignored)
-  carries `PORT`, `WRANGLER_PORT`, and `CLOUDFLARE_API_TOKEN` — read by
-  `process.env` (Next.js, drizzle-kit, wrangler CLI). `.dev.vars` (also
-  gitignored, template at `.dev.vars.example`) carries provider secrets
-  (`ANTHROPIC_API_KEY`, `PARALLEL_API_KEY`, `BETTER_AUTH_SECRET`, etc.) —
-  read by `env()` (the Cloudflare binding helper in `lib/cf.ts`) via
-  `initOpenNextCloudflareForDev()` in `next.config.ts`. Code in `lib/*`
-  reads secrets through `env()` so the same call works in dev (from
-  `.dev.vars`) and prod (from `wrangler secret put`). If you put a secret
-  in `.env.local`, lib code won't see it.
-- **D1 is per-worktree local.** Each worktree has its own SQLite at
-  `<worktree>/.wrangler/state/v3/d1/`. The binding name is the same
-  in every worktree (`startup-state-atlas-db`) but the data is
-  isolated. After pulling new migrations from `main`, run
-  `npm run db:migrate:local` and `npm run seed` in your worktree.
-  Production D1 is created at deploy time, not now.
-- **Schema is collaborative.** Any agent may edit `db/schema.ts` and
-  generate a migration in their own worktree. **Rebase against
-  `main` before running `npm run db:generate`** so two parallel
-  agents don't ship colliding migration numbers (`0003_*.sql`). If a
-  collision lands on `main`, rename the loser's file to the next
-  free index. Agent 1 owns the *initial* schema + persona seed; the
-  Better Auth tables (`user`, `session`, `account`, `verification`)
-  are frozen after Agent 1 runs `@better-auth/cli generate`. If you
-  need a column you can't add yourself, append a request to
-  `docs/agent-tasks/schema-requests.md`.
+- **`.env.local`** (per-worktree, gitignored) carries `PORT`,
+  `WRANGLER_PORT`, and `CLOUDFLARE_API_TOKEN` — read by
+  `process.env` (Next.js, drizzle-kit, wrangler CLI).
+- **`.dev.vars`** (also gitignored, template at `.dev.vars.example`)
+  carries provider secrets (`ANTHROPIC_API_KEY`, `PARALLEL_API_KEY`,
+  `BETTER_AUTH_SECRET`, etc.) — read by `env()` (the Cloudflare
+  binding helper in `lib/cf.ts`) via `initOpenNextCloudflareForDev()`
+  in `next.config.ts`. Code in `lib/*` reads secrets through
+  `env()` so the same call works in dev (from `.dev.vars`) and prod
+  (from `wrangler secret put`). **If you put a secret in
+  `.env.local`, lib code won't see it.**
+
+In production, secrets live on the Worker via
+`wrangler secret put <NAME>`. `.env.example` lists every required
+variable.
+
+## D1 is per-worktree local
+
+Each worktree has its own SQLite at
+`<worktree>/.wrangler/state/v3/d1/`. The binding name is the same
+in every worktree (`startup-state-atlas-db`) but the data is
+isolated. After pulling new migrations from `main`, run
+`npm run db:migrate:local` and `npm run seed` in your worktree.
+Production D1 is created at deploy time, not now.
+
+## Schema is collaborative
+
+Any agent may edit `db/schema.ts` and generate a migration in
+their own worktree. **Rebase against `main` before running
+`npm run db:generate`** so two parallel agents don't ship colliding
+migration numbers (`0001_*.sql`). If a collision lands on `main`,
+rename the loser's file to the next free index. Agent 1 owns the
+*initial* schema + persona seed; the Better Auth tables (`user`,
+`session`, `account`, `verification`) are frozen after Agent 1 runs
+`@better-auth/cli generate`. If you need a column you can't add
+yourself, append a request to `docs/agent-tasks/schema-requests.md`.
+
+For migration-numbering during Phase 3-4 specifically (when several
+PRs each add a migration), see
+`docs/agent-tasks/00-shared-context.md` § Schema ownership.
+
+## Coding Style
+
+- TypeScript strict mode. Formatting via Prettier (printWidth 80).
+- **`target="_blank"` links must include `rel="noopener noreferrer"`.**
+- **Responsive design (REQUIRED).** Every shipped page — Founder
+  Navigator, map, company profiles, claim flow, GOEO admin UI,
+  `/agents` — must work on **both desktop and mobile**. Mobile is
+  not a "nice-to-have" or a v2; the demo audience and real founders
+  will open this on phones. Concretely:
+  - Design mobile-first (Tailwind `base` styles target ≤ 375px),
+    then layer `sm:` / `md:` / `lg:` breakpoints up.
+  - Test every shipped page at three widths: **375px** (iPhone
+    SE), **768px** (tablet), **1280px+** (desktop). No horizontal
+    scroll at 375px. Tap targets ≥ 44×44 px.
+  - Map and admin tables need explicit mobile fallbacks: tables
+    collapse to stacked cards or use horizontal scroll inside a
+    bounded container; the map fills the viewport with a
+    bottom-sheet sidebar instead of a side panel.
+  - Use the device toolbar in `agent-browser` (or
+    `mcp__playwright__browser_resize`) during UI testing — don't
+    ship a page you've only viewed at desktop width.
+
+## Testing
+
+- Unit / component: **Vitest**.
+- E2E: **Playwright** (Phase 5; manual smoke tests until then).
+- External services: **no mocking lib** — call real Anthropic API
+  in tests with cheap models, or stub with hand-written fakes.
+- Use `agent-browser` for browser automation and visual checks
+  (`.claude/hooks/allow-agent-browser.sh` auto-allows it).
+
+## Operations
+
+- **Deploy target:** Cloudflare Workers via `wrangler deploy`.
+- **Observability:** Cloudflare Workers built-in (free) — set
+  `observability.enabled = true` in `wrangler.jsonc`. Live tail
+  with `wrangler tail`. Search/retention via the Workers dashboard.
+  No Sentry/PostHog this hackathon.
+- **Production read-only DB access:**
+  `wrangler d1 execute startup-state-atlas-db --command "SELECT ..."`
+  from the CLI. Read queries only.
 
 ## Working in a worktree
 
@@ -144,10 +218,11 @@ If you're a parallel Claude Code session spawned in a worktree, the
 reading order in "Where to start" above is the only thing you need.
 
 `git checkout -b feat/<slice>` first (the `protect-main` hook blocks
-edits on `main`). Work to your brief's DONE-when criteria. Keep a
-clean PR scope.
+edits on `main`). Branch names follow `feat/*`, `fix/*`, `chore/*`,
+`docs/*`, or `refactor/*`. Commit messages use the matching
+conventional prefixes. PRs target `main` — squash-merge only.
 
-## Claude Code Hooks
+## Hooks
 
 Local safety + convenience hooks in `.claude/settings.json` and
 `.claude/hooks/`:
@@ -163,19 +238,27 @@ Local safety + convenience hooks in `.claude/settings.json` and
 - **`allow-doppler.sh`** — installed but unused. No-op.
 - **`cc-notify.sh`** — Notification + Stop hook (desktop ping).
 
-Codex follows `AGENTS.md`, `.agents/skills/`, and its own approval
-policy.
-
-## Claude Skills
+## Skills
 
 Skills live in `.agents/skills/<name>/SKILL.md`. The corresponding
-`.claude/skills/<name>` is a relative symlink so Claude and Codex
-share one source of truth.
+`.claude/skills/<name>` is a relative symlink so all loaders share
+one source of truth.
 
 Add a skill: drop `SKILL.md` (with frontmatter) into a new
 `.agents/skills/<name>/`, then symlink `.claude/skills/<name>` →
 `../../.agents/skills/<name>`. Edit by editing the source file
 directly — there's no longer any "shared package" to publish back to.
 
-Claude-only behavior stays in `.claude/` and must not duplicate
-project policy from `AGENTS.md`.
+## MCP
+
+`.mcp.json` is gitignored — keep it local or symlinked from a
+trusted source. No bearer tokens, API keys, or PATs in tracked
+files. For local agent-side MCP usage, prefer env-var-based auth.
+
+## Two `AGENTS.md` files? Just one now.
+
+Historically this repo had two: a root `/AGENTS.md` for coding agents
+(Codex + Claude Code) and a `public/AGENTS.md` for end-user agents
+calling the API. The root one is gone — this `CLAUDE.md` is the
+single coding-agent doc. Agent 6's `public/AGENTS.md` (served at
+`https://<host>/AGENTS.md`) is unrelated and stays.

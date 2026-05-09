@@ -44,7 +44,7 @@ jobs:
 
             ## Setup
 
-            1. Read CLAUDE.md and AGENTS.md for project conventions.
+            1. Read CLAUDE.md for project conventions.
             2. Read .claude/agents/code-reviewer.md for the detailed review checklist — use it as your primary reference.
             3. Read additional documentation under documentation/ or docs/ ONLY if you need to understand a specific convention or pattern referenced in the changed files.
 
