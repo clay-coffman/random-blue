@@ -635,30 +635,30 @@ before the 24-hour mark.
 
 ## Status snapshot (update as phases complete)
 
+> **Discipline:** if your PR closes or advances any line in the
+> snapshot below, flip the line **in the same PR**. The doc is the
+> contract for what's free to start; stale state actively misleads
+> the next agent. The `ship` skill (Phase 1) checks for this before
+> committing.
+
 ```
 Phase 1:  ✅ DONE  (PR #6, 2026-05-08)
 Phase 2:  ✅ DONE  (Agent 1: PR #10/#13; Agent 7: PR #11)
 Phase 3:  🟡 IN FLIGHT
-            Agent 2 — recommend:     PR #16 OPEN (needs rebase; migration 0001 collides with PR #20)
+            Agent 2 — recommend:     ✅ DONE (PR #16, c4273a6)
             Agent 3 — navigator:     ✅ DONE (PR #17, 513ae26)
             Agent 6 — agent-native:  ⬜ NOT STARTED
 Phase 4:  🟡 IN FLIGHT
-            Agent 4 — map+profiles:  ⬜ NOT STARTED
-            Agent 5 — auth+admin:    PR #20 OPEN (migration 0001 collides with PR #16)
+            Agent 4 — map+profiles:  ⬜ NOT STARTED (wt3 picking up next on `feat/map`)
+            Agent 5 — auth+admin:    PR #20 OPEN (must rebase + renumber 0001 → 0003)
 Phase 5a: ⬜ PENDING — production hardening (CI, deploy, secrets, security review)
 Phase 5b: ⬜ PENDING — polish + demo dry-run
 Phase 6:  📝 DOCS-ONLY — scope locked (PR #15); implementation deferred to post-MVP
 ```
 
-**Migration collision pending:** PR #16 ships **two** migrations
-(`0001_brainy_sentinels.sql` + `0002_slow_shotgun.sql`); PR #20
-ships one (`0001_magenta_roughhouse.sql`). Whichever PR merges
-first keeps its indexes; the other rebases and renumbers to the
-**next free index** — rename the SQL file(s), update
-`db/migrations/meta/_journal.json`, rename each snapshot.
-Concretely: if PR #16 lands first, PR #20's `0001` → `0003`. If
-PR #20 lands first, PR #16's `0001`/`0002` → `0002`/`0003`.
-
-When you merge a PR, flip its status here in the same commit (or
-in the immediate follow-up). Future agents read this to know
-what's free to start.
+**Migration state on `main`:** `0000_flaky_scarlet_spider` (Agent 1)
++ `0001_brainy_sentinels` + `0002_slow_shotgun` (PR #16). The next
+free index is `0003`. PR #20's `0001_magenta_roughhouse.sql` must
+rebase onto main and regenerate as `0003_*.sql` — recipe in the PR
+#20 comment thread; convention in
+`docs/agent-tasks/00-shared-context.md` § Schema ownership.
