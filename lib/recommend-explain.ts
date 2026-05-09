@@ -7,7 +7,7 @@
 import { z } from "zod";
 import { ANTHROPIC_MODEL, anthropic, cachedSystem } from "./anthropic";
 import type { Scored } from "./recommend";
-import type { FounderPassportInput } from "@/types/api";
+import type { FounderPassportInput } from "@/schemas/founder-passport";
 
 const HARD_TIMEOUT_MS = 12_000;
 const MAX_OUTPUT_TOKENS = 800;

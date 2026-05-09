@@ -12,9 +12,14 @@
 #
 # `.env.local` keeps PORT / WRANGLER_PORT and any drizzle-kit / wrangler CLI
 # credentials (those tools read process.env directly).
+#
+# Per-worktree note: `BETTER_AUTH_URL` includes a port; main checkout uses
+# 3000, worktrees use 3000+N (see `docs/agent-tasks/00-shared-context.md`
+# § Worktree port table). Adjust to match the worktree you're filling this
+# out in.
 
 ANTHROPIC_API_KEY=
 ATLAS_ADMIN_TOKEN=
 BETTER_AUTH_SECRET=
-BETTER_AUTH_URL=http://localhost:3001
+BETTER_AUTH_URL=http://localhost:3000
 RESEND_API_KEY=

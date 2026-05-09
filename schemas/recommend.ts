@@ -1,3 +1,8 @@
+// Zod schemas for the recommend + plan + enrich endpoints. The shapes
+// match the wire-format `*Wire` types declared in `types/api.ts` so a
+// single contract flows from runtime validation → TS types → front-end
+// codec (`lib/api-codec.ts`).
+
 import { z } from "zod";
 import { FounderPassportInput } from "./founder-passport";
 
@@ -20,19 +25,24 @@ export type Bucket = z.infer<typeof Bucket>;
 export const RecommendedResource = z.object({
   resource_id: z.string(),
   title: z.string(),
-  source_url: z.string().nullable(),
   score: z.number(),
   bucket: Bucket,
   reasons: z.array(z.string()),
-  why: z.string().nullable(), // LLM "Because…" sentence; null if fallback
-  action: z.string().nullable(),
+  // LLM "Because…" sentence; empty string when fallback (Anthropic timeout / parse fail).
+  because: z.string(),
+  // Suggested next action; empty string when none.
+  action_text: z.string(),
+  kind: z.string().optional(),
+  source_url: z.string().optional(),
+  contact_email: z.string().optional(),
 });
 export type RecommendedResource = z.infer<typeof RecommendedResource>;
 
 export const RecommendResponse = z.object({
   passport_id: z.string(),
   recommendations: z.array(RecommendedResource),
-  llm_used: z.boolean(),
+  // ISO 8601 — used by the front-end for cache-staleness display.
+  generated_at: z.string(),
 });
 export type RecommendResponse = z.infer<typeof RecommendResponse>;
 
@@ -54,15 +64,14 @@ export const EnrichRequest = z.object({
 export type EnrichRequest = z.infer<typeof EnrichRequest>;
 
 export const EnrichField = z.object({
+  name: z.string(),
   value: z.unknown(),
   confidence: z.number().min(0).max(1),
 });
 export type EnrichField = z.infer<typeof EnrichField>;
 
 export const EnrichResponse = z.object({
-  fields: z.record(z.string(), EnrichField),
-  source_url: z.string(),
-  fetched_at: z.number(),
+  fields: z.array(EnrichField),
   degraded: z.boolean().optional(),
 });
 export type EnrichResponse = z.infer<typeof EnrichResponse>;

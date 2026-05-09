@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bucketize, scoreResource } from "@/lib/recommend";
 import type { ResourceRow } from "@/lib/recommend";
-import type { FounderPassportInput } from "@/types/api";
+import type { FounderPassportInput } from "@/schemas/founder-passport";
 
 // ─── Resource fixtures ─────────────────────────────────────────────
 

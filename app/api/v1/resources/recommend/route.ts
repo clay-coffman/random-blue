@@ -20,8 +20,8 @@ import { explainRecommendations } from "@/lib/recommend-explain";
 import { safeParseJson } from "@/lib/json-safe";
 import type {
   Bucket,
-  RecommendResponse,
-  RecommendedResource,
+  RecommendResponseWire,
+  RecommendedResourceWire,
 } from "@/types/api";
 
 export const runtime = "edge";
@@ -160,9 +160,10 @@ export async function POST(req: Request) {
     // 3. Source-bound LLM "Because…" for top 6 (now + next).
     const topForLLM = labelled.filter((s) => s.bucket !== "ignore");
     const explanations = await explainRecommendations(passport, topForLLM);
-    const llmUsed = explanations.size > 0;
 
-    // 4. Persist (idempotent: replace).
+    // 4. Persist (idempotent: replace). The DB column `actionText` carries
+    // the "Because…" sentence today; if a future iteration wants a separate
+    // suggested-action field, add a `because_text` column and migrate.
     await d
       .delete(recommendations)
       .where(eq(recommendations.passportId, passportId));
@@ -182,21 +183,24 @@ export async function POST(req: Request) {
     }
 
     // 5. Shape response.
-    const recs: RecommendedResource[] = labelled.map((s) => ({
+    const recs: RecommendedResourceWire[] = labelled.map((s) => ({
       resource_id: s.resource.id,
       title: s.resource.title,
-      source_url: s.resource.sourceUrl,
       score: s.score,
       bucket: s.bucket,
       reasons: s.reasons,
-      why: explanations.get(s.resource.id) ?? null,
-      action: null,
+      because: explanations.get(s.resource.id) ?? "",
+      action_text: "",
+      kind: s.resource.kind ?? undefined,
+      source_url: s.resource.sourceUrl ?? undefined,
+      // Resources loader doesn't currently surface contact_email; left
+      // for a follow-up if/when downstream needs it.
     }));
 
-    const payload: RecommendResponse = {
+    const payload: RecommendResponseWire = {
       passport_id: passportId,
       recommendations: recs,
-      llm_used: llmUsed,
+      generated_at: new Date().toISOString(),
     };
     return Response.json(payload);
   } catch (err) {

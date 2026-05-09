@@ -1,12 +1,12 @@
 // Deterministic resource scoring.
 // Pure functions — no DB, no IO. Tested in isolation by tests/recommend.test.ts.
 
+import type { Bucket } from "@/types/api";
 import type {
-  Bucket,
   FounderGoal,
   FounderPassportInput,
   FounderStage,
-} from "@/types/api";
+} from "@/schemas/founder-passport";
 
 export type ResourceLocation = {
   county: string | null;

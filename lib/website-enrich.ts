@@ -15,7 +15,7 @@
 
 import { z } from "zod";
 import { ANTHROPIC_MODEL, anthropic, cachedSystem } from "./anthropic";
-import type { EnrichResponse } from "@/types/api";
+import type { EnrichResponse } from "@/schemas/recommend";
 
 const FETCH_TIMEOUT_MS = 8_000;
 const LLM_TIMEOUT_MS = 10_000;
@@ -55,11 +55,9 @@ Return ONLY a single JSON object matching this exact shape (no prose, no code fe
 }
 Use null when the website doesn't make a value clear. Do not invent data.`;
 
-function degraded(url: string): EnrichResponse {
+function degraded(_url: string): EnrichResponse {
   return {
-    fields: {},
-    source_url: url,
-    fetched_at: Date.now(),
+    fields: [],
     degraded: true,
   };
 }
@@ -217,16 +215,12 @@ export async function enrichWebsite(url: string): Promise<EnrichResponse> {
   const extracted = await extractWithLLM(url, pageText);
   if (!extracted) return degraded(url);
 
-  const fields: EnrichResponse["fields"] = {};
+  const fields: EnrichResponse["fields"] = [];
   for (const [k, v] of Object.entries(extracted)) {
     if (v === null || v === undefined) continue;
     if (Array.isArray(v) && v.length === 0) continue;
-    fields[k] = { value: v, confidence: LLM_CONFIDENCE };
+    fields.push({ name: k, value: v, confidence: LLM_CONFIDENCE });
   }
 
-  return {
-    fields,
-    source_url: url,
-    fetched_at: Date.now(),
-  };
+  return { fields };
 }

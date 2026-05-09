@@ -5,8 +5,8 @@ import { ApiError, errorResponse } from "@/lib/api-error";
 import { Bucket } from "@/schemas/recommend";
 import { safeParseJson } from "@/lib/json-safe";
 import type {
-  PlanResponse,
-  RecommendedResource,
+  RecommendResponseWire,
+  RecommendedResourceWire,
 } from "@/types/api";
 
 export const runtime = "edge";
@@ -42,7 +42,7 @@ export async function GET(
       .where(eq(recommendations.passportId, id))
       .orderBy(desc(recommendations.score));
 
-    const recs: RecommendedResource[] = [];
+    const recs: RecommendedResourceWire[] = [];
     for (const r of rows) {
       // Validate the bucket value at the boundary; drop the row if it's
       // unrecognized rather than silently labeling it `next`.
@@ -51,19 +51,23 @@ export async function GET(
       recs.push({
         resource_id: r.res.id,
         title: r.res.title,
-        source_url: r.res.sourceUrl,
         score: r.rec.score,
         bucket: bucketParsed.data,
         reasons: safeParseJson<string[]>(r.rec.reasonsJson, []),
-        why: r.rec.actionText ?? null,
-        action: null,
+        // `actionText` column carries the LLM "Because…" sentence (see
+        // recommend POST handler).
+        because: r.rec.actionText ?? "",
+        action_text: "",
+        kind: r.res.kind ?? undefined,
+        source_url: r.res.sourceUrl ?? undefined,
+        contact_email: r.res.contactEmail ?? undefined,
       });
     }
 
-    const payload: PlanResponse = {
+    const payload: RecommendResponseWire = {
       passport_id: id,
       recommendations: recs,
-      llm_used: recs.some((r) => r.why !== null),
+      generated_at: new Date().toISOString(),
     };
     return Response.json(payload);
   } catch (err) {
