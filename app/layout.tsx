@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import {
   Roboto_Serif,
   Hanken_Grotesk,
@@ -7,6 +8,8 @@ import {
   JetBrains_Mono,
 } from "next/font/google";
 import "./globals.css";
+import { getAuth } from "@/auth";
+import { UserMenu } from "@/components/site/UserMenu";
 
 const robotoSerif = Roboto_Serif({
   subsets: ["latin"],
@@ -58,7 +61,32 @@ const footerLinks = [
   { href: REPO_URL, label: "GitHub", external: true },
 ];
 
-function SiteNav() {
+type HeaderUser = {
+  email: string;
+  name: string;
+  role: string;
+  planHref?: string;
+};
+
+async function loadHeaderUser(): Promise<HeaderUser | null> {
+  const session = await getAuth()
+    .api.getSession({ headers: await headers() })
+    .catch(() => null);
+  if (!session?.user) return null;
+  const user = session.user as { email: string; name?: string | null; role?: string | null };
+  const role = user.role ?? "founder";
+  // Defer the founder-passport lookup to /me/plan so the root layout
+  // does not issue a D1 query on every authenticated navigation.
+  return {
+    email: user.email,
+    name: user.name ?? "",
+    role,
+    planHref: role === "founder" ? "/me/plan" : undefined,
+  };
+}
+
+async function SiteNav() {
+  const user = await loadHeaderUser();
   return (
     <header className="sticky top-0 z-50 border-b border-topo bg-paper/90 backdrop-blur-sm">
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-center gap-4 px-4 py-3 sm:px-7 md:gap-6">
@@ -97,18 +125,29 @@ function SiteNav() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2 md:ml-0">
-          <Link
-            href="/sign-in"
-            className="hidden whitespace-nowrap rounded-pill border-[1.5px] border-ink bg-paper-2 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition hover:-translate-y-0.5 sm:inline-flex"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/sign-up?intent=claim"
-            className="inline-flex whitespace-nowrap items-center gap-1 rounded-pill border-[1.5px] border-ember bg-ember px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:-translate-y-0.5"
-          >
-            Claim a company →
-          </Link>
+          {user ? (
+            <UserMenu
+              name={user.name}
+              email={user.email}
+              role={user.role}
+              planHref={user.planHref}
+            />
+          ) : (
+            <>
+              <Link
+                href="/sign-in"
+                className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-pill border-[1.5px] border-ink bg-paper-2 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition hover:-translate-y-0.5"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/sign-up?intent=claim"
+                className="inline-flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-pill border-[1.5px] border-ember bg-ember px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:-translate-y-0.5"
+              >
+                Claim a company →
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>
