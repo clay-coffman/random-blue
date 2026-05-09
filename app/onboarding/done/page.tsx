@@ -9,24 +9,55 @@ import { ScribbleDivider } from "@/components/brand";
 
 export const dynamic = "force-dynamic";
 
-const COPY: Record<
-  string,
-  { title: string; lede: string; cta: { label: string; href: string } }
-> = {
+type Cta = { label: string; href: string };
+type RoleCopy = {
+  title: string;
+  lede: string;
+  primary: Cta;
+  secondary: Cta[];
+};
+
+const SETTINGS: Cta = { label: "Settings →", href: "/settings" };
+const MAP: Cta = { label: "Open the map →", href: "/map" };
+
+const COPY: Record<string, RoleCopy> = {
   founder: {
     title: "Welcome, founder.",
     lede: "Your passport is saved. Here's your 90-day plan.",
-    cta: { label: "See my 90-day plan →", href: "/founder" },
+    primary: { label: "See my 90-day plan →", href: "/founder" },
+    secondary: [MAP, SETTINGS],
   },
   owner: {
     title: "Welcome, owner.",
     lede: "Verify your domain to publish updates to your company profile.",
-    cta: { label: "Find my company →", href: "/onboarding/owner" },
+    primary: { label: "Find my company →", href: "/onboarding/owner" },
+    secondary: [MAP, SETTINGS],
   },
   investor: {
     title: "Welcome, investor.",
-    lede: "Your map is filtered to match your preferences.",
-    cta: { label: "Open the map →", href: "/map" },
+    lede: "Your preferences are saved. We're wiring them into the map next — for now you can filter manually.",
+    primary: {
+      label: "Edit your public profile →",
+      href: "/me/investor",
+    },
+    secondary: [
+      { label: "Browse the investor directory →", href: "/investors" },
+      { label: "Saved companies →", href: "/me/saved" },
+      MAP,
+      SETTINGS,
+    ],
+  },
+  goeo_admin: {
+    title: "Welcome.",
+    lede: "You have admin access to the GOEO console.",
+    primary: { label: "Open the admin dashboard →", href: "/admin" },
+    secondary: [SETTINGS],
+  },
+  superadmin: {
+    title: "Welcome.",
+    lede: "You have superadmin access to the GOEO console.",
+    primary: { label: "Open the admin dashboard →", href: "/admin" },
+    secondary: [SETTINGS],
   },
 };
 
@@ -38,7 +69,7 @@ export default async function OnboardingDonePage() {
   const copy = COPY[role] ?? COPY.founder;
 
   // Founders: if they already have a passport, link to that plan.
-  let ctaHref = copy.cta.href;
+  let primaryHref = copy.primary.href;
   if (role === "founder") {
     const [latest] = await db()
       .select({ id: founderPassports.id })
@@ -46,7 +77,7 @@ export default async function OnboardingDonePage() {
       .where(eq(founderPassports.userId, session.user.id))
       .orderBy(desc(founderPassports.createdAt))
       .limit(1);
-    if (latest) ctaHref = `/plan/${latest.id}`;
+    if (latest) primaryHref = `/plan/${latest.id}`;
   }
 
   return (
@@ -66,17 +97,25 @@ export default async function OnboardingDonePage() {
       <p className="mt-3 text-base leading-relaxed text-ink-2">{copy.lede}</p>
       <ScribbleDivider className="my-6" />
       <Link
-        href={ctaHref}
+        href={primaryHref}
         className="inline-flex min-h-[44px] items-center justify-center rounded-tile border-[1.5px] border-ember bg-ember px-5 py-3 font-medium text-paper shadow-sketch transition-transform hover:-translate-y-0.5 hover:shadow-sketch-hover"
       >
-        {copy.cta.label}
+        {copy.primary.label}
       </Link>
-      <Link
-        href="/settings"
-        className="mt-4 font-mono text-xs uppercase tracking-wider text-ink-3 hover:text-ember"
-      >
-        Or visit settings →
-      </Link>
+      {copy.secondary.length > 0 ? (
+        <ul className="mt-4 flex flex-col items-center gap-2">
+          {copy.secondary.map((cta) => (
+            <li key={cta.href}>
+              <Link
+                href={cta.href}
+                className="font-mono text-xs uppercase tracking-wider text-ink-3 hover:text-ember"
+              >
+                {cta.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </section>
   );
 }

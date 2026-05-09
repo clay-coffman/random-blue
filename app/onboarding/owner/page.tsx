@@ -46,9 +46,6 @@ export default function OwnerOnboardingPage() {
 
   return (
     <section className="mx-auto flex min-h-[calc(100dvh-180px)] max-w-2xl flex-col px-4 py-10 sm:px-7">
-      <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">
-        Owner · step 2 of 3
-      </p>
       <h1 className="font-serif text-3xl leading-tight tracking-tight sm:text-4xl">
         Find your company.
       </h1>
