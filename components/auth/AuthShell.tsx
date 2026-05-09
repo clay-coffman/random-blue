@@ -32,7 +32,7 @@ export function AuthShell({
         {title}
       </h1>
       {lede ? (
-        <p className="mt-3 text-base leading-relaxed text-ink-2">{lede}</p>
+        <div className="mt-3 text-base leading-relaxed text-ink-2">{lede}</div>
       ) : null}
       <ScribbleDivider className="my-6" />
       <div className="flex flex-1 flex-col">{children}</div>
@@ -52,11 +52,11 @@ function Stepper({ steps }: { steps: Step[] }) {
       {steps.map((s, i) => (
         <li
           key={s.label}
-          className="flex items-center gap-2"
-          style={i < steps.length - 1 ? { flex: "1 1 0%" } : undefined}
+          aria-current={s.state === "current" ? "step" : undefined}
+          className={`flex items-center gap-2 ${i < steps.length - 1 ? "flex-1" : ""}`}
         >
           <span
-            aria-current={s.state === "current" ? "step" : undefined}
+            aria-hidden
             className={
               s.state === "current"
                 ? "grid h-[22px] w-[22px] flex-none place-items-center rounded-full border-[1.5px] border-ember bg-ember font-mono text-[11px] font-semibold text-paper"

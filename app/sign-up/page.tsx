@@ -82,7 +82,7 @@ export default function SignUpRolePage() {
           return (
             <label
               key={r.id}
-              className={`flex cursor-pointer items-center gap-3 rounded-tile border-[1.5px] p-3 transition ${
+              className={`flex cursor-pointer items-center gap-3 rounded-tile border-[1.5px] p-3 transition has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ember ${
                 selected
                   ? "border-ember bg-ember-tint shadow-sketch"
                   : "border-topo bg-paper-2 hover:-translate-y-0.5 hover:border-ink"

@@ -1,16 +1,12 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { count, eq } from "drizzle-orm";
 import { getAuth } from "@/auth";
 import { isAdminRole, isSuperadmin } from "@/lib/auth-utils";
-import { db } from "@/lib/db";
-import { businessOwnershipSubmissions } from "@/db/schema";
+import { getPendingSubmissionsCount } from "@/lib/admin/pending";
 
 export const dynamic = "force-dynamic";
 
-// TODO(phase-5): wire additional admin sections — wireframe also calls
-// out Edit log, Reports, Imports, Audit log, Feature flags, API health.
 const NAV_GROUPS: Array<{
   label: string;
   items: Array<{ href: string; label: string; superadminOnly?: boolean }>;
@@ -41,14 +37,6 @@ const NAV_GROUPS: Array<{
   },
 ];
 
-async function loadPendingByRoute(): Promise<Record<string, number>> {
-  const [{ pending }] = await db()
-    .select({ pending: count() })
-    .from(businessOwnershipSubmissions)
-    .where(eq(businessOwnershipSubmissions.status, "pending"));
-  return { "/admin/submissions": pending };
-}
-
 export default async function AdminLayout({
   children,
 }: {
@@ -61,7 +49,10 @@ export default async function AdminLayout({
   const isSuper = isSuperadmin(role);
 
   const user = session.user as { name: string; email: string };
-  const pendingByRoute = await loadPendingByRoute();
+  const pendingSubmissions = await getPendingSubmissionsCount();
+  const pendingByRoute: Record<string, number> = {
+    "/admin/submissions": pendingSubmissions,
+  };
 
   return (
     <div className="grid min-h-[calc(100dvh-100px)] grid-cols-1 md:grid-cols-[220px_1fr]">

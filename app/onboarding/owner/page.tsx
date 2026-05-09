@@ -122,7 +122,7 @@ export default function OwnerOnboardingPage() {
           <p className="text-sm text-ink-2">Don&rsquo;t see your company?</p>
           <a
             href="mailto:atlas@goed.utah.gov?subject=Request%20to%20add%20company"
-            className="inline-flex min-h-[36px] items-center justify-center rounded-tile border-[1.5px] border-ink bg-paper px-3 py-1.5 text-sm transition-transform hover:-translate-y-0.5 hover:shadow-sketch"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-tile border-[1.5px] border-ink bg-paper px-4 py-2 text-sm transition-transform hover:-translate-y-0.5 hover:shadow-sketch"
           >
             + Add a new company
           </a>

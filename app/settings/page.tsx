@@ -136,7 +136,7 @@ export default async function SettingsPage() {
             href="#role"
             className="mt-2 inline-block font-medium text-ember underline-offset-4 hover:underline"
           >
-            Switch role →
+            Manage role →
           </Link>
         </div>
       </aside>
