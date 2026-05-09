@@ -47,12 +47,19 @@ function VerifyForm() {
     }
   }
 
-  async function resend() {
+  async function resend(): Promise<string | void> {
     setError(null);
-    await authClient.emailOtp.sendVerificationOtp({
-      email,
-      type: "sign-in",
-    });
+    try {
+      const result = await authClient.emailOtp.sendVerificationOtp({
+        email,
+        type: "sign-in",
+      });
+      if (result.error) {
+        return result.error.message ?? "Couldn't resend code.";
+      }
+    } catch (err) {
+      return err instanceof Error ? err.message : "Network error. Try again.";
+    }
   }
 
   if (!email) {

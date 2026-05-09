@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { D1Database } from "@cloudflare/workers-types";
@@ -119,15 +120,36 @@ function buildAuth(env?: CloudflareEnv) {
         otpLength: 6,
         expiresIn: 600, // 10 minutes
         // We pre-create users in /api/auth/start-signup before
-        // sending the sign-in OTP, so signIn.emailOtp must refuse
-        // to auto-create unknown emails. That gives /sign-in a
-        // clean "no account found" error to surface.
+        // sending the sign-in OTP. disableSignUp: true means
+        // signIn.emailOtp won't auto-create accounts for unknown
+        // emails (anti-enumeration: unknown emails get the same
+        // INVALID_OTP response as a wrong code).
         disableSignUp: true,
         async sendVerificationOTP({ email, otp }) {
           await sendVerificationEmail(email, otp);
         },
       }),
     ],
+    databaseHooks: {
+      session: {
+        create: {
+          // First successful sign-in proves the user controls the
+          // email — flip emailVerified=true. Pre-created rows from
+          // /api/auth/start-signup land with emailVerified=false so
+          // a row with emailVerified=false + no sessions is an
+          // unclaimed pending signup, not a real account.
+          before: async (session) => {
+            if (env) {
+              await drizzle(env.DB as unknown as D1Database)
+                .update(authSchema.user)
+                .set({ emailVerified: true })
+                .where(eq(authSchema.user.id, session.userId));
+            }
+            return { data: session };
+          },
+        },
+      },
+    },
     session: {
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // sliding refresh once/day

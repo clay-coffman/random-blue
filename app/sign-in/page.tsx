@@ -51,28 +51,16 @@ function SignInForm() {
     setServerError(null);
     setSubmitting(true);
     try {
-      const result = await authClient.emailOtp.sendVerificationOtp({
+      // Anti-enumeration: Better Auth's send-verification-otp with
+      // disableSignUp:true returns success for unknown emails too
+      // (without actually sending mail). We always route to
+      // /sign-in/verify; an unknown email simply never receives a
+      // code and signIn.emailOtp returns INVALID_OTP at the verify
+      // step — same response a wrong-code attempt would get.
+      await authClient.emailOtp.sendVerificationOtp({
         email: values.email,
         type: "sign-in",
       });
-      if (result.error) {
-        // disableSignUp:true on the OTP plugin maps unknown emails to
-        // USER_NOT_FOUND. Surface a sign-up nudge instead of the
-        // generic message.
-        const code = (result.error as { code?: string }).code;
-        if (
-          code === "USER_NOT_FOUND" ||
-          /not.*found/i.test(result.error.message ?? "")
-        ) {
-          setServerError(
-            "No account found for that email. Sign up to create one.",
-          );
-        } else {
-          setServerError(result.error.message ?? "Couldn't send code.");
-        }
-        setSubmitting(false);
-        return;
-      }
       const sp = new URLSearchParams();
       sp.set("email", values.email);
       if (next && next !== "/") sp.set("next", next);

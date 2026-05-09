@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const OTP_TTL_SECONDS = 600; // matches auth.ts emailOTP.expiresIn
 const RESEND_COOLDOWN_SECONDS = 30;
 
 export type OtpInputGridProps = {
   onSubmit: (otp: string) => Promise<void>;
-  onResend: () => Promise<void>;
+  // Returning a string surfaces a resend error to the user; returning
+  // void (or nothing) is treated as success.
+  onResend: () => Promise<string | void>;
   submitting: boolean;
   error: string | null;
-  // When `error` flips to a new truthy value, the grid clears its
-  // digits and refocuses the first input. Pass null to keep state.
+  // When the parent bumps `resetSignal`, the grid clears its digits
+  // and refocuses the first input. Use it to recover after a rejected
+  // OTP. Leave undefined to keep state.
   resetSignal?: unknown;
 };
 
@@ -25,7 +28,15 @@ export function OtpInputGrid({
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [expiresIn, setExpiresIn] = useState(OTP_TTL_SECONDS);
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS);
+  const [resendError, setResendError] = useState<string | null>(null);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
+  // Stash the latest onSubmit so the auto-submit effect (which depends
+  // only on the joined digits) can call the current handler without
+  // re-running on every parent re-render.
+  const onSubmitRef = useRef(onSubmit);
+  useEffect(() => {
+    onSubmitRef.current = onSubmit;
+  }, [onSubmit]);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -35,34 +46,40 @@ export function OtpInputGrid({
     return () => clearInterval(t);
   }, []);
 
-  // Parent clears digits on rejected OTP by bumping resetSignal.
   useEffect(() => {
     if (resetSignal === undefined) return;
     setDigits(["", "", "", "", "", ""]);
     inputs.current[0]?.focus();
   }, [resetSignal]);
 
-  function setDigit(i: number, val: string) {
-    const cleaned = val.replace(/\D/g, "").slice(0, 1);
+  // Spread up to 6 digits across slots starting at `startIndex`.
+  // Single-character input typing, paste, and iOS one-time-code
+  // autofill (which writes the full 6-digit code into a single
+  // focused input via onChange, not onPaste) all funnel through here.
+  const fillFrom = useCallback((startIndex: number, raw: string) => {
+    const cleaned = raw.replace(/\D/g, "");
+    if (cleaned.length === 0) return;
     setDigits((d) => {
       const next = [...d];
-      next[i] = cleaned;
+      for (let k = 0; k < cleaned.length && startIndex + k < 6; k++) {
+        next[startIndex + k] = cleaned[k];
+      }
       return next;
     });
-    if (cleaned && i < 5) inputs.current[i + 1]?.focus();
+    const lastWritten = Math.min(5, startIndex + cleaned.length - 1);
+    const focusTarget = Math.min(5, lastWritten + 1);
+    inputs.current[focusTarget]?.focus();
+  }, []);
+
+  function setDigit(i: number, val: string) {
+    fillFrom(i, val);
   }
 
   function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasted.length === 0) return;
+    const pasted = e.clipboardData.getData("text");
+    if (!/\D*\d/.test(pasted)) return;
     e.preventDefault();
-    setDigits((d) => {
-      const next = [...d];
-      for (let i = 0; i < 6; i++) next[i] = pasted[i] ?? "";
-      return next;
-    });
-    const lastFilled = Math.min(pasted.length, 6) - 1;
-    inputs.current[Math.min(5, lastFilled + 1)]?.focus();
+    fillFrom(0, pasted);
   }
 
   function handleKeyDown(i: number, e: React.KeyboardEvent<HTMLInputElement>) {
@@ -71,23 +88,31 @@ export function OtpInputGrid({
     }
   }
 
-  // Auto-submit when all 6 digits are filled.
+  const joined = digits.join("");
   useEffect(() => {
-    if (digits.every((d) => d.length === 1) && !submitting) {
-      void onSubmit(digits.join(""));
+    if (joined.length === 6 && !submitting) {
+      void onSubmitRef.current(joined);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [digits.join("")]);
+  }, [joined, submitting]);
 
   async function resend() {
     if (resendCooldown > 0) return;
+    setResendError(null);
+    const result = await onResend();
+    if (typeof result === "string") {
+      // Don't burn the cooldown / TTL on a failed resend — the user
+      // should be able to retry immediately once they fix whatever
+      // the server flagged.
+      setResendError(result);
+      return;
+    }
     setResendCooldown(RESEND_COOLDOWN_SECONDS);
     setExpiresIn(OTP_TTL_SECONDS);
-    await onResend();
   }
 
   const minutes = Math.floor(expiresIn / 60);
   const seconds = String(expiresIn % 60).padStart(2, "0");
+  const displayError = error ?? resendError;
 
   return (
     <>
@@ -100,7 +125,10 @@ export function OtpInputGrid({
             }}
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={1}
+            // No maxLength — iOS one-time-code autofill writes the
+            // full 6-digit string into a single focused input, and
+            // maxLength=1 would silently truncate it. fillFrom()
+            // handles the spread.
             value={d}
             onChange={(e) => setDigit(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
@@ -128,9 +156,13 @@ export function OtpInputGrid({
           )}
         </span>
       </div>
-      {error ? (
-        <p className="mt-3 rounded-tile border border-danger bg-paper-2 px-3 py-2 text-sm text-danger">
-          {error}
+      {displayError ? (
+        <p
+          role="alert"
+          aria-live="assertive"
+          className="mt-3 rounded-tile border border-danger bg-paper-2 px-3 py-2 text-sm text-danger"
+        >
+          {displayError}
         </p>
       ) : null}
     </>

@@ -23,9 +23,11 @@ const Role = z.enum(["founder", "owner", "investor"]);
 const Schema = z.object({
   name: z.string().min(2, "Enter your full name"),
   email: z.string().email("Enter a valid email"),
-  terms: z.literal(true, {
-    errorMap: () => ({ message: "You must accept the terms to continue" }),
-  }),
+  terms: z
+    .boolean()
+    .refine((v) => v === true, {
+      message: "You must accept the terms to continue",
+    }),
 });
 
 type FormValues = z.infer<typeof Schema>;
@@ -48,7 +50,7 @@ function AccountForm() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(Schema),
-    defaultValues: { name: "", email: "", terms: false as never },
+    defaultValues: { name: "", email: "", terms: false },
   });
 
   async function onSubmit(values: FormValues) {

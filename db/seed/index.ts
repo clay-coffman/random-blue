@@ -83,9 +83,14 @@ async function buildSql(): Promise<string> {
       `INSERT INTO "user" (id, name, email, email_verified, image, role, created_at, updated_at) VALUES (${sqlString(u.id)}, ${sqlString(u.name)}, ${sqlString(u.email)}, 1, NULL, ${sqlString(u.role)}, unixepoch() * 1000, unixepoch() * 1000) ON CONFLICT(id) DO UPDATE SET name=excluded.name, email=excluded.email, role=excluded.role, updated_at=excluded.updated_at;`,
     );
   }
-  // Clear any vestigial credential `account` rows from older seed
-  // runs so password sign-in can't accidentally work for seeded users.
-  stmts.push("DELETE FROM account WHERE provider_id = 'credential';");
+  // Clear vestigial credential `account` rows from older seed runs,
+  // scoped to the seeded test user IDs so a `--remote` run can't wipe
+  // any real human's credential row that may still be on prod from
+  // before the OTP-only migration.
+  const testUserIdList = sqlList(testUsers.map((u) => u.id));
+  stmts.push(
+    `DELETE FROM account WHERE provider_id = 'credential' AND user_id IN (${testUserIdList});`,
+  );
 
   // ─── Investor profiles (UPSERT keyed by user_id) ───────────────────
   // Tied to investor test users seeded above.
