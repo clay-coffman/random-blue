@@ -17,6 +17,7 @@ import type {
   RecommendResult,
   RecommendedResource,
 } from "@/types/passport";
+import { toSchemaGoal, toSchemaStage } from "./intake-options";
 
 const KNOWN_PASSPORT_FIELDS = [
   "websiteUrl",
@@ -77,14 +78,20 @@ const WIRE_TO_CAMEL: Record<string, PassportFieldName> = {
 export function toWirePassportInput(
   p: FounderPassportInput,
 ): FounderPassportInputWire {
+  // Translate the form's founder-friendly stage/goal vocabulary
+  // (idea/early/raising/growth, raise_capital, hire_talent, …) to
+  // the API's canonical schema enums (paying_customers,
+  // raise_seed_round, hire, …). See FORM_TO_SCHEMA_STAGE /
+  // FORM_TO_SCHEMA_GOAL in lib/intake-options.ts. Schema-vocab and
+  // unknown values pass through unchanged.
   return {
     website_url: p.websiteUrl,
     county: p.county,
     city: p.city,
-    stage: p.stage,
+    stage: toSchemaStage(p.stage),
     industry: p.industry,
     communities: p.communities,
-    goal: p.goal,
+    goal: toSchemaGoal(p.goal),
     urgency: p.urgency,
     business_size: p.businessSize,
     business_type: p.businessType,
