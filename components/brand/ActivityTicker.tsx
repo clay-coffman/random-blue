@@ -1,18 +1,21 @@
+import type { ActivityEvent } from "@/lib/activity";
 import { cn } from "@/lib/utils";
 
-const stub = [
-  "+ Crew (FinTech, SLC) just claimed their profile",
-  "+ Maria added a hiring update",
-  "+ 3 new resources in Washington County",
+const fallback: ActivityEvent[] = [
+  {
+    kind: "claim",
+    text: "New here — be the first to claim a profile",
+    ts: 0,
+  },
 ];
 
 type ActivityTickerProps = {
   className?: string;
+  events?: ActivityEvent[];
 };
 
-// TODO(phase-5): wire to real events from D1 (last-N claims + passport
-// creations + profile updates).
-export function ActivityTicker({ className }: ActivityTickerProps) {
+export function ActivityTicker({ className, events }: ActivityTickerProps) {
+  const lines = events && events.length > 0 ? events : fallback;
   return (
     <div
       className={cn(
@@ -21,13 +24,16 @@ export function ActivityTicker({ className }: ActivityTickerProps) {
       )}
       aria-label="Recent activity"
     >
-      {stub.map((line, i) => (
-        <span key={i} className="flex shrink-0 items-center gap-2">
+      {lines.map((event, i) => (
+        <span
+          key={`${event.kind}-${event.ts}-${i}`}
+          className="flex shrink-0 items-center gap-2"
+        >
           <span aria-hidden className="text-ember">
-            {line.charAt(0)}
+            +
           </span>
           <span className="whitespace-nowrap">
-            <span className="text-paper">{line.slice(2)}</span>
+            <span className="text-paper">{event.text}</span>
           </span>
         </span>
       ))}

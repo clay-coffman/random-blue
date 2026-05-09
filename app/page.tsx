@@ -7,6 +7,7 @@ import {
   SectionHeader,
   Tile,
 } from "@/components/brand";
+import { recentActivity } from "@/lib/activity";
 import { personas } from "@/lib/personas";
 
 const ctaBase =
@@ -48,7 +49,8 @@ const audienceCards = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const activity = await recentActivity(6);
   return (
     <div>
       {/* Hero */}
@@ -166,7 +168,7 @@ export default function Home() {
               </li>
             ))}
           </ul>
-          <ActivityTicker className="md:ml-auto" />
+          <ActivityTicker className="md:ml-auto" events={activity} />
         </div>
       </section>
 
