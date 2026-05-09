@@ -2,10 +2,10 @@ import Link from "next/link";
 import { Chip, ScribbleDivider, Tile } from "@/components/brand";
 import {
   COMMUNITY_TAGS,
-  GOALS,
   INDUSTRIES,
-  STAGES,
+  goalLabel,
   labelFor,
+  stageLabel,
 } from "@/lib/intake-options";
 import { personaIdFromPassport } from "@/lib/intake-fixtures";
 import { personaById } from "@/lib/personas";
@@ -48,10 +48,10 @@ export function ResultsView({ passportId, input, result }: Props) {
             </h1>
             <div className="mt-3 flex flex-wrap gap-2">
               {input.goal && (
-                <Chip tone="ember-tint">{labelFor(GOALS, input.goal)}</Chip>
+                <Chip tone="ember-tint">{goalLabel(input.goal)}</Chip>
               )}
               {input.stage && (
-                <Chip tone="sky-tint">{labelFor(STAGES, input.stage)}</Chip>
+                <Chip tone="sky-tint">{stageLabel(input.stage)}</Chip>
               )}
               {input.industry && (
                 <Chip tone="sage-tint">
@@ -142,8 +142,8 @@ function buildHeadline(
   if (firstName) parts.push(firstName);
   if (input.city) parts.push(input.city);
   else if (input.county) parts.push(`${input.county} County`);
-  if (input.stage) parts.push(labelFor(STAGES, input.stage) ?? input.stage);
-  if (input.goal) parts.push(labelFor(GOALS, input.goal) ?? input.goal);
+  if (input.stage) parts.push(stageLabel(input.stage));
+  if (input.goal) parts.push(goalLabel(input.goal));
   if (parts.length === 0) return "Your 90-day plan.";
   return parts.join(" · ");
 }
@@ -350,11 +350,11 @@ function buildMailto(
   resource: RecommendedResource,
   input: FounderPassportInput,
 ): string {
-  const stage = input.stage ? labelFor(STAGES, input.stage) : undefined;
+  const stage = input.stage ? stageLabel(input.stage) : undefined;
   const industry = input.industry
     ? labelFor(INDUSTRIES, input.industry)
     : undefined;
-  const goal = input.goal ? labelFor(GOALS, input.goal) : undefined;
+  const goal = input.goal ? goalLabel(input.goal) : undefined;
   const location = input.city ?? (input.county ? `${input.county} County` : undefined);
 
   const subjectParts = ["Intro from a Utah founder"];
