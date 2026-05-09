@@ -457,11 +457,13 @@ LinkedIn, or pampam.city. Use what's in `docs/source_data/`.
 
 ## Open work before launch
 
-Tracked here so they don't fall through the cracks. The agent-native
+Tracked here so it doesn't fall through the cracks. The agent-native
 layer (CLI / MCP / OpenAPI / `/llms.txt` / `/AGENTS.md` / `/agents`
 page) is in flight on `feat/agent-layer`; the ecosystem-map polish
 and Investor Brief fallback handling are in flight on `feat/agent-4`.
-The items below are what's still outstanding once those land.
+The admin role audit was completed and the operator handover doc is
+at [`docs/operator-runbook.md`](operator-runbook.md). The item below
+is what's left once the in-flight branches land.
 
 ### Photo gallery upload
 
@@ -476,21 +478,6 @@ renders a placeholder.
 the editor after claim), or admin-curated only? The upload UI, R2
 bucket policy, and moderation flow follow from that decision.
 
-### GOEO admin role audit + operator runbook
-
-The admin UI spec above describes role gates, but verify end-to-end
-before handover:
-
-- Every `/admin/*` route is gated to `goeo_admin` or `superadmin`
-  (no founder/owner/investor leak through middleware).
-- `npm run bootstrap-superadmin <email>` works against production D1.
-- `/admin/admins` invites send a real one-time link via Resend, and
-  consuming it flips the recipient's role.
-
-Pair the audit with a short operator runbook for GOEO staff covering
-bootstrap, admin invites, and the day-1 review queues (claim
-submissions, pending edits).
-
 ## Source-of-truth pointers
 
 - Implementation map: `docs/implementation-plan.md`.
@@ -500,3 +487,4 @@ submissions, pending edits).
 - Customer brief (canonical): `docs/source_data/page-2026-05-08-19-38-24.md`.
 - Per-agent execution: `docs/agent-tasks/agent-<N>-<slice>.md`.
 - Shared conventions: `docs/agent-tasks/00-shared-context.md`.
+- GOEO operator runbook: `docs/operator-runbook.md`.
