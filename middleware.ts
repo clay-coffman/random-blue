@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { getCookiePrefix } from "@/lib/auth-cookie";
 import { safeNext } from "@/lib/url";
 import {
   SITE_GATE_COOKIE,
@@ -49,10 +50,20 @@ export default async function middleware(req: NextRequest) {
     }
   }
 
-  // 2) Better Auth session gate for protected routes (existing).
+  // 2) Better Auth session gate for protected routes. Cloudflare sets
+  //    x-forwarded-proto to the original scheme; the nextUrl.protocol
+  //    fallback covers local dev where the header is absent. The
+  //    cookiePrefix here MUST match auth.ts:advanced.cookiePrefix or
+  //    we read the wrong cookie and bounce every authenticated user
+  //    to /sign-in (regression #49).
   const needsAuth = AUTH_REQUIRED_PATTERNS.some((rx) => rx.test(pathname));
   if (needsAuth) {
-    const session = getSessionCookie(req);
+    const proto =
+      req.headers.get("x-forwarded-proto") ??
+      req.nextUrl.protocol.replace(":", "");
+    const session = getSessionCookie(req, {
+      cookiePrefix: getCookiePrefix(proto === "https"),
+    });
     if (!session) {
       const url = req.nextUrl.clone();
       url.pathname = "/sign-in";

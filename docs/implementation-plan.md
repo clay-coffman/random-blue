@@ -91,6 +91,7 @@ check each one for current status before assuming.
 | #44 | E2E quick-wins bundle — B1 (D1-derived landing stats), B5 (Better Auth `trustedOrigins`), B9 (persona quick-test submit), B11 (Priya naming) | UNSTABLE (checks pending) | — |
 | #45 | Plan page fixes — B7 (skip-bucket explainer wording), B8 (mailto CTAs prepopulated from passport) | UNSTABLE | — |
 | #46 | Header rewrite — B2 (mobile sign-in CTA), B6 (auth-state branching), B10 (sign-out CTA + UserMenu) | UNSTABLE | — |
+| #53 | Middleware cookie-prefix fix — pass `cookiePrefix` to `getSessionCookie` so authenticated users aren't bounced from every gated route | OPEN | #49 |
 
 Between #44, #45, #46 — **9 of the 11** e2e bugs close. The remaining
 two (B3, B4) are not yet PR'd; see _Open issues_ below.

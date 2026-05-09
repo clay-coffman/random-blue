@@ -6,6 +6,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { D1Database } from "@cloudflare/workers-types";
 import { z } from "zod";
 import * as authSchema from "@/db/schema.auth";
+import { getCookiePrefix } from "@/lib/auth-cookie";
 import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
 
 // Self-serve roles only. goeo_admin/superadmin are gained via
@@ -151,7 +152,7 @@ function buildAuth(env?: CloudflareEnv) {
       // __Host- prefix in prod prevents any sibling host on utah.gov
       // from setting the session cookie. The prefix needs Secure +
       // Path=/ + no Domain, all of which we configure below.
-      cookiePrefix: isHttps ? "__Host-atlas" : "atlas",
+      cookiePrefix: getCookiePrefix(isHttps),
       useSecureCookies: isHttps,
       defaultCookieAttributes: {
         httpOnly: true,
