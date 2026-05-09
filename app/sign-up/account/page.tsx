@@ -84,8 +84,16 @@ function AccountForm() {
         setSubmitting(false);
         return;
       }
-      // emailOTP plugin's sendVerificationOnSignUp: true automatically
-      // dispatches the verification code on signup. No extra send needed.
+      // Better Auth returns a session token only when the server's
+      // `requireEmailVerification` is false (i.e. AUTH_SKIP_OTP=true in
+      // dev). In that case the user is already signed in — the verify
+      // page would dead-end them. Otherwise the OTP plugin's
+      // sendVerificationOnSignUp: true has already dispatched a code,
+      // and we route to the verify screen as usual.
+      if (result.data?.token) {
+        router.push(next || `/onboarding/${role}`);
+        return;
+      }
       const sp = new URLSearchParams();
       sp.set("email", values.email);
       sp.set("role", role);
