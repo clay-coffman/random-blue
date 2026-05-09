@@ -227,7 +227,7 @@ function Field({
   const id = useId();
   const hintId = hint ? `${id}-hint` : undefined;
   return (
-    <div className="block">
+    <div>
       <label
         htmlFor={id}
         className="block font-mono text-[11px] uppercase tracking-wider text-ink-3"
