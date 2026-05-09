@@ -196,12 +196,20 @@ demo gating: `../implementation-plan.md`.
 ## Worktree port table
 
 `N` is the worktree index (`startup-state-atlas-wt<N>`). Main
-checkout is `N=0`.
+checkout is `N=0`. Each worktree gets its own mailpit instance so
+auth-flow testing in parallel worktrees doesn't cross streams.
 
 | Variable                          | Formula  | main | wt1  | wt2  | wt3  |
 | --------------------------------- | -------- | ---- | ---- | ---- | ---- |
 | `PORT` (`next dev`)               | 3000 + N | 3000 | 3001 | 3002 | 3003 |
 | `WRANGLER_PORT` (`wrangler dev`)  | 8787 + N | 8787 | 8788 | 8789 | 8790 |
+| `MAILPIT_URL` HTTP (inbox + send) | 8025 + N | 8025 | 8026 | 8027 | 8028 |
+| Mailpit SMTP intake               | 1025 + N | 1025 | 1026 | 1027 | 1028 |
+
+The mailpit HTTP port is what `MAILPIT_URL` in `.dev.vars` points at
+(see `CLAUDE.md` § Local authentication testing). The SMTP port is
+unused by the app today — Workers can't open SMTP — but reserved so
+mailpit launches with a non-conflicting pair.
 
 D1 is **per-worktree local** (SQLite at `<worktree>/.wrangler/state/v3/d1/`).
 Each agent runs `npm run db:migrate:local` and `npm run seed` in their

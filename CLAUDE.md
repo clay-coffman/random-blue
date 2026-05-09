@@ -166,25 +166,35 @@ verify screen, no code to grab. Use this 90% of the time.
 ### Testing the real OTP flow: route mail to mailpit
 
 ```
-MAILPIT_URL=http://localhost:8025
+MAILPIT_URL=http://localhost:802(5+N)
 ```
 
 When set, `lib/email.ts` POSTs outgoing email to mailpit's HTTP
 send API instead of Resend or the console fallback. Browse the
-captured inbox at the same URL in your browser.
+captured inbox at the same URL in your browser. Mailpit serves the
+send API and the inbox UI on the same port.
 
-Mailpit is **shared across all worktrees** — one install on your
-host machine, all three workers' OTPs land in the same inbox:
+**One mailpit per worktree, ports follow the worktree formula.**
+Same shape as `PORT` and `WRANGLER_PORT`: `MAILPIT_HTTP = 8025 + N`,
+`MAILPIT_SMTP = 1025 + N`. So `wt1` → `MAILPIT_URL=http://localhost:8026`,
+`wt2` → `8027`, `wt3` → `8028`. Each worktree's `.dev.vars` already
+has the right value (`create-worktree` and `refresh-worktrees`
+seed it).
+
+Start mailpit once per worktree, then leave it running:
 
 ```bash
-# Docker
-docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit
-# or Homebrew (Linux/macOS)
-brew install mailpit && mailpit
+# Native binary (preferred — one process per worktree, easy to kill)
+mailpit --listen 0.0.0.0:$((8025+N)) --smtp 0.0.0.0:$((1025+N))
+
+# Or Docker
+docker run -d --name mailpit-wt$N \
+  -p $((1025+N)):1025 -p $((8025+N)):8025 axllent/mailpit
 ```
 
-Mailpit serves the send API and the inbox UI on the same port
-(default 8025), so one URL covers both.
+Each worktree's OTPs land in *its own* inbox. wt1's signup
+verification doesn't pollute wt2's testing — important when several
+agents are exercising auth flows in parallel.
 
 ### When to use which
 

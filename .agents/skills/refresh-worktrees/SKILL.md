@@ -27,6 +27,8 @@ is `N=0`.
 | --------------------------------- | -------- | ---- | ---- | ---- | ---- |
 | `PORT` (`next dev`)               | 3000 + N | 3000 | 3001 | 3002 | 3003 |
 | `WRANGLER_PORT` (`wrangler dev`)  | 8787 + N | 8787 | 8788 | 8789 | 8790 |
+| `MAILPIT_URL` HTTP (inbox + send) | 8025 + N | 8025 | 8026 | 8027 | 8028 |
+| Mailpit SMTP intake               | 1025 + N | 1025 | 1026 | 1027 | 1028 |
 
 ## Instructions
 
@@ -78,17 +80,20 @@ is `N=0`.
      that lib/ secrets are not configured anywhere.
    - For each non-main worktree:
      - If `.dev.vars` is missing, copy main's verbatim, then rewrite
-       the `BETTER_AUTH_URL` line so its port is `3000+N`:
+       **both** per-worktree URLs (port formulas: `3000+N` for the
+       app, `8025+N` for mailpit):
 
        ```bash
-       sed "s|^BETTER_AUTH_URL=.*|BETTER_AUTH_URL=http://localhost:$((3000+N))|" \
+       sed -e "s|^BETTER_AUTH_URL=.*|BETTER_AUTH_URL=http://localhost:$((3000+N))|" \
+           -e "s|^MAILPIT_URL=.*|MAILPIT_URL=http://localhost:$((8025+N))|" \
          <main>/.dev.vars > <worktree>/.dev.vars
        ```
 
-     - If it exists, verify the non-`BETTER_AUTH_URL` lines match
-       main. If they differ, surface the mismatch — do not
-       overwrite. Verify `BETTER_AUTH_URL` ends with `:<3000+N>`;
-       if not, surface that too.
+     - If it exists, verify the non-`BETTER_AUTH_URL` /
+       non-`MAILPIT_URL` lines match main. If they differ, surface
+       the mismatch — do not overwrite. Verify both per-worktree
+       URLs end with the correct port (`3000+N` and `8025+N`); if
+       not, surface that too.
 
    ### c. Symlink shared local config files
 
