@@ -14,25 +14,27 @@ left) lives in `docs/implementation-plan.md`.
 
 ## Where to start
 
-Most of this app has shipped. The active surface is **Agent 6** (the
-agent-native layer: CLI, MCP server, OpenAPI doc, `/llms.txt`, public
-`AGENTS.md`). **Agent 8** (investor public surface) is post-launch and
-scope-locked — don't pick it up unless asked. Everything else is shipped;
-historical briefs live under `docs/archive/agent-tasks/`.
+The whole app has shipped to a Worker (see `docs/deploy-log.md`).
+Active work is **Phase 5a/5b polish** — landing the four open PRs
+that close 9 of the 11 e2e bugs in
+`docs/e2e-findings-2026-05-09.md`, plus the open hardening tickets
+(#34, #37). **Agent 8** (investor public surface) is post-launch
+and scope-locked — don't pick it up unless asked. All agent briefs
+(Agents 0–7) are archived under `docs/archive/agent-tasks/`.
 
 Reading order for an agent picking up work:
 
 1. **`CLAUDE.md`** (this file) — policy and conventions.
-2. **`docs/architecture.md`** — stack and frozen contracts.
-3. **`docs/agent-tasks/00-shared-context.md`** — port table, ID prefixes,
-   branch protocol, schema ownership, dual-auth model.
-4. **The relevant brief** — `docs/agent-tasks/agent-6-agent-native.md`
-   for the agent-native layer, or
-   `docs/agent-tasks/agent-8-investor.md` for post-launch investor work.
+2. **`docs/implementation-plan.md`** — what's shipped, in flight,
+   and left. Start here for any "what should I work on" question.
+3. **`docs/architecture.md`** — stack and frozen contracts.
+4. **`docs/agent-tasks/00-shared-context.md`** — port table, ID
+   prefixes, branch protocol, schema ownership, dual-auth model.
 5. **`docs/screens.md`** — only if you own a UI surface.
 6. **`docs/design-guidelines.md`** — only if you own a UI surface.
 
-For status (what's shipped vs. left): `docs/implementation-plan.md`.
+For post-launch investor work, the brief is
+`docs/agent-tasks/agent-8-investor.md`.
 
 ## Project at a glance
 
