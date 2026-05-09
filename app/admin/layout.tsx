@@ -5,6 +5,7 @@ import { getAuth } from "@/auth";
 import { isAdminRole, isSuperadmin } from "@/lib/auth-utils";
 import {
   getPendingIntrosCount,
+  getPendingInvestorVerificationsCount,
   getPendingSubmissionsCount,
 } from "@/lib/admin/pending";
 
@@ -54,13 +55,16 @@ export default async function AdminLayout({
   const isSuper = isSuperadmin(role);
 
   const user = session.user as { name: string; email: string };
-  const [pendingSubmissions, pendingIntros] = await Promise.all([
-    getPendingSubmissionsCount(),
-    getPendingIntrosCount(),
-  ]);
+  const [pendingSubmissions, pendingIntros, pendingInvestors] =
+    await Promise.all([
+      getPendingSubmissionsCount(),
+      getPendingIntrosCount(),
+      getPendingInvestorVerificationsCount(),
+    ]);
   const pendingByRoute: Record<string, number> = {
     "/admin/submissions": pendingSubmissions,
     "/admin/intros": pendingIntros,
+    "/admin/investors": pendingInvestors,
   };
 
   return (

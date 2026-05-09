@@ -117,13 +117,20 @@ export default async function AdminSubmissionReviewPage({
                 ok={domainMatch}
                 detail={
                   websiteHost
-                    ? `submitter @${submitterDomain ?? "?"} · site ${websiteHost}`
-                    : "company has no website"
+                    ? domainMatch
+                      ? `Submitter email domain (@${submitterDomain}) matches the company website domain (${websiteHost}).`
+                      : `Submitter email domain (@${submitterDomain ?? "?"}) does not match the company website domain (${websiteHost}).`
+                    : "Company has no website on file, so no domain comparison is possible."
                 }
               />
             }
           />
           <Row label="Name on file" value={userName ?? "—"} />
+          <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-ink-3">
+            Domain check compares the submitter&apos;s email host
+            against the company website host. One signal among
+            several.
+          </p>
         </Card>
         <Card label="Company">
           <Row label="Slug" value={company?.slug ?? "—"} mono />

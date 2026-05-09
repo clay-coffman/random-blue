@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +33,6 @@ function formatRole(role: string): string {
 }
 
 export function UserMenu({ name, email, role, planHref }: Props) {
-  const router = useRouter();
   const [signingOut, setSigningOut] = React.useState(false);
   const [signOutError, setSignOutError] = React.useState<string | null>(null);
 
@@ -56,8 +54,11 @@ export function UserMenu({ name, email, role, planHref }: Props) {
         setSigningOut(false);
         return;
       }
-      router.push("/");
-      router.refresh();
+      // Hard navigation guarantees the admin shell unmounts and the
+      // next request goes through the auth gate fresh — soft nav can
+      // race with the cookie clear and leave the previous RSC tree on
+      // screen.
+      window.location.assign("/");
     } catch (err) {
       setSignOutError(
         err instanceof Error ? err.message : "Could not sign out. Try again.",
