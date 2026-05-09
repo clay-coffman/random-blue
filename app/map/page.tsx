@@ -34,12 +34,6 @@ function flatten(sp: SearchParams): URLSearchParams {
   return out;
 }
 
-type ViewMode = "companies" | "clusters" | "heat";
-
-function isViewMode(v: unknown): v is ViewMode {
-  return v === "companies" || v === "clusters" || v === "heat";
-}
-
 export default async function MapPage({
   searchParams,
 }: {
@@ -51,9 +45,6 @@ export default async function MapPage({
   const filters: CompanyFilters = errors ? {} : parsedFilters;
 
   const initial = await listCompanies(filters, 500);
-
-  const rawView = Array.isArray(sp.view) ? sp.view[0] : sp.view;
-  const view: ViewMode = isViewMode(rawView) ? rawView : "companies";
 
   const initialCamera = (() => {
     const lat = Array.isArray(sp.lat) ? sp.lat[0] : sp.lat;
@@ -74,7 +65,6 @@ export default async function MapPage({
       initialCompanies={initial.companies}
       initialTotal={initial.total}
       initialFilters={filters}
-      initialView={view}
       initialCamera={initialCamera}
     />
   );

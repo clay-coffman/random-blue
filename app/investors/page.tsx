@@ -99,8 +99,11 @@ export default async function InvestorsLandingPage() {
             <Link href="/map" className={`${ctaBase} ${ctaSky}`}>
               Open the map →
             </Link>
-            <Link href="/investors/all" className={`${ctaBase} ${ctaGhost}`}>
-              Browse investors
+            <Link
+              href="/map?view=list"
+              className={`${ctaBase} ${ctaGhost}`}
+            >
+              Browse companies
             </Link>
           </div>
         </div>
@@ -139,36 +142,6 @@ export default async function InvestorsLandingPage() {
             <p className="text-sm leading-relaxed text-ink-2">{tile.body}</p>
           </Tile>
         ))}
-      </section>
-
-      {/* Directory teaser */}
-      <section className="mx-auto max-w-[1480px] px-4 py-14 sm:px-7">
-        <Tile
-          as="article"
-          shadow="sketch"
-          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div className="max-w-2xl">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-sky">
-              FELLOW UTAH-ACTIVE INVESTORS
-            </p>
-            <h2 className="mt-2 font-serif text-2xl leading-tight tracking-tight sm:text-3xl">
-              {verifiedInvestors > 0
-                ? `Browse ${fmt(verifiedInvestors)} verified investor${verifiedInvestors === 1 ? "" : "s"}.`
-                : "Browse the verified investor directory."}
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-ink-2">
-              Filter by type, stage, sector, and geography. Public profiles
-              only; email is redacted by design.
-            </p>
-          </div>
-          <Link
-            href="/investors/all"
-            className={`${ctaBase} ${ctaGhost} self-start sm:self-auto`}
-          >
-            Open directory →
-          </Link>
-        </Tile>
       </section>
 
       {/* Mono credibility line */}
