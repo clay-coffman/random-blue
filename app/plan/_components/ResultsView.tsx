@@ -86,6 +86,7 @@ export function ResultsView({ passportId, input, result }: Props) {
           title="This week"
           subtitle={`${now.length} action${now.length === 1 ? "" : "s"}`}
           items={now}
+          input={input}
           highlightFirst
         />
         <BucketColumn
@@ -94,6 +95,7 @@ export function ResultsView({ passportId, input, result }: Props) {
           title="Weeks 2–6"
           subtitle={`${next.length} action${next.length === 1 ? "" : "s"}`}
           items={next}
+          input={input}
         />
         <IgnoreColumn items={ignore} />
       </section>
@@ -137,6 +139,7 @@ function BucketColumn({
   title,
   subtitle,
   items,
+  input,
   highlightFirst,
 }: {
   tone: "ember" | "ink";
@@ -144,6 +147,7 @@ function BucketColumn({
   title: string;
   subtitle: string;
   items: RecommendedResource[];
+  input: FounderPassportInput;
   highlightFirst?: boolean;
 }) {
   if (items.length === 0) {
@@ -182,6 +186,7 @@ function BucketColumn({
           <li key={r.resourceId}>
             <RecommendationCard
               resource={r}
+              input={input}
               highlight={highlightFirst && i === 0}
             />
           </li>
@@ -189,22 +194,6 @@ function BucketColumn({
       </ul>
     </div>
   );
-}
-
-// Pick the reason most useful for an ignore card — prefer the
-// disqualifying signal (community / industry / geo gate) over generic
-// positive matches that aren't what got the resource ignored.
-const NEGATIVE_REASON_MARKERS = [
-  "that's not your profile",
-  "Industry-specific",
-  "Limited to",
-];
-
-function ignoreReason(reasons: string[]): string {
-  const negative = reasons.find((r) =>
-    NEGATIVE_REASON_MARKERS.some((m) => r.includes(m)),
-  );
-  return negative ?? reasons[0] ?? "Low fit on your passport.";
 }
 
 function IgnoreColumn({ items }: { items: RecommendedResource[] }) {
@@ -246,7 +235,7 @@ function IgnoreColumn({ items }: { items: RecommendedResource[] }) {
                 <p className="text-sm line-through decoration-ink-3">
                   {r.title}
                 </p>
-                <p className="text-xs text-ink-3">{ignoreReason(r.reasons)}</p>
+                <p className="text-xs text-ink-3">{r.because}</p>
               </div>
             </li>
           ))}
@@ -258,9 +247,11 @@ function IgnoreColumn({ items }: { items: RecommendedResource[] }) {
 
 function RecommendationCard({
   resource,
+  input,
   highlight,
 }: {
   resource: RecommendedResource;
+  input: FounderPassportInput;
   highlight?: boolean;
 }) {
   return (
@@ -297,19 +288,34 @@ function RecommendationCard({
             ))}
           </ul>
         </details>
-        <ResourceCta resource={resource} />
+        <ResourceCta resource={resource} input={input} />
       </div>
     </Tile>
   );
 }
 
-function ResourceCta({ resource }: { resource: RecommendedResource }) {
-  if (resource.sourceUrl) {
+function ResourceCta({
+  resource,
+  input,
+}: {
+  resource: RecommendedResource;
+  input: FounderPassportInput;
+}) {
+  // Prefer mailto when the resource has a contact address — the action
+  // text on capital cards reads "Email info@…", and a website href is a
+  // visible lie (B8 in docs/e2e-findings-2026-05-09.md). Falls through to
+  // sourceUrl for non-email CTAs ("Apply", "Book a call", etc.).
+  const href = resource.contactEmail
+    ? buildMailto(resource.contactEmail, resource, input)
+    : resource.sourceUrl;
+  if (href) {
+    const isMailto = href.startsWith("mailto:");
     return (
       <a
-        href={resource.sourceUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={href}
+        {...(isMailto
+          ? {}
+          : { target: "_blank", rel: "noopener noreferrer" })}
         className="font-mono text-[11px] font-bold uppercase tracking-wider text-ember hover:underline"
       >
         {resource.actionText} →
@@ -321,6 +327,49 @@ function ResourceCta({ resource }: { resource: RecommendedResource }) {
       {resource.actionText}
     </span>
   );
+}
+
+// Build a mailto: with a draft subject + body pre-filled from the founder
+// passport. The founder will edit before sending — keep the body neutral
+// and short. Missing passport fields degrade gracefully (subject/body
+// just omit them rather than rendering "undefined").
+function buildMailto(
+  email: string,
+  resource: RecommendedResource,
+  input: FounderPassportInput,
+): string {
+  const stage = input.stage ? labelFor(STAGES, input.stage) : undefined;
+  const industry = input.industry
+    ? labelFor(INDUSTRIES, input.industry)
+    : undefined;
+  const goal = input.goal ? labelFor(GOALS, input.goal) : undefined;
+  const location = input.city ?? (input.county ? `${input.county} County` : undefined);
+
+  const subjectParts = ["Intro from a Utah founder"];
+  if (stage && industry) subjectParts.push(`(${stage}, ${industry})`);
+  else if (stage) subjectParts.push(`(${stage})`);
+  else if (industry) subjectParts.push(`(${industry})`);
+  const subject = subjectParts.join(" ");
+
+  const lines: string[] = ["Hi,", ""];
+  const introBits: string[] = [];
+  if (location) introBits.push(`I'm a founder based in ${location}`);
+  else introBits.push("I'm a Utah-based founder");
+  if (industry) introBits.push(`working in ${industry.toLowerCase()}`);
+  if (stage) introBits.push(`at the ${stage.toLowerCase()} stage`);
+  lines.push(introBits.join(", ") + ".");
+  if (goal) lines.push(`Right now I'm focused on ${goal.toLowerCase()}.`);
+  lines.push("");
+  lines.push(
+    `I came across ${resource.title} via Utah's Startup State Atlas and wanted to reach out about a possible fit.`,
+  );
+  lines.push("");
+  lines.push("Happy to share more context if useful.");
+  lines.push("");
+  lines.push("Thanks,");
+
+  const body = lines.join("\r\n");
+  return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 function ScoreBadge({ score }: { score: number }) {

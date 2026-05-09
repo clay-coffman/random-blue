@@ -6,6 +6,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { D1Database } from "@cloudflare/workers-types";
 import { z } from "zod";
 import * as authSchema from "@/db/schema.auth";
+import { getCookiePrefix } from "@/lib/auth-cookie";
 import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
 
 // Self-serve roles only. goeo_admin/superadmin are gained via
@@ -67,7 +68,26 @@ function buildAuth(env?: CloudflareEnv) {
       env?.BETTER_AUTH_SECRET ??
       process.env.BETTER_AUTH_SECRET ??
       undefined,
-    trustedOrigins: baseURL ? [baseURL] : [],
+    // In dev (localhost), accept any localhost origin so worktrees on
+    // rotating ports (3000+N) don't 403 when BETTER_AUTH_URL is stale.
+    // Production keeps the strict single-origin allowlist.
+    trustedOrigins: isLocalhost
+      ? (request?: Request) => {
+          const origin = request?.headers.get("origin");
+          if (!origin) return [];
+          try {
+            const h = new URL(origin).hostname;
+            if (h === "localhost" || h === "127.0.0.1" || h === "::1") {
+              return [origin];
+            }
+          } catch {
+            // malformed origin — ignore
+          }
+          return [];
+        }
+      : baseURL
+        ? [baseURL]
+        : [],
     database: drizzleAdapter(db, {
       provider: "sqlite",
       schema: authSchema,
@@ -132,7 +152,7 @@ function buildAuth(env?: CloudflareEnv) {
       // __Host- prefix in prod prevents any sibling host on utah.gov
       // from setting the session cookie. The prefix needs Secure +
       // Path=/ + no Domain, all of which we configure below.
-      cookiePrefix: isHttps ? "__Host-atlas" : "atlas",
+      cookiePrefix: getCookiePrefix(isHttps),
       useSecureCookies: isHttps,
       defaultCookieAttributes: {
         httpOnly: true,

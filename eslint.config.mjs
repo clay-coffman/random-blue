@@ -15,6 +15,9 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".next/**",
+      // OpenNext build output. Generated locally by `npm run deploy`
+      // and shouldn't be linted (it's compiled JS, not source).
+      ".open-next/**",
       "out/**",
       "build/**",
       "next-env.d.ts",

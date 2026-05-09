@@ -212,7 +212,9 @@ function McpPanel() {
       <p className="text-base text-ink-2">
         Two transports: a local stdio server for Claude Desktop / Cursor / MCP Inspector,
         and a stateless remote endpoint at <code className="font-mono">/api/mcp</code> for clients that prefer HTTP.
-        Both expose the same 8 tools, 6 resources, and 4 prompts.
+        The remote endpoint exposes 7 read tools, 6 resources, and 4 prompts;
+        the local stdio server adds <code className="font-mono">update_company_profile</code> for trusted operators
+        running it with <code className="font-mono">ATLAS_ADMIN_TOKEN</code> in env.
       </p>
 
       <h3 className="font-heading text-lg">Claude Desktop config</h3>
@@ -223,15 +225,21 @@ function McpPanel() {
 
       <div className="grid gap-6 sm:grid-cols-2">
         <div>
-          <h3 className="font-heading text-lg">Tools (8)</h3>
+          <h3 className="font-heading text-lg">Tools (7 remote + 1 local-only)</h3>
           <ul className="mt-2 space-y-2">
             {mcpTools.map((t) => (
               <li key={t.name} className="text-sm">
                 <code className="font-mono text-ink">{t.name}</code>
-                {t.privileged && (
+                {t.localOnly ? (
                   <span className="ml-2 rounded bg-ember-tint px-2 py-0.5 font-mono text-[11px] text-ember">
-                    write
+                    local stdio only
                   </span>
+                ) : (
+                  t.privileged && (
+                    <span className="ml-2 rounded bg-ember-tint px-2 py-0.5 font-mono text-[11px] text-ember">
+                      write
+                    </span>
+                  )
                 )}
                 <div className="text-ink-3">{t.summary}</div>
               </li>

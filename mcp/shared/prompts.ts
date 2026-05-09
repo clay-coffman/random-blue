@@ -120,7 +120,7 @@ export function registerPrompts(server: McpServer) {
               `1. Use the founder_passports/enrich path (or your own fetch + summarisation) to extract: name, sector, stage, employee_count, founding_year, description.\n` +
               `2. Reconcile against get_company(slug) — only suggest changes for fields that improve the row.\n` +
               `3. Print a JSON PATCH body suitable for update_company_profile(slug, patch). Owner whitelist: name, website, description, sector, stage, employee_count, hiring_status, founding_year, logo_url, founder_team_json, lat, lng. Admin/machine may also edit slug, linkedin, address_text.\n` +
-              `4. Do not call update_company_profile until the operator confirms the patch.\n` +
+              `4. Do not call update_company_profile until the operator confirms the patch. NOTE: update_company_profile is exposed only on the LOCAL stdio MCP (\`npm run mcp\` with ATLAS_ADMIN_TOKEN in env). On the REMOTE /api/mcp endpoint the tool is not registered — emit the patch as JSON for the operator to apply via the local stdio MCP, the CLI (\`npm run cli -- company patch ...\`), or PATCH /api/v1/companies/<slug>.\n` +
               `5. Cite the website url for every claim. Mark anything you can't verify with confidence < 0.5.`,
           },
         },

@@ -20,6 +20,7 @@ import type {
   RecommendResult,
   RecommendedResource,
 } from "@/types/passport";
+import { explainSkip } from "@/lib/recommend-explain";
 
 type Catalogue = {
   resourceId: string;
@@ -448,6 +449,17 @@ export function recommendMock(
 
   scored.sort((a, b) => b.score - a.score);
 
+  // Track needs already claimed by higher-ranked (now/next) resources so the
+  // ignore-bucket explainer can fall back to "already covered by higher-
+  // ranked options" when no clearer mismatch is present.
+  const alreadyCoveredNeeds = new Set<string>();
+  scored.forEach((row, i) => {
+    const inActionable = row.score >= 35 && i < 3;
+    const inNext = row.score >= 20 && i < 7 && !inActionable;
+    if (!inActionable && !inNext) return;
+    for (const n of row.c.matches.needs ?? []) alreadyCoveredNeeds.add(n);
+  });
+
   const recommendations: RecommendedResource[] = scored.map((row, i) => {
     let bucket: RecommendedResource["bucket"];
     if (row.score >= 35 && i < 3) bucket = "now";
@@ -462,7 +474,10 @@ export function recommendMock(
       reasons: row.reasons.length
         ? row.reasons
         : ["No strong field match — listed for completeness."],
-      because: because(input, row.c, row.reasons),
+      because:
+        bucket === "ignore"
+          ? explainSkip(row.c.matches, input, { alreadyCoveredNeeds })
+          : because(input, row.c, row.reasons),
       actionText: actionFor(row.c, input),
       kind: row.c.kind,
       sourceUrl: row.c.sourceUrl,
