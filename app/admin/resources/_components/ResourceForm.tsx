@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ChipInput } from "./ChipInput";
 
 const Schema = z.object({
   id: z.string().min(2, "id is required (use r_<upstream-id>)"),
@@ -23,15 +25,31 @@ const Schema = z.object({
   source_url: z.string().url().or(z.literal("")).optional(),
   kind: z.string().optional(),
   contact_email: z.string().email().or(z.literal("")).optional(),
+  industries: z.array(z.string()),
+  communities: z.array(z.string()),
+  topics: z.array(z.string()),
+  counties: z.array(z.string()),
+  statewide: z.boolean(),
 });
 type Values = z.infer<typeof Schema>;
 
 interface Props {
   mode: "create" | "edit";
   initial?: Partial<Values> & { id?: string };
+  canonicalCounties: string[];
+  suggestions: {
+    industries: string[];
+    communities: string[];
+    topics: string[];
+  };
 }
 
-export function ResourceForm({ mode, initial }: Props) {
+export function ResourceForm({
+  mode,
+  initial,
+  canonicalCounties,
+  suggestions,
+}: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -46,6 +64,11 @@ export function ResourceForm({ mode, initial }: Props) {
       source_url: initial?.source_url ?? "",
       kind: initial?.kind ?? "",
       contact_email: initial?.contact_email ?? "",
+      industries: initial?.industries ?? [],
+      communities: initial?.communities ?? [],
+      topics: initial?.topics ?? [],
+      counties: initial?.counties ?? [],
+      statewide: initial?.statewide ?? false,
     },
   });
 
@@ -104,6 +127,8 @@ export function ResourceForm({ mode, initial }: Props) {
       setDeleting(false);
     }
   }
+
+  const statewide = form.watch("statewide");
 
   return (
     <Form {...form}>
@@ -198,6 +223,132 @@ export function ResourceForm({ mode, initial }: Props) {
             )}
           />
         </div>
+
+        <section className="space-y-4 rounded-tile border-[1.5px] border-topo bg-paper-2 p-4">
+          <header>
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-3">
+              Recommendation targeting
+            </p>
+            <p className="mt-1 text-sm text-ink-2">
+              These tags drive matching in the founder recommendation
+              engine. Free-form fields lowercase on save; counties pull
+              from the canonical Utah county list.
+            </p>
+          </header>
+
+          <FormField
+            control={form.control}
+            name="industries"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Industries</FormLabel>
+                <FormControl>
+                  <ChipInput
+                    mode="free-form"
+                    value={field.value}
+                    onChange={field.onChange}
+                    suggestions={suggestions.industries}
+                    placeholder="industry-agnostic (matches all)"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="communities"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Communities</FormLabel>
+                <FormControl>
+                  <ChipInput
+                    mode="free-form"
+                    value={field.value}
+                    onChange={field.onChange}
+                    suggestions={suggestions.communities}
+                    placeholder="all founders"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="topics"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Topics</FormLabel>
+                <FormControl>
+                  <ChipInput
+                    mode="free-form"
+                    value={field.value}
+                    onChange={field.onChange}
+                    suggestions={suggestions.topics}
+                    placeholder="no topic tags"
+                  />
+                </FormControl>
+                <p className="text-xs text-ink-3">
+                  First topic also feeds the resource <code>kind</code>{" "}
+                  index used by CLI/MCP filters.
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="space-y-3">
+            <FormField
+              control={form.control}
+              name="statewide"
+              render={({ field }) => (
+                <FormItem>
+                  <label className="flex items-center gap-2">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(v) => field.onChange(v === true)}
+                      />
+                    </FormControl>
+                    <FormLabel className="m-0">
+                      Statewide (applies in all counties)
+                    </FormLabel>
+                  </label>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="counties"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Counties</FormLabel>
+                  <FormControl>
+                    <ChipInput
+                      mode="fixed"
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={canonicalCounties}
+                      caseInsensitive={true}
+                      disabled={statewide}
+                      placeholder={
+                        statewide
+                          ? "(disabled — statewide)"
+                          : "no counties (matches no founders by location)"
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </section>
+
         {error ? (
           <p className="rounded-tile border border-danger bg-paper-2 px-3 py-2 text-sm text-danger">
             {error}

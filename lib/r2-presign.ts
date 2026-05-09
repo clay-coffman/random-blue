@@ -1,6 +1,17 @@
 import { AwsClient } from "aws4fetch";
 import { env } from "./cf";
 
+const R2_CREDS_MISSING_MSG =
+  "R2 S3 credentials missing. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY.";
+
+export function hasR2Credentials(): boolean {
+  return Boolean(
+    env().R2_ACCOUNT_ID &&
+      env().R2_ACCESS_KEY_ID &&
+      env().R2_SECRET_ACCESS_KEY,
+  );
+}
+
 // 60-second presigned GET for a key in the OWNERSHIP_DOCS bucket.
 // Sensitive documents — keep expiry tight.
 export async function presignOwnershipDocGet(
@@ -11,9 +22,7 @@ export async function presignOwnershipDocGet(
   const accessKey = env().R2_ACCESS_KEY_ID;
   const secret = env().R2_SECRET_ACCESS_KEY;
   if (!accountId || !accessKey || !secret) {
-    throw new Error(
-      "R2 S3 credentials missing. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY.",
-    );
+    throw new Error(R2_CREDS_MISSING_MSG);
   }
   const client = new AwsClient({
     accessKeyId: accessKey,

@@ -27,7 +27,8 @@ replaced.
 > the repo so the dev team can sign in across environments. Rotate
 > before any real user data lands.
 
-All test users share the same password: `passport123`.
+All test users share the same password: `passport12345` (12 chars to
+satisfy `auth.ts` `minPasswordLength: 12`).
 
 | Role | Email | User ID | Display name | Linked passport |
 |------|-------|---------|--------------|-----------------|

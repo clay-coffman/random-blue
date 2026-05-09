@@ -4,6 +4,11 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { resources } from "@/db/schema";
 import { ScribbleDivider } from "@/components/brand";
+import {
+  CANONICAL_COUNTIES,
+  loadAffinitySuggestions,
+  loadResourceAffinities,
+} from "@/lib/resource-affinities";
 import { ResourceForm } from "../_components/ResourceForm";
 
 export const dynamic = "force-dynamic";
@@ -15,15 +20,23 @@ export default async function AdminResourceEditPage({
 }) {
   const { id } = await params;
   const isNew = id === "new";
-  const row = isNew
-    ? null
-    : (
-        await db()
-          .select()
-          .from(resources)
-          .where(eq(resources.id, id))
-          .limit(1)
-      )[0];
+
+  const [rowResult, affinities, suggestions] = await Promise.all([
+    isNew
+      ? Promise.resolve([])
+      : db().select().from(resources).where(eq(resources.id, id)).limit(1),
+    isNew
+      ? Promise.resolve({
+          industries: [],
+          communities: [],
+          topics: [],
+          counties: [],
+          statewide: false,
+        })
+      : loadResourceAffinities(id),
+    loadAffinitySuggestions(),
+  ]);
+  const row = rowResult[0];
   if (!isNew && !row) notFound();
 
   return (
@@ -37,6 +50,8 @@ export default async function AdminResourceEditPage({
       <ScribbleDivider className="my-5" />
       <ResourceForm
         mode={isNew ? "create" : "edit"}
+        canonicalCounties={CANONICAL_COUNTIES}
+        suggestions={suggestions}
         initial={
           row
             ? {
@@ -46,8 +61,11 @@ export default async function AdminResourceEditPage({
                 source_url: row.sourceUrl ?? "",
                 kind: row.kind ?? "",
                 contact_email: row.contactEmail ?? "",
+                ...affinities,
               }
-            : undefined
+            : {
+                ...affinities,
+              }
         }
       />
       <Link
