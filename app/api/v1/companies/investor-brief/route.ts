@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse } from "@/lib/api-error";
+import { env } from "@/lib/cf";
 import { listCompanies } from "@/lib/companies-list";
 import { parseFilters } from "@/lib/company-filters";
 import { generateInvestorBrief } from "@/lib/investor-brief";
@@ -23,6 +24,19 @@ const BodySchema = z.object({
 // or rely on `filter` to re-derive the set server-side. Returns the
 // structured brief; degraded fallback on any failure path.
 export async function POST(req: Request) {
+  // Per-IP rate limit. Each call drives an Anthropic Claude request
+  // and is unauthenticated, so cap before parsing the body or
+  // touching the upstream.
+  const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+  const { success } = await env().INVESTOR_BRIEF_LIMIT.limit({ key: ip });
+  if (!success) {
+    return errorResponse(
+      "rate_limited",
+      "Too many investor briefs requested. Try again in a minute.",
+      429,
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();

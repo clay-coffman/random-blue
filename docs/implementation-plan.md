@@ -102,7 +102,7 @@ two (B3, B4) are not yet PR'd; see _Open issues_ below.
 
 | # | What | Priority |
 |---|------|----------|
-| #34 | Rate-limit public founder-passport endpoints (Anthropic cost protection) | pre-launch nice-to-have, ~30 min fix using the same `unsafe.bindings` ratelimit pattern as PR #36 |
+| #34 | Rate-limit unauthenticated LLM-backed endpoints (Anthropic / Parallel.ai cost protection) | **closes with this PR** — `unsafe.bindings` ratelimits on `/resources/recommend`, `/founder-passports/enrich`, `/founder-passports`, `/companies/investor-brief` |
 | #37 | Smaller hardening follow-ups — `cookieCache.maxAge` propagation on role demotion; `rate_limit` table cleanup; `unsafe.bindings` → top-level `ratelimit` binding when wrangler supports it | post-launch |
 
 Also from `docs/e2e-findings-2026-05-09.md` but not yet ticketed:

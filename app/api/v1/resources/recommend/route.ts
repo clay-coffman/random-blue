@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { founderPassports, recommendations } from "@/db/schema";
 import { newId } from "@/lib/ids";
 import { ApiError, errorResponse } from "@/lib/api-error";
+import { env } from "@/lib/cf";
 import { RecommendRequest } from "@/schemas/recommend";
 import {
   FounderGoal,
@@ -35,6 +36,19 @@ import type {
 
 export async function POST(req: Request) {
   try {
+    // Per-IP rate limit. Ahead of body parse + Claude call so abuse
+    // can't burn either. Public endpoint — limit must be tight
+    // because each call drives an Anthropic Opus request.
+    const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+    const { success } = await env().RECOMMEND_LIMIT.limit({ key: ip });
+    if (!success) {
+      return errorResponse(
+        "rate_limited",
+        "Too many recommendations requested. Try again in a minute.",
+        429,
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const parsed = RecommendRequest.safeParse(body);
     if (!parsed.success) {
