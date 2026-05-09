@@ -16,6 +16,7 @@ export function SavedRowActions({
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingUnsave, setConfirmingUnsave] = useState(false);
 
   const dirty = note !== savedNote;
 
@@ -45,7 +46,6 @@ export function SavedRowActions({
   }
 
   async function unsave() {
-    if (!confirm("Remove from saved?")) return;
     setBusy(true);
     setError(null);
     try {
@@ -59,6 +59,7 @@ export function SavedRowActions({
           | null;
         setError(err?.error?.message ?? `Unsave failed (${res.status}).`);
       } else {
+        setConfirmingUnsave(false);
         router.refresh();
       }
     } catch {
@@ -117,6 +118,28 @@ export function SavedRowActions({
               Cancel
             </button>
           </>
+        ) : confirmingUnsave ? (
+          <>
+            <button
+              type="button"
+              onClick={unsave}
+              disabled={busy}
+              className="inline-flex h-9 min-h-[44px] items-center justify-center rounded-pill bg-danger px-3 font-mono text-[11px] uppercase tracking-wider text-paper hover:-translate-y-0.5 disabled:opacity-50"
+            >
+              {busy ? "Removing…" : "Confirm unsave"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmingUnsave(false);
+                setError(null);
+              }}
+              disabled={busy}
+              className="inline-flex h-9 min-h-[44px] items-center justify-center rounded-pill border-[1.5px] border-ink/40 px-3 font-mono text-[11px] uppercase tracking-wider text-ink-2 hover:bg-paper-2 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </>
         ) : (
           <>
             <button
@@ -128,11 +151,11 @@ export function SavedRowActions({
             </button>
             <button
               type="button"
-              onClick={unsave}
+              onClick={() => setConfirmingUnsave(true)}
               disabled={busy}
               className="inline-flex h-9 min-h-[44px] items-center justify-center rounded-pill border-[1.5px] border-danger/50 px-3 font-mono text-[11px] uppercase tracking-wider text-danger hover:bg-danger/10 disabled:opacity-50"
             >
-              {busy ? "…" : "Unsave"}
+              Unsave
             </button>
           </>
         )}

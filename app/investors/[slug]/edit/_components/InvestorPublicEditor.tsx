@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 type Defaults = {
   slug: string;
@@ -87,66 +87,91 @@ export function InvestorPublicEditor({
       className="mt-6 space-y-6"
     >
       <Field label="Display name" required>
-        <input
-          type="text"
-          value={values.display_name}
-          onChange={(e) => set("display_name", e.target.value)}
-          maxLength={120}
-          required
-          className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-serif text-base focus:border-ember focus:outline-none"
-        />
+        {(fieldProps) => (
+          <input
+            type="text"
+            {...fieldProps}
+            value={values.display_name}
+            onChange={(e) => set("display_name", e.target.value)}
+            maxLength={120}
+            required
+            className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-serif text-base focus:border-ember focus:outline-none"
+          />
+        )}
       </Field>
 
-      <Field label="Slug" hint={canEditSlug ? "Lowercase letters, digits, and hyphens." : "Locked after verification."}>
-        <input
-          type="text"
-          value={values.slug}
-          onChange={(e) => set("slug", e.target.value)}
-          maxLength={80}
-          disabled={!canEditSlug}
-          pattern="[a-z0-9-]+"
-          className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-mono text-sm focus:border-ember focus:outline-none disabled:bg-paper-2 disabled:text-ink-3"
-        />
+      <Field
+        label="Slug"
+        hint={
+          canEditSlug
+            ? "Lowercase letters, digits, and hyphens."
+            : "Locked after verification."
+        }
+      >
+        {(fieldProps) => (
+          <input
+            type="text"
+            {...fieldProps}
+            value={values.slug}
+            onChange={(e) => set("slug", e.target.value)}
+            maxLength={80}
+            disabled={!canEditSlug}
+            pattern="[a-z0-9-]+"
+            className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-mono text-sm focus:border-ember focus:outline-none disabled:bg-paper-2 disabled:text-ink-3"
+          />
+        )}
       </Field>
 
       <Field label="Tagline" hint="One line. Shows under your name on the profile.">
-        <input
-          type="text"
-          value={values.tagline}
-          onChange={(e) => set("tagline", e.target.value)}
-          maxLength={200}
-          className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-serif text-base focus:border-ember focus:outline-none"
-        />
+        {(fieldProps) => (
+          <input
+            type="text"
+            {...fieldProps}
+            value={values.tagline}
+            onChange={(e) => set("tagline", e.target.value)}
+            maxLength={200}
+            className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-serif text-base focus:border-ember focus:outline-none"
+          />
+        )}
       </Field>
 
       <Field label="Bio" hint="A few short paragraphs. Plain text — no HTML.">
-        <textarea
-          rows={8}
-          value={values.bio}
-          onChange={(e) => set("bio", e.target.value)}
-          maxLength={2000}
-          className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-serif text-base leading-relaxed focus:border-ember focus:outline-none"
-        />
+        {(fieldProps) => (
+          <textarea
+            {...fieldProps}
+            rows={8}
+            value={values.bio}
+            onChange={(e) => set("bio", e.target.value)}
+            maxLength={2000}
+            className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-serif text-base leading-relaxed focus:border-ember focus:outline-none"
+          />
+        )}
       </Field>
 
       <Field label="Website">
-        <input
-          type="url"
-          value={values.website}
-          onChange={(e) => set("website", e.target.value)}
-          placeholder="https://"
-          className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-serif text-base focus:border-ember focus:outline-none"
-        />
+        {(fieldProps) => (
+          <input
+            type="url"
+            {...fieldProps}
+            value={values.website}
+            onChange={(e) => set("website", e.target.value)}
+            placeholder="https://"
+            className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-serif text-base focus:border-ember focus:outline-none"
+          />
+        )}
       </Field>
 
       <Field label="LinkedIn">
-        <input
-          type="url"
-          value={values.linkedin}
-          onChange={(e) => set("linkedin", e.target.value)}
-          placeholder="https://www.linkedin.com/in/…"
-          className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-serif text-base focus:border-ember focus:outline-none"
-        />
+        {(fieldProps) => (
+          <input
+            type="url"
+            {...fieldProps}
+            value={values.linkedin}
+            onChange={(e) => set("linkedin", e.target.value)}
+            placeholder="https://www.linkedin.com/in/…"
+            className="w-full rounded-tile border-[1.5px] border-ink/30 bg-paper p-3 font-serif text-base focus:border-ember focus:outline-none"
+          />
+        )}
       </Field>
 
       {errorMessage ? (
@@ -194,20 +219,33 @@ function Field({
   label: string;
   hint?: string;
   required?: boolean;
-  children: React.ReactNode;
+  children: (props: {
+    id: string;
+    "aria-describedby"?: string;
+  }) => React.ReactNode;
 }) {
+  const id = useId();
+  const hintId = hint ? `${id}-hint` : undefined;
   return (
-    <label className="block">
-      <span className="font-mono text-[11px] uppercase tracking-wider text-ink-3">
+    <div>
+      <label
+        htmlFor={id}
+        className="block font-mono text-[11px] uppercase tracking-wider text-ink-3"
+      >
         {label}
         {required ? " *" : ""}
-      </span>
+      </label>
       {hint ? (
-        <span className="mt-1 block font-mono text-[10px] uppercase tracking-wider text-ink-3/70">
+        <p
+          id={hintId}
+          className="mt-1 font-mono text-[10px] uppercase tracking-wider text-ink-3/70"
+        >
           {hint}
-        </span>
+        </p>
       ) : null}
-      <div className="mt-2">{children}</div>
-    </label>
+      <div className="mt-2">
+        {children({ id, "aria-describedby": hintId })}
+      </div>
+    </div>
   );
 }
