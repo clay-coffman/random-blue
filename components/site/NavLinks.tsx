@@ -7,6 +7,7 @@ const navLinks = [
   { href: "/", label: "Atlas" },
   { href: "/map", label: "Map" },
   { href: "/founder", label: "Resources" },
+  { href: "/investors", label: "Investors" },
   { href: "/agents", label: "For agents" },
 ];
 

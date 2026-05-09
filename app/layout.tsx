@@ -55,12 +55,37 @@ const footerLinks = [
   { href: REPO_URL, label: "GitHub", external: true },
 ];
 
+type MenuLink = { href: string; label: string };
+
 type HeaderUser = {
   email: string;
   name: string;
   role: string;
-  planHref?: string;
+  links: MenuLink[];
 };
+
+function linksForRole(role: string): MenuLink[] {
+  switch (role) {
+    case "founder":
+      return [{ href: "/me/plan", label: "My plan" }];
+    case "owner":
+      return [
+        { href: "/me/submissions", label: "My claims" },
+        { href: "/me/intros", label: "My intros" },
+      ];
+    case "investor":
+      return [
+        { href: "/me/saved", label: "Saved companies" },
+        { href: "/me/intros", label: "My intros" },
+        { href: "/me/investor", label: "My public profile" },
+      ];
+    case "goeo_admin":
+    case "superadmin":
+      return [{ href: "/admin", label: "Admin dashboard" }];
+    default:
+      return [];
+  }
+}
 
 async function loadHeaderUser(): Promise<HeaderUser | null> {
   const session = await (await getAuth())
@@ -69,13 +94,11 @@ async function loadHeaderUser(): Promise<HeaderUser | null> {
   if (!session?.user) return null;
   const user = session.user as { email: string; name?: string | null; role?: string | null };
   const role = user.role ?? "founder";
-  // Defer the founder-passport lookup to /me/plan so the root layout
-  // does not issue a D1 query on every authenticated navigation.
   return {
     email: user.email,
     name: user.name ?? "",
     role,
-    planHref: role === "founder" ? "/me/plan" : undefined,
+    links: linksForRole(role),
   };
 }
 
@@ -111,7 +134,7 @@ async function SiteNav() {
               name={user.name}
               email={user.email}
               role={user.role}
-              planHref={user.planHref}
+              links={user.links}
             />
           ) : (
             <>

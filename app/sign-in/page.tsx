@@ -68,6 +68,9 @@ function SignInForm() {
         return;
       }
       router.push(next);
+      // The header is rendered server-side from the session cookie;
+      // refresh so the new session is picked up without a full reload.
+      router.refresh();
     } catch (err) {
       setServerError(
         err instanceof Error ? err.message : "Network error. Please retry.",

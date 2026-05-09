@@ -92,6 +92,9 @@ function AccountForm() {
       // and we route to the verify screen as usual.
       if (result.data?.token) {
         router.push(next || `/onboarding/${role}`);
+        // The header is rendered server-side from the session cookie;
+        // refresh so the new session is picked up without a full reload.
+        router.refresh();
         return;
       }
       const sp = new URLSearchParams();
