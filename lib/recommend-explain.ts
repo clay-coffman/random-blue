@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import { ANTHROPIC_MODEL, anthropic, cachedSystem } from "./anthropic";
-import type { Scored } from "./recommend";
+import type { ResourceRow, Scored } from "./recommend";
 import type { FounderPassportInput } from "@/schemas/founder-passport";
 import { COMMUNITY_TAGS, INDUSTRIES, STAGES, labelFor } from "./intake-options";
 
@@ -203,4 +203,25 @@ export function explainSkip(
 
   // 6. Final fallback — partial match, nothing strongly disqualifying.
   return "Low fit on your passport — only a partial match.";
+}
+
+// ResourceRow → SkipFacets adapter for the production recommend route.
+// Three of explainSkip's signals are wired up: community, industry, and
+// geo. `stages` is intentionally omitted — stage info on a `ResourceRow`
+// lives in `topics` (CSV `Topics` lifecycle markers, not a structured
+// enum), and decoding it for negative matching is more nuance than the
+// other three signals warrant. `needs` is mock-only for now (Catalogue
+// has `matches.needs`; ResourceRow does not), so the "already covered"
+// branch of explainSkip never fires from production traffic.
+export function resourceRowToSkipFacets(r: ResourceRow): SkipFacets {
+  const counties = r.locations
+    .map((l) => l.county)
+    .filter((c): c is string => c !== null);
+  const statewide = r.locations.some((l) => l.statewide);
+  return {
+    industries: r.industries,
+    communities: r.communities,
+    counties: counties.length > 0 ? counties : undefined,
+    statewide,
+  };
 }

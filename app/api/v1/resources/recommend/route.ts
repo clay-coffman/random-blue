@@ -19,9 +19,8 @@ import { loadAllResourceRows } from "@/lib/resources-loader";
 import {
   explainRecommendations,
   explainSkip,
-  type SkipFacets,
+  resourceRowToSkipFacets,
 } from "@/lib/recommend-explain";
-import type { ResourceRow } from "@/lib/recommend";
 import { safeParseJson } from "@/lib/json-safe";
 import type {
   Bucket,
@@ -206,7 +205,7 @@ export async function POST(req: Request) {
       reasons: s.reasons,
       because:
         s.bucket === "ignore"
-          ? explainSkip(facetsFor(s.resource), passport)
+          ? explainSkip(resourceRowToSkipFacets(s.resource), passport)
           : (explanations.get(s.resource.id) ?? ""),
       action_text: "",
       kind: s.resource.kind ?? undefined,
@@ -227,19 +226,3 @@ export async function POST(req: Request) {
   }
 }
 
-// ResourceRow → SkipFacets adapter. `stages` is intentionally omitted —
-// stage info lives in `topics` (CSV `Topics` lifecycle markers) and the
-// other four signals (community/industry/geo/needs) carry the load for
-// the skip-bucket explainer.
-function facetsFor(r: ResourceRow): SkipFacets {
-  const counties = r.locations
-    .map((l) => l.county)
-    .filter((c): c is string => c !== null);
-  const statewide = r.locations.some((l) => l.statewide);
-  return {
-    industries: r.industries,
-    communities: r.communities,
-    counties: counties.length > 0 ? counties : undefined,
-    statewide,
-  };
-}

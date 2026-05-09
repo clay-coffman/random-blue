@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   explainSkip,
+  resourceRowToSkipFacets,
   type SkipFacets,
   type SkipPassport,
 } from "@/lib/recommend-explain";
+import type { ResourceRow } from "@/lib/recommend";
 
+// Stay within a single stage vocabulary — `growth` exists in both the
+// `FounderStage` enum and the intake-options `STAGES` table, which keeps
+// the mismatch test honest if either side ever normalises.
 const basePassport: SkipPassport = {
   county: "Salt Lake",
-  stage: "paying_customers",
+  stage: "growth",
   industry: "b2b_saas",
   communities: ["women"],
 };
@@ -116,6 +121,72 @@ describe("explainSkip", () => {
     const opts = { alreadyCoveredNeeds: new Set(["capital"]) };
     expect(explainSkip(facets, basePassport, opts)).toMatch(
       /Built for Multicultural \/ minority-owned founders/,
+    );
+  });
+});
+
+describe("resourceRowToSkipFacets", () => {
+  const baseRow: ResourceRow = {
+    id: "r_test",
+    title: "Test Resource",
+    description: null,
+    sourceUrl: null,
+    contactEmail: null,
+    kind: null,
+    topics: [],
+    industries: ["b2b_saas"],
+    communities: ["veteran"],
+    locations: [],
+  };
+
+  it("flattens locations into counties + statewide", () => {
+    const row: ResourceRow = {
+      ...baseRow,
+      locations: [
+        { county: "Salt Lake", city: null, statewide: false },
+        { county: "Utah", city: null, statewide: false },
+      ],
+    };
+    expect(resourceRowToSkipFacets(row)).toEqual({
+      industries: ["b2b_saas"],
+      communities: ["veteran"],
+      counties: ["Salt Lake", "Utah"],
+      statewide: false,
+    });
+  });
+
+  it("filters out null counties so explainSkip's geo branch only sees real ones", () => {
+    const row: ResourceRow = {
+      ...baseRow,
+      // Statewide rows often have null county — including null in counties
+      // would break explainSkip's `!includes(passport.county)` check.
+      locations: [{ county: null, city: null, statewide: true }],
+    };
+    const facets = resourceRowToSkipFacets(row);
+    expect(facets.counties).toBeUndefined();
+    expect(facets.statewide).toBe(true);
+  });
+
+  it("derives statewide from any location with statewide=true", () => {
+    const row: ResourceRow = {
+      ...baseRow,
+      locations: [
+        { county: "Salt Lake", city: null, statewide: false },
+        { county: null, city: null, statewide: true },
+      ],
+    };
+    expect(resourceRowToSkipFacets(row).statewide).toBe(true);
+  });
+
+  it("end-to-end: a county-restricted row with industry match yields a geo skip reason", () => {
+    const row: ResourceRow = {
+      ...baseRow,
+      industries: ["b2b_saas"], // matches base passport
+      communities: [], // no community filter
+      locations: [{ county: "Washington", city: null, statewide: false }],
+    };
+    expect(explainSkip(resourceRowToSkipFacets(row), basePassport)).toBe(
+      "Limited to Washington (you're in Salt Lake).",
     );
   });
 });

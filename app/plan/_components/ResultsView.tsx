@@ -361,7 +361,7 @@ function buildMailto(
   if (goal) lines.push(`Right now I'm focused on ${goal.toLowerCase()}.`);
   lines.push("");
   lines.push(
-    `I came across ${resource.title} via Utah's Startup State Atlas and wanted to reach out — ${resource.actionText.toLowerCase()}`,
+    `I came across ${resource.title} via Utah's Startup State Atlas and wanted to reach out about a possible fit.`,
   );
   lines.push("");
   lines.push("Happy to share more context if useful.");
