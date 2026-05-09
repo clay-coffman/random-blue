@@ -8,7 +8,11 @@ import {
   getApiSession,
   isAdminRole,
 } from "@/lib/auth-utils";
-import { canSeeInvestor, investorCard } from "@/lib/investor-card";
+import {
+  canSeeInvestor,
+  investorCard,
+  RESERVED_INVESTOR_SLUGS,
+} from "@/lib/investor-card";
 import { InvestorPublicPatchSchema } from "@/schemas/investor-public";
 
 export const dynamic = "force-dynamic";
@@ -132,11 +136,15 @@ export async function PATCH(
   }
 
   // Slug-uniqueness check — return 409 instead of letting D1 surface
-  // a generic constraint error.
+  // a generic constraint error. Also reject reserved slugs that
+  // collide with static `/investors/<segment>` routes.
   if (
     typeof patch.slug === "string" &&
     patch.slug !== profile.slug
   ) {
+    if (RESERVED_INVESTOR_SLUGS.has(patch.slug)) {
+      return errorResponse("conflict", "Slug is reserved.", 409);
+    }
     const [taken] = await db()
       .select({ id: investorProfiles.id })
       .from(investorProfiles)

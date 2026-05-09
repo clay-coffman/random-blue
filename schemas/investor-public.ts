@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RESERVED_INVESTOR_SLUGS } from "@/lib/investor-card";
 
 // Patch shape for the public-profile editor + machine PATCH. All
 // fields optional — the route only writes what the caller sends.
@@ -10,6 +11,7 @@ export const InvestorPublicPatchSchema = z.object({
     .min(1)
     .max(80)
     .regex(/^[a-z0-9-]+$/, "Lowercase letters, digits, and hyphens only.")
+    .refine((v) => !RESERVED_INVESTOR_SLUGS.has(v), "This slug is reserved.")
     .optional(),
   display_name: z.string().min(1).max(120).optional(),
   bio: z.string().max(2000).nullable().optional(),

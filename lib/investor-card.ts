@@ -15,6 +15,11 @@ import { db } from "@/lib/db";
 import { investorProfiles } from "@/db/schema";
 import { slugify } from "@/lib/slugify";
 
+// Slugs that collide with static `/investors/<segment>` routes and
+// must never be assigned to a profile. Add new entries here when a
+// new static segment lands under app/investors/.
+export const RESERVED_INVESTOR_SLUGS: ReadonlySet<string> = new Set(["all"]);
+
 type InvestorProfileRow = typeof investorProfiles.$inferSelect;
 import {
   GEO_FOCUS_OPTIONS,
@@ -169,6 +174,7 @@ export async function ensureInvestorSlug(row: InvestorProfileRow): Promise<strin
   const base = slugify(seed) || "investor";
   for (let n = 1; n <= 50; n++) {
     const candidate = n === 1 ? base : `${base}-${n}`;
+    if (RESERVED_INVESTOR_SLUGS.has(candidate)) continue;
     const taken = await db()
       .select({ id: investorProfiles.id })
       .from(investorProfiles)

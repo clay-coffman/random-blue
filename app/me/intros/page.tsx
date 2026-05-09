@@ -201,7 +201,7 @@ function OutboundView({
         <p className="mt-2 text-sm text-ink-3">
           Send your first request from{" "}
           <Link
-            href="/investors"
+            href="/investors/all"
             className="underline decoration-ember/40 hover:decoration-ember"
           >
             the investor directory
