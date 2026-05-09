@@ -89,7 +89,7 @@ Live in `components/brand/*`. Import via the barrel:
 ```ts
 import {
   Tile, Chip, SectionHeader, ScribbleDivider,
-  PersonaTile, ActivityTicker,
+  PersonaTile,
 } from '@/components/brand';
 ```
 
@@ -118,9 +118,6 @@ Compact = pill with circled initial (used in hero + Agent 3 quick-test
 buttons). Full = `<Tile>` with name + location + oneLiner (use on
 `/founder` if the page wants a grid; brief allows it). Both variants
 honor the same URL contract.
-
-**ActivityTicker** — static stub of three strings. **Don't** wire to
-real D1 events from a UI agent — Phase 5 polish owns that.
 
 ## Personas — the URL contract
 
