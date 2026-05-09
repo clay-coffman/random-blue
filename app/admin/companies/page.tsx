@@ -42,7 +42,9 @@ export default async function AdminCompaniesPage({
   ]);
   const pendingSet = new Set(pendingRows.map((r) => r.companyId));
 
-  function statusOf(r: (typeof allRows)[number]): "claimed" | "pending" | "unclaimed" {
+  function statusOf(
+    r: (typeof allRows)[number],
+  ): "claimed" | "pending" | "unclaimed" {
     if (r.claimedByUserId) return "claimed";
     if (pendingSet.has(r.id)) return "pending";
     return "unclaimed";
@@ -54,7 +56,9 @@ export default async function AdminCompaniesPage({
     pending: allRows.filter((r) => statusOf(r) === "pending").length,
     unclaimed: allRows.filter((r) => statusOf(r) === "unclaimed").length,
   };
-  const visible = allRows.filter((r) => filter === "all" || statusOf(r) === filter);
+  const visible = allRows.filter(
+    (r) => filter === "all" || statusOf(r) === filter,
+  );
 
   return (
     <div>
@@ -90,98 +94,98 @@ export default async function AdminCompaniesPage({
         </p>
       ) : (
         <>
-      <div className="hidden lg:block overflow-x-auto rounded-tile border-[1.5px] border-topo">
-        <table className="w-full min-w-[560px] text-sm">
-          <thead className="bg-paper">
-            <tr className="text-left">
-              <Th>Company</Th>
-              <Th>Sector</Th>
-              <Th>Stage</Th>
-              <Th>Status</Th>
-              <Th>Action</Th>
-            </tr>
-          </thead>
-          <tbody>
+          <div className="hidden lg:block overflow-x-auto rounded-tile border-[1.5px] border-topo">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead className="bg-paper">
+                <tr className="text-left">
+                  <Th>Company</Th>
+                  <Th>Sector</Th>
+                  <Th>Stage</Th>
+                  <Th>Status</Th>
+                  <Th>Action</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((c) => {
+                  const status = statusOf(c);
+                  return (
+                    <tr key={c.id} className="border-t border-topo bg-paper-2">
+                      <Td>
+                        <Link
+                          href={`/companies/${c.slug}/edit`}
+                          className="font-medium hover:text-ember"
+                        >
+                          {c.name}
+                        </Link>
+                      </Td>
+                      <Td>{c.sector ?? "—"}</Td>
+                      <Td>{c.stage ?? "—"}</Td>
+                      <Td>
+                        <StatusChip status={status} />
+                      </Td>
+                      <Td>
+                        {status === "pending" ? (
+                          <Link
+                            href={`/admin/submissions?company=${c.slug}`}
+                            className="rounded-pill border border-ember px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ember hover:bg-ember-tint"
+                          >
+                            Review
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/companies/${c.slug}/edit`}
+                            className="rounded-pill border border-ink px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ink hover:bg-stone"
+                          >
+                            Edit
+                          </Link>
+                        )}
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <ul className="grid gap-2 lg:hidden">
             {visible.map((c) => {
               const status = statusOf(c);
               return (
-                <tr key={c.id} className="border-t border-topo bg-paper-2">
-                  <Td>
+                <li
+                  key={c.id}
+                  className="flex flex-wrap items-center gap-3 rounded-tile border-[1.5px] border-topo bg-paper p-4"
+                >
+                  <span className="flex-1 min-w-0">
                     <Link
                       href={`/companies/${c.slug}/edit`}
-                      className="font-medium hover:text-ember"
+                      className="block font-serif text-lg leading-tight hover:text-ember"
                     >
                       {c.name}
                     </Link>
-                  </Td>
-                  <Td>{c.sector ?? "—"}</Td>
-                  <Td>{c.stage ?? "—"}</Td>
-                  <Td>
-                    <StatusChip status={status} />
-                  </Td>
-                  <Td>
-                    {status === "pending" ? (
-                      <Link
-                        href={`/admin/submissions?company=${c.slug}`}
-                        className="rounded-pill border border-ember px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ember hover:bg-ember-tint"
-                      >
-                        Review
-                      </Link>
-                    ) : (
-                      <Link
-                        href={`/companies/${c.slug}/edit`}
-                        className="rounded-pill border border-ink px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ink hover:bg-stone"
-                      >
-                        Edit
-                      </Link>
-                    )}
-                  </Td>
-                </tr>
+                    <span className="mt-0.5 block text-xs text-ink-3">
+                      {c.sector ?? "—"} · {c.stage ?? "—"}
+                    </span>
+                  </span>
+                  <StatusChip status={status} />
+                  {status === "pending" ? (
+                    <Link
+                      href={`/admin/submissions?company=${c.slug}`}
+                      className="inline-flex min-h-[44px] items-center rounded-pill border border-ember px-4 py-2 font-mono text-xs uppercase tracking-wider text-ember hover:bg-ember-tint"
+                    >
+                      Review
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/companies/${c.slug}/edit`}
+                      className="inline-flex min-h-[44px] items-center rounded-pill border border-ink px-4 py-2 font-mono text-xs uppercase tracking-wider text-ink hover:bg-stone"
+                    >
+                      Edit
+                    </Link>
+                  )}
+                </li>
               );
             })}
-          </tbody>
-        </table>
-      </div>
-
-      <ul className="grid gap-2 lg:hidden">
-        {visible.map((c) => {
-          const status = statusOf(c);
-          return (
-            <li
-              key={c.id}
-              className="flex flex-wrap items-center gap-3 rounded-tile border-[1.5px] border-topo bg-paper p-4"
-            >
-              <span className="flex-1 min-w-0">
-                <Link
-                  href={`/companies/${c.slug}/edit`}
-                  className="block font-serif text-lg leading-tight hover:text-ember"
-                >
-                  {c.name}
-                </Link>
-                <span className="mt-0.5 block text-xs text-ink-3">
-                  {c.sector ?? "—"} · {c.stage ?? "—"}
-                </span>
-              </span>
-              <StatusChip status={status} />
-              {status === "pending" ? (
-                <Link
-                  href={`/admin/submissions?company=${c.slug}`}
-                  className="inline-flex min-h-[44px] items-center rounded-pill border border-ember px-4 py-2 font-mono text-xs uppercase tracking-wider text-ember hover:bg-ember-tint"
-                >
-                  Review
-                </Link>
-              ) : (
-                <Link
-                  href={`/companies/${c.slug}/edit`}
-                  className="inline-flex min-h-[44px] items-center rounded-pill border border-ink px-4 py-2 font-mono text-xs uppercase tracking-wider text-ink hover:bg-stone"
-                >
-                  Edit
-                </Link>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+          </ul>
         </>
       )}
     </div>
