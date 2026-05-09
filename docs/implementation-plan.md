@@ -26,8 +26,9 @@ See `CLAUDE.md` § Source data for the file list and field notes.
 
 Migration state on `main`: `0000_flaky_scarlet_spider` (Agent 1) +
 `0001_brainy_sentinels` + `0002_slow_shotgun` (PR #16) +
-`0003_curious_fat_cobra` (PR #20, renumbered cleanly). Next free
-index is `0004`.
+`0003_curious_fat_cobra` (PR #20, renumbered cleanly) +
+`0004_striped_ulik` (security PR — `rate_limit` table for Better
+Auth's `storage: "database"`). Next free index is `0005`.
 
 ---
 
@@ -82,9 +83,14 @@ Whoever has cycles after Phase 3c merges. Two tracks:
 
 - **5a — hardening:** CI green on `main`, production deploy verified
   (`wrangler deploy` + D1 remote migrated + secrets set), smoke test
-  against the live Worker URL, auth security review (session flags,
-  CSRF, rate limits), upstream failure handling (Anthropic / Parallel.ai
-  timeouts), privacy review on `founder_passports`.
+  against the live Worker URL, ~~auth security review (session flags,
+  CSRF, rate limits)~~ ✅ shipped — session cookie hardening (`__Host-`
+  prefix in prod), CSRF guard on `/api/v1/*` writes, Better Auth
+  `rateLimit` on `/api/auth/*`, Cloudflare native ratelimit binding
+  on ownership uploads. Founder-passport public endpoints are tracked
+  separately (GH issue, follow-up). Upstream failure handling
+  (Anthropic / Parallel.ai timeouts), privacy review on
+  `founder_passports` still open.
 - **5b — polish:** mobile sweep at 375 / 768 / 1280px, empty / error /
   loading states on every surface, end-to-end Playwright smoke test,
   activity ticker wire-up, InvestorBrief prompt tuning.

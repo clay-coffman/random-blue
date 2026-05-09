@@ -3,11 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { companies, profileUpdates } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
-import {
-  getApiSession,
-  hasMachineToken,
-  isAdminRole,
-} from "@/lib/auth-utils";
+import { authorizeWrite, isAdminRole } from "@/lib/auth-utils";
 import { companyCard } from "@/lib/company-card";
 
 export const dynamic = "force-dynamic";
@@ -85,21 +81,32 @@ export async function PATCH(
   > | null;
   if (!body) return errorResponse("bad_request", "Body required.", 400);
 
-  // Auth precedence: session (admin or owner) wins over the machine
-  // token if both are present, so an admin's user id is preserved in
-  // the audit row instead of being recorded as 'machine'.
-  const session = await getApiSession(req);
-  const isAdmin = !!session && isAdminRole(session.user.role);
+  const auth = await authorizeWrite(req);
+  if (auth.kind === "denied") {
+    if (auth.reason === "csrf") {
+      return errorResponse("forbidden", "Cross-origin request blocked.", 403);
+    }
+    return errorResponse(
+      "unauthorized",
+      "Sign in with the owner account, an admin role, or use X-Atlas-Admin-Token.",
+      401,
+    );
+  }
+  const machine = auth.kind === "machine";
+  const sessionUser = auth.kind === "session" ? auth.user : null;
+  const isAdmin = !!sessionUser && isAdminRole(sessionUser.role);
   const isOwner =
-    !!session &&
+    !!sessionUser &&
     !!company.claimedByUserId &&
-    company.claimedByUserId === session.user.id;
-  const machine = !session && hasMachineToken(req);
+    company.claimedByUserId === sessionUser.id;
 
+  // Authorization: machine OR admin OR claimed-owner. Anyone else
+  // signed in (e.g. a founder who hasn't claimed this company) is
+  // forbidden.
   if (!machine && !isAdmin && !isOwner) {
     return errorResponse(
       "forbidden",
-      "Sign in with the owner account, an admin role, or use X-Atlas-Admin-Token.",
+      "You don't have permission to edit this company.",
       403,
     );
   }
@@ -125,7 +132,7 @@ export async function PATCH(
     : isAdmin && !isOwner
       ? "staff"
       : "owner";
-  const editorUserId = session?.user.id ?? null;
+  const editorUserId = sessionUser?.id ?? null;
 
   // Update + audit row.
   patch.lastUpdatedBy = editorUserId ?? "machine";
@@ -159,10 +166,15 @@ export async function DELETE(
   ctx: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await ctx.params;
-  const machine = hasMachineToken(req);
-  const session = machine ? null : await getApiSession(req);
-  const isAdmin = !!session && isAdminRole(session.user.role);
-  if (!machine && !isAdmin) {
+  const auth = await authorizeWrite(req);
+  if (auth.kind === "denied") {
+    if (auth.reason === "csrf") {
+      return errorResponse("forbidden", "Cross-origin request blocked.", 403);
+    }
+    return errorResponse("unauthorized", "Sign in required.", 401);
+  }
+  const isAdmin = auth.kind === "session" && isAdminRole(auth.user.role);
+  if (auth.kind !== "machine" && !isAdmin) {
     return errorResponse("forbidden", "Admin role required.", 403);
   }
   const [company] = await db()

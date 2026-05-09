@@ -4,7 +4,11 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { adminInvites } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
-import { getApiSession, isSuperadmin } from "@/lib/auth-utils";
+import {
+  authorizeSessionWrite,
+  getApiSession,
+  isSuperadmin,
+} from "@/lib/auth-utils";
 import { newId } from "@/lib/ids";
 import { sendAdminInviteEmail } from "@/lib/email";
 import { env } from "@/lib/cf";
@@ -27,8 +31,14 @@ function generateToken(): string {
 }
 
 export async function POST(req: Request) {
-  const session = await getApiSession(req);
-  if (!session) return errorResponse("unauthorized", "Sign in required.", 401);
+  const auth = await authorizeSessionWrite(req);
+  if (auth.kind === "denied") {
+    if (auth.reason === "csrf") {
+      return errorResponse("forbidden", "Cross-origin request blocked.", 403);
+    }
+    return errorResponse("unauthorized", "Sign in required.", 401);
+  }
+  const session = { user: auth.user };
   if (!isSuperadmin(session.user.role)) {
     return errorResponse("forbidden", "Superadmin only.", 403);
   }

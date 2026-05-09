@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { adminInvites } from "@/db/schema";
 import { user as userTable } from "@/db/schema.auth";
 import { errorResponse } from "@/lib/api-error";
-import { getApiSession } from "@/lib/auth-utils";
+import { authorizeSessionWrite } from "@/lib/auth-utils";
 import { sha256Hex } from "@/lib/hash";
 
 export const dynamic = "force-dynamic";
@@ -20,8 +20,14 @@ export async function POST(
   req: Request,
   ctx: { params: Promise<{ token: string }> },
 ) {
-  const session = await getApiSession(req);
-  if (!session) return errorResponse("unauthorized", "Sign in to accept.", 401);
+  const auth = await authorizeSessionWrite(req);
+  if (auth.kind === "denied") {
+    if (auth.reason === "csrf") {
+      return errorResponse("forbidden", "Cross-origin request blocked.", 403);
+    }
+    return errorResponse("unauthorized", "Sign in to accept.", 401);
+  }
+  const session = { user: auth.user };
   const { token } = await ctx.params;
   const tokenHash = await sha256Hex(token);
   const [invite] = await db()

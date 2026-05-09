@@ -31,15 +31,19 @@ function buildAuth(env?: CloudflareEnv) {
   // § Local authentication testing.
   const skipOtp = env?.AUTH_SKIP_OTP === "true";
 
+  const baseURL =
+    env?.BETTER_AUTH_URL ?? process.env.BETTER_AUTH_URL ?? undefined;
+  // __Host- prefix requires Secure + Path=/ + no Domain. Browsers reject
+  // it over plain HTTP, so fall back to a plain prefix in dev.
+  const isHttps = baseURL?.startsWith("https://") ?? false;
+
   return betterAuth({
-    baseURL:
-      env?.BETTER_AUTH_URL ??
-      process.env.BETTER_AUTH_URL ??
-      undefined,
+    baseURL,
     secret:
       env?.BETTER_AUTH_SECRET ??
       process.env.BETTER_AUTH_SECRET ??
       undefined,
+    trustedOrigins: baseURL ? [baseURL] : [],
     database: drizzleAdapter(db, {
       provider: "sqlite",
       schema: authSchema,
@@ -95,6 +99,45 @@ function buildAuth(env?: CloudflareEnv) {
             },
           }),
         ],
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
+      updateAge: 60 * 60 * 24, // sliding refresh once/day
+      cookieCache: { enabled: true, maxAge: 5 * 60 },
+    },
+    advanced: {
+      // __Host- prefix in prod prevents any sibling host on utah.gov
+      // from setting the session cookie. The prefix needs Secure +
+      // Path=/ + no Domain, all of which we configure below.
+      cookiePrefix: isHttps ? "__Host-atlas" : "atlas",
+      useSecureCookies: isHttps,
+      defaultCookieAttributes: {
+        httpOnly: true,
+        secure: isHttps,
+        sameSite: "lax",
+        path: "/",
+      },
+      crossSubDomainCookies: { enabled: false },
+      // Cloudflare strips x-forwarded-for and provides the true client
+      // IP via cf-connecting-ip. Without this, rateLimit (below) keys
+      // on the wrong/null IP.
+      ipAddress: {
+        ipAddressHeaders: ["cf-connecting-ip"],
+      },
+    },
+    rateLimit: {
+      enabled: true,
+      storage: "database",
+      window: 60,
+      max: 60,
+      customRules: {
+        "/sign-in/email": { window: 60, max: 5 },
+        "/sign-up/email": { window: 600, max: 5 },
+        "/email-otp/send-verification-otp": { window: 60, max: 3 },
+        "/email-otp/verify-otp": { window: 60, max: 5 },
+        "/forget-password": { window: 600, max: 3 },
+        "/reset-password": { window: 600, max: 5 },
+      },
+    },
   });
 }
 
