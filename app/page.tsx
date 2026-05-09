@@ -8,6 +8,7 @@ import {
   Tile,
 } from "@/components/brand";
 import { recentActivity } from "@/lib/activity";
+import { getLandingStats } from "@/lib/landing-stats";
 import { personas } from "@/lib/personas";
 
 export const dynamic = "force-dynamic";
@@ -16,13 +17,6 @@ const ctaBase =
   "inline-flex min-h-[44px] items-center justify-center gap-1 rounded-tile border-[1.5px] border-ink px-5 py-3 font-medium shadow-sketch transition-transform hover:-translate-y-0.5 hover:shadow-sketch-hover";
 const ctaEmber = "border-ember bg-ember text-paper";
 const ctaGhost = "bg-paper-2 text-ink";
-
-const liveStats = [
-  { value: "1,247", label: "Companies" },
-  { value: "312", label: "Resources" },
-  { value: "29", label: "Counties" },
-  { value: "84", label: "Verified profiles" },
-];
 
 const audienceCards = [
   {
@@ -52,7 +46,17 @@ const audienceCards = [
 ];
 
 export default async function Home() {
-  const activity = await recentActivity(6);
+  const [activity, stats] = await Promise.all([
+    recentActivity(6),
+    getLandingStats(),
+  ]);
+  const fmt = (n: number) => n.toLocaleString("en-US");
+  const liveStats = [
+    { value: fmt(stats.companies), label: "Companies" },
+    { value: fmt(stats.resources), label: "Resources" },
+    { value: fmt(stats.counties), label: "Counties" },
+    { value: fmt(stats.verifiedProfiles), label: "Verified profiles" },
+  ];
   return (
     <div>
       {/* Hero */}

@@ -67,7 +67,26 @@ function buildAuth(env?: CloudflareEnv) {
       env?.BETTER_AUTH_SECRET ??
       process.env.BETTER_AUTH_SECRET ??
       undefined,
-    trustedOrigins: baseURL ? [baseURL] : [],
+    // In dev (localhost), accept any localhost origin so worktrees on
+    // rotating ports (3000+N) don't 403 when BETTER_AUTH_URL is stale.
+    // Production keeps the strict single-origin allowlist.
+    trustedOrigins: isLocalhost
+      ? (request?: Request) => {
+          const origin = request?.headers.get("origin");
+          if (!origin) return [];
+          try {
+            const h = new URL(origin).hostname;
+            if (h === "localhost" || h === "127.0.0.1" || h === "::1") {
+              return [origin];
+            }
+          } catch {
+            // malformed origin — ignore
+          }
+          return [];
+        }
+      : baseURL
+        ? [baseURL]
+        : [],
     database: drizzleAdapter(db, {
       provider: "sqlite",
       schema: authSchema,
