@@ -111,6 +111,16 @@ locked:
 
 Two cross-cutting rules that are easy to get wrong:
 
+- **Two env files, two purposes.** `.env.local` (per-worktree, gitignored)
+  carries `PORT`, `WRANGLER_PORT`, and `CLOUDFLARE_API_TOKEN` — read by
+  `process.env` (Next.js, drizzle-kit, wrangler CLI). `.dev.vars` (also
+  gitignored, template at `.dev.vars.example`) carries provider secrets
+  (`ANTHROPIC_API_KEY`, `PARALLEL_API_KEY`, `BETTER_AUTH_SECRET`, etc.) —
+  read by `env()` (the Cloudflare binding helper in `lib/cf.ts`) via
+  `initOpenNextCloudflareForDev()` in `next.config.ts`. Code in `lib/*`
+  reads secrets through `env()` so the same call works in dev (from
+  `.dev.vars`) and prod (from `wrangler secret put`). If you put a secret
+  in `.env.local`, lib code won't see it.
 - **D1 is per-worktree local.** Each worktree has its own SQLite at
   `<worktree>/.wrangler/state/v3/d1/`. The binding name is the same
   in every worktree (`startup-state-atlas-db`) but the data is
