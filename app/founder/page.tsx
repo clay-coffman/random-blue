@@ -1,7 +1,14 @@
 import { headers } from "next/headers";
 import Link from "next/link";
+import { eq } from "drizzle-orm";
 import { getAuth } from "@/auth";
 import { SectionHeader } from "@/components/brand";
+import { db } from "@/lib/db";
+import { companies, companyLocations } from "@/db/schema";
+import {
+  companyToPassportInitial,
+  type CompanyForPassport,
+} from "@/lib/company-to-passport";
 import { isPersonaId, personaFixtures } from "@/lib/intake-fixtures";
 import { personaById } from "@/lib/personas";
 import type { FounderPassportInput } from "@/types/passport";
@@ -9,8 +16,44 @@ import { IntakeForm } from "./_components/IntakeForm";
 import { PersonaButtons } from "./_components/PersonaButtons";
 
 type PageProps = {
-  searchParams: Promise<{ persona?: string | string[] }>;
+  searchParams: Promise<{
+    persona?: string | string[];
+    company?: string | string[];
+  }>;
 };
+
+async function loadCompanyPrefill(
+  slug: string | undefined,
+): Promise<{ initial: Partial<FounderPassportInput>; companyName: string } | null> {
+  if (!slug) return null;
+  const [row] = await db()
+    .select({
+      name: companies.name,
+      website: companies.website,
+      sector: companies.sector,
+      stage: companies.stage,
+      employeeCount: companies.employeeCount,
+      county: companyLocations.county,
+      city: companyLocations.city,
+    })
+    .from(companies)
+    .leftJoin(companyLocations, eq(companyLocations.companyId, companies.id))
+    .where(eq(companies.slug, slug))
+    .limit(1);
+  if (!row) return null;
+  const c: CompanyForPassport = {
+    name: row.name,
+    website: row.website,
+    sector: row.sector,
+    stage: row.stage,
+    county: row.county,
+    city: row.city,
+    employeeCount: row.employeeCount,
+  };
+  const initial = companyToPassportInitial(c);
+  if (Object.keys(initial).length === 0) return null;
+  return { initial, companyName: row.name };
+}
 
 export const metadata = {
   title: "Start your plan — Atlas",
@@ -23,6 +66,7 @@ export default async function FounderPage({ searchParams }: PageProps) {
   const rawPersona = Array.isArray(sp.persona) ? sp.persona[0] : sp.persona;
   const personaId =
     rawPersona && isPersonaId(rawPersona) ? rawPersona : undefined;
+  const rawCompany = Array.isArray(sp.company) ? sp.company[0] : sp.company;
   const session = await (await getAuth()).api.getSession({ headers: await headers() });
   // Persona quick-test fixtures short-circuit submit to a seeded
   // passport (fp_priya etc). For a signed-in user that means landing
@@ -31,9 +75,27 @@ export default async function FounderPage({ searchParams }: PageProps) {
   // surface, not their flow.
   const showFixtures = !session?.user;
   const effectivePersonaId = showFixtures ? personaId : undefined;
-  const initial: FounderPassportInput | undefined = effectivePersonaId
+  // Persona fixture wins over company prefill if both are present;
+  // ?company is meant for signed-in owners, ?persona for the anonymous
+  // tour, so they don't realistically collide.
+  const personaInitial: FounderPassportInput | undefined = effectivePersonaId
     ? personaFixtures[effectivePersonaId]
     : undefined;
+  const companyPrefill = personaInitial
+    ? null
+    : await loadCompanyPrefill(rawCompany);
+  const initial: FounderPassportInput | undefined =
+    personaInitial ??
+    (companyPrefill
+      ? ({
+          websiteUrl: "",
+          city: "",
+          communities: [],
+          needs: [],
+          constraints: [],
+          ...companyPrefill.initial,
+        } satisfies FounderPassportInput)
+      : undefined);
   const persona = effectivePersonaId
     ? personaById(effectivePersonaId)
     : undefined;
@@ -46,6 +108,18 @@ export default async function FounderPage({ searchParams }: PageProps) {
         title="Tell us what you're building."
         sub="Six questions. We'll match your situation against every state-vetted resource and return a ranked 90-day plan."
       />
+
+      {companyPrefill ? (
+        <div className="mt-8 rounded-tile border-[1.5px] border-ember bg-ember-tint p-4 sm:p-5">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-ember">
+            Prefilled from your company
+          </p>
+          <p className="mt-1 font-serif text-lg leading-snug">
+            We filled what we could from {companyPrefill.companyName}. Edit
+            anything that&rsquo;s off.
+          </p>
+        </div>
+      ) : null}
 
       {showFixtures ? (
         <div className="mt-8 rounded-tile border-[1.5px] border-topo bg-paper-2 p-4 sm:p-6">

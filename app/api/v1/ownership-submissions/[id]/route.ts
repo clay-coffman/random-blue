@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { businessOwnershipSubmissions, companies } from "@/db/schema";
+import { user as userTable } from "@/db/schema.auth";
 import { errorResponse } from "@/lib/api-error";
 import {
   authorizeSessionWrite,
   getApiSession,
   isAdminRole,
 } from "@/lib/auth-utils";
+import { sendClaimDecisionEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +110,40 @@ export async function PATCH(
         lastUpdatedAt: now,
       })
       .where(eq(companies.id, submission.companyId));
+  }
+
+  // Notify the submitter. Failure here must not roll back the status
+  // change — log and move on; the admin already decided.
+  try {
+    const [recipient] = await db()
+      .select({
+        email: userTable.email,
+        companyName: companies.name,
+        companySlug: companies.slug,
+      })
+      .from(businessOwnershipSubmissions)
+      .leftJoin(userTable, eq(businessOwnershipSubmissions.userId, userTable.id))
+      .leftJoin(
+        companies,
+        eq(businessOwnershipSubmissions.companyId, companies.id),
+      )
+      .where(eq(businessOwnershipSubmissions.id, id))
+      .limit(1);
+    if (
+      recipient?.email &&
+      recipient.companyName &&
+      recipient.companySlug
+    ) {
+      await sendClaimDecisionEmail({
+        to: recipient.email,
+        status: body.status!,
+        companyName: recipient.companyName,
+        companySlug: recipient.companySlug,
+        notes: body.review_notes ?? null,
+      });
+    }
+  } catch (err) {
+    console.error("[ownership-submissions] decision email failed", err);
   }
 
   const [updated] = await db()

@@ -234,6 +234,62 @@ export async function sendIntroDeclinedEmail(args: {
   );
 }
 
+// ─── Business-ownership claim decision emails ───────────────────────
+
+type ClaimDecision = "approved" | "rejected" | "needs_more_info";
+
+export async function sendClaimDecisionEmail(args: {
+  to: string;
+  status: ClaimDecision;
+  companyName: string;
+  companySlug: string;
+  notes?: string | null;
+}) {
+  const origin = publicOrigin();
+  const safeName = escapeHtml(stripCrlf(args.companyName));
+  const editUrl = `${origin}/companies/${encodeURIComponent(args.companySlug)}/edit`;
+  const claimUrl = `${origin}/companies/${encodeURIComponent(args.companySlug)}/claim`;
+  const notesBlock = args.notes
+    ? `<h3>Note from GOEO</h3>${paragraphs(args.notes)}`
+    : "";
+
+  if (args.status === "approved") {
+    await send(
+      args.to,
+      `${stripCrlf(args.companyName)} is yours on Atlas`,
+      `<h2>You&rsquo;re verified</h2>
+       <p>GOEO reviewed and approved your claim of <strong>${safeName}</strong>. You can now edit the public profile.</p>
+       <p><a href="${editUrl}" style="display:inline-block;padding:10px 16px;background:#c2410c;color:#fff;text-decoration:none;border-radius:6px">Edit your profile →</a></p>
+       <p>Changes you save publish to the map, the public profile, the JSON feed, and the Markdown export immediately.</p>
+       ${notesBlock}
+       <p>— Utah GOED</p>`,
+    );
+    return;
+  }
+  if (args.status === "needs_more_info") {
+    await send(
+      args.to,
+      `One more thing for your ${stripCrlf(args.companyName)} claim`,
+      `<h2>We need a bit more</h2>
+       <p>Thanks for your claim of <strong>${safeName}</strong>. Before GOEO can verify it, we need an additional document or clarification.</p>
+       ${notesBlock}
+       <p><a href="${claimUrl}" style="display:inline-block;padding:10px 16px;background:#c2410c;color:#fff;text-decoration:none;border-radius:6px">Re-upload a document →</a></p>
+       <p>— Utah GOED</p>`,
+    );
+    return;
+  }
+  // rejected
+  await send(
+    args.to,
+    `Update on your ${stripCrlf(args.companyName)} claim`,
+    `<h2>Claim not approved</h2>
+     <p>We weren&rsquo;t able to verify your claim of <strong>${safeName}</strong> with the document provided.</p>
+     ${notesBlock}
+     <p>If you believe this is an error, reply to this email or write to <a href="mailto:atlas@goed.utah.gov">atlas@goed.utah.gov</a> and we&rsquo;ll take another look.</p>
+     <p>— Utah GOED</p>`,
+  );
+}
+
 export async function sendIntroIntroducedEmail(args: {
   to: string;
   name: string;

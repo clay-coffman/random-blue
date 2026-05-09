@@ -66,25 +66,28 @@ type HeaderUser = {
 };
 
 function linksForRole(role: string): MenuLink[] {
+  const base: MenuLink = { href: "/me", label: "You" };
   switch (role) {
     case "founder":
-      return [{ href: "/me/plan", label: "My plan" }];
+      return [base, { href: "/me/plan", label: "My plan" }];
     case "owner":
       return [
+        base,
         { href: "/me/submissions", label: "My claims" },
         { href: "/me/intros", label: "My intros" },
       ];
     case "investor":
       return [
+        base,
         { href: "/me/saved", label: "Saved companies" },
         { href: "/me/intros", label: "My intros" },
         { href: "/me/investor", label: "My public profile" },
       ];
     case "goeo_admin":
     case "superadmin":
-      return [{ href: "/admin", label: "Admin dashboard" }];
+      return [base, { href: "/admin", label: "Admin dashboard" }];
     default:
-      return [];
+      return [base];
   }
 }
 
