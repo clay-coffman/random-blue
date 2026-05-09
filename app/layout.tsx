@@ -9,6 +9,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { getAuth } from "@/auth";
+import { NavLinks } from "@/components/site/NavLinks";
 import { UserMenu } from "@/components/site/UserMenu";
 
 const robotoSerif = Roboto_Serif({
@@ -46,13 +47,6 @@ export const metadata: Metadata = {
 };
 
 const REPO_URL = "https://github.com/clay-coffman/startup-state-atlas";
-
-const navLinks = [
-  { href: "/", label: "Atlas" },
-  { href: "/map", label: "Map" },
-  { href: "/founder", label: "Resources" },
-  { href: "/agents", label: "For agents" },
-];
 
 const footerLinks = [
   { href: "/llms.txt", label: "llms.txt", external: false },
@@ -110,20 +104,7 @@ async function SiteNav() {
             </span>
           </span>
         </Link>
-        <nav
-          aria-label="Primary"
-          className="order-3 -mx-4 flex w-full gap-4 overflow-x-auto px-4 font-hand text-[15px] font-bold md:order-none md:mx-0 md:w-auto md:flex-1 md:justify-center md:overflow-visible md:px-0"
-        >
-          {navLinks.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="whitespace-nowrap text-ink-2 transition hover:text-ember"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
+        <NavLinks />
         <div className="ml-auto flex items-center gap-2 md:ml-0">
           {user ? (
             <UserMenu
