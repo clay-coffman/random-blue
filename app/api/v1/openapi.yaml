@@ -215,6 +215,32 @@ paths:
                     items: { $ref: "#/components/schemas/ResourceSummary" }
         "500": { $ref: "#/components/responses/Internal" }
 
+  /api/v1/resources/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          pattern: "^r_[a-zA-Z0-9_-]+$"
+        description: Resource id (e.g. `r_2628`).
+    get:
+      tags: [resources]
+      operationId: getResource
+      summary: Fetch a single resource by id.
+      security: []
+      responses:
+        "200":
+          description: Resource row.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [resource]
+                properties:
+                  resource: { $ref: "#/components/schemas/ResourceSummary" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/companies:
     get:
       tags: [companies]

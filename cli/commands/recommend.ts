@@ -20,7 +20,7 @@ export function registerRecommend(program: Command) {
   program
     .command("recommend")
     .description(
-      `Score Utah resources against a founder profile.\n\nWith --persona <${PERSONA_NAMES.join("|")}> the canonical fp_<name> id is reused.\nFlags override the persona's saved fields.`,
+      `Score Utah resources against a founder profile.\n\nWith --persona <${PERSONA_NAMES.join("|")}> the canonical fp_<name>\npassport is loaded and its saved fields win — other flags are ignored.\nTo score a custom profile, omit --persona and pass --stage --industry --goal\n(plus optional --county / --city / --communities ... ).`,
     )
     .option("--persona <name>", `One of: ${PERSONA_NAMES.join(", ")}`)
     .option("--county <county>", "Utah county (e.g. 'Salt Lake')")

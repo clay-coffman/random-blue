@@ -15,6 +15,7 @@
 import { NextResponse } from "next/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { env } from "@/lib/cf";
 import { createAtlasClient } from "@/cli/lib/atlas-client";
 import { registerTools } from "@/mcp/shared/tools";
 import { registerResources } from "@/mcp/shared/resources";
@@ -36,10 +37,11 @@ async function handleMcpRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const baseUrl = `${url.protocol}//${url.host}`;
 
-  const client = createAtlasClient({
-    baseUrl,
-    adminToken: process.env.ATLAS_ADMIN_TOKEN,
-  });
+  // Worker secret lives on `env().ATLAS_ADMIN_TOKEN` — `process.env`
+  // does not pick up `.dev.vars` since `initOpenNextCloudflareForDev`
+  // wires bindings through Cloudflare context, not Node `process.env`.
+  const adminToken = env().ATLAS_ADMIN_TOKEN ?? "";
+  const client = createAtlasClient({ baseUrl, adminToken });
 
   const server = new McpServer(
     {

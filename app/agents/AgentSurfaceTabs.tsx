@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import {
   cliCommands,
   cliInstallExample,
@@ -38,7 +38,7 @@ function CodeBlock({ children }: { children: string }) {
       <button
         type="button"
         onClick={copy}
-        className="absolute right-2 top-2 z-10 min-h-[36px] rounded-md border-[1.5px] border-ink/20 bg-paper-2 px-2 py-1 font-mono text-xs text-ink shadow-sketch hover:-translate-y-0.5 hover:shadow-sketch-hover focus:outline-none focus:ring-2 focus:ring-ember"
+        className="absolute right-2 top-2 z-10 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border-[1.5px] border-ink/20 bg-paper-2 px-3 py-1 font-mono text-xs text-ink shadow-sketch hover:-translate-y-0.5 hover:shadow-sketch-hover focus:outline-none focus:ring-2 focus:ring-ember"
         aria-label="Copy code"
       >
         {copied ? "copied" : "copy"}
@@ -59,18 +59,41 @@ function TabHeader({
   active: TabId;
   onChange: (id: TabId) => void;
 }) {
+  const refs = useRef<Map<TabId, HTMLButtonElement>>(new Map());
+
+  function handleKey(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") {
+      return;
+    }
+    e.preventDefault();
+    const idx = TABS.findIndex((t) => t.id === active);
+    let next = idx;
+    if (e.key === "ArrowRight") next = (idx + 1) % TABS.length;
+    else if (e.key === "ArrowLeft") next = (idx - 1 + TABS.length) % TABS.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = TABS.length - 1;
+    const target = TABS[next];
+    onChange(target.id);
+    refs.current.get(target.id)?.focus();
+  }
+
   return (
-    <div role="tablist" className="flex flex-wrap gap-2 border-b-[1.5px] border-topo">
+    <div role="tablist" onKeyDown={handleKey} className="flex flex-wrap gap-2 border-b-[1.5px] border-topo">
       {TABS.map((t) => {
         const isActive = t.id === active;
         return (
           <button
             key={t.id}
+            ref={(el) => {
+              if (el) refs.current.set(t.id, el);
+              else refs.current.delete(t.id);
+            }}
             type="button"
             role="tab"
             aria-selected={isActive}
             aria-controls={`agent-tab-${t.id}`}
             id={`agent-tab-trigger-${t.id}`}
+            tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(t.id)}
             className={`min-h-[44px] px-4 py-2 font-hand text-sm font-bold transition-colors ${
               isActive

@@ -22,7 +22,7 @@ export const installCards: InstallCard[] = [
   {
     name: "Run from terminal",
     kicker: "CLI",
-    body: "`startup-state recommend --persona priya` from any checkout. Same surface as the API.",
+    body: "`npm run cli -- recommend --persona priya` from a checkout. Same surface as the API.",
     cta: "See commands",
   },
   {
@@ -115,27 +115,27 @@ export type CliCommand = {
 
 export const cliCommands: CliCommand[] = [
   {
-    command: "startup-state recommend --persona priya --compact",
+    command: "npm run cli -- recommend --persona priya --compact",
     summary: "Score resources for the Priya seed-stage SaaS persona.",
   },
   {
-    command: "startup-state recommend --county 'Salt Lake' --stage mvp --industry 'b2b saas' --goal raise_seed_round --json",
+    command: "npm run cli -- recommend --county 'Salt Lake' --stage mvp --industry 'b2b saas' --goal raise_seed_round --json",
     summary: "Score resources for an inline founder profile.",
   },
   {
-    command: "startup-state map search --sector fintech --employees 2-10 --json",
+    command: "npm run cli -- map search --sector fintech --employees 2-10 --json",
     summary: "Filter companies by sector + employee range.",
   },
   {
-    command: "startup-state company get crew --json",
+    command: "npm run cli -- company get alcomy --json",
     summary: "Read a single company profile as JSON.",
   },
   {
-    command: "startup-state company patch crew --field description='Updated bio.' --field stage=growth",
+    command: "ATLAS_ADMIN_TOKEN=<token> npm run cli -- company patch alcomy --field description='Updated bio.' --field stage=growth",
     summary: "Update a company (requires ATLAS_ADMIN_TOKEN).",
   },
   {
-    command: "startup-state profile build --company NewCo --from-url https://newco.com --emit md,json,llms",
+    command: "npm run cli -- profile build --company NewCo --from-url https://newco.com --emit md,json,llms",
     summary: "Generate three artifact files from a website url.",
   },
 ];
@@ -198,14 +198,19 @@ export const mcpPrompts = [
   },
 ];
 
+// Local stdio config — points at a checkout via tsx so end users
+// don't need a published npm package. Replace `<absolute-path>` with
+// the path where you cloned the repo. Authentication is optional
+// (read tools work without it; only update_company_profile requires
+// ATLAS_ADMIN_TOKEN).
 export const claudeDesktopConfig = `{
   "mcpServers": {
     "startup-state": {
       "command": "npx",
-      "args": ["startup-state-mcp"],
+      "args": ["-y", "tsx", "<absolute-path>/mcp/server.ts"],
       "env": {
         "STARTUP_STATE_API_URL": "https://startup.utah.gov",
-        "ATLAS_ADMIN_TOKEN": "<your-token>"
+        "ATLAS_ADMIN_TOKEN": "<optional-token>"
       }
     }
   }
@@ -226,7 +231,8 @@ export const curlExample = `curl https://startup.utah.gov/api/v1/resources/recom
 
 export const cliInstallExample = `git clone https://github.com/utah-goed/startup-state-atlas
 cd startup-state-atlas && npm install
-export ATLAS_ADMIN_TOKEN=<your-token>
+export STARTUP_STATE_API_URL=https://startup.utah.gov
+# ATLAS_ADMIN_TOKEN is only needed for write subcommands.
 npm run cli -- recommend --persona priya --compact`;
 
 export const agentRules = [

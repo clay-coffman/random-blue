@@ -25,9 +25,9 @@
   `fp_priya`) and get scored, bucketed Utah resources.
 - [Cached plan](/api/v1/founder-passports/{id}/plan): Re-read a saved
   recommendation set.
-- [Founder Passport schema](/openapi.yaml#/components/schemas/FounderPassportInput):
+- [Founder Passport schema](/api/v1/openapi.json#/components/schemas/FounderPassportInput):
   Required intake fields.
-- [Company Profile schema](/openapi.yaml#/components/schemas/Company):
+- [Company Profile schema](/api/v1/openapi.json#/components/schemas/Company):
   How companies represent themselves.
 
 ## Authentication for writes

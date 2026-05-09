@@ -17,6 +17,13 @@ export async function GET(req: Request) {
     Number(url.searchParams.get("limit") ?? "50") || 50,
   );
 
+  // Strip LIKE wildcards (`%`, `_`, `\`) from the user input so the
+  // search behaves as a substring match, not a glob — values are
+  // parameterised by Drizzle so this is not a SQL-injection defense,
+  // it's a correctness defense (a search for `100%` should match the
+  // literal "100%", not everything).
+  const safeQ = q.replace(/[%_\\]/g, "");
+
   const baseQuery = db()
     .select({
       id: resources.id,
@@ -28,12 +35,12 @@ export async function GET(req: Request) {
     })
     .from(resources);
 
-  const rows = q
+  const rows = safeQ
     ? await baseQuery
         .where(
           or(
-            like(resources.title, `%${q}%`),
-            like(resources.description, `%${q}%`),
+            like(resources.title, `%${safeQ}%`),
+            like(resources.description, `%${safeQ}%`),
           ),
         )
         .limit(limit)

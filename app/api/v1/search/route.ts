@@ -6,6 +6,16 @@ import { errorResponse } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
+// `%` and `_` are LIKE wildcards; `\` is the escape character we'd
+// need to introduce to handle them. Easiest defense: strip these
+// from caller input so the search behaves as a substring match,
+// not a glob. Drizzle parameterises the value (no SQL injection),
+// but unescaped wildcards still let `100%` match everything that
+// contains "100".
+function stripWildcards(s: string) {
+  return s.replace(/[%_\\]/g, "");
+}
+
 type SearchResult = {
   kind: "resource" | "company";
   id: string;
@@ -48,6 +58,7 @@ export async function GET(req: Request) {
   }
 
   const out: SearchResult[] = [];
+  const safeQ = stripWildcards(q);
 
   if (type === "resources" || type === "all") {
     const rRows = await db()
@@ -60,8 +71,8 @@ export async function GET(req: Request) {
       .from(resources)
       .where(
         or(
-          like(resources.title, `%${q}%`),
-          like(resources.description, `%${q}%`),
+          like(resources.title, `%${safeQ}%`),
+          like(resources.description, `%${safeQ}%`),
         ),
       )
       .limit(limit);
@@ -91,9 +102,9 @@ export async function GET(req: Request) {
       .from(companies)
       .where(
         or(
-          like(companies.name, `%${q}%`),
-          like(companies.slug, `%${q}%`),
-          like(companies.website, `%${q}%`),
+          like(companies.name, `%${safeQ}%`),
+          like(companies.slug, `%${safeQ}%`),
+          like(companies.website, `%${safeQ}%`),
         ),
       )
       .limit(limit);

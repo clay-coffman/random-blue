@@ -28,10 +28,6 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "bin": {
-    "startup-state": "./cli/index.ts",
-    "startup-state-mcp": "./mcp/server.ts"
-  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.1",
     "@base-ui/react": "^1.4.1",
