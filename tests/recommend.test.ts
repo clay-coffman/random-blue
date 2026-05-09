@@ -1,0 +1,308 @@
+import { describe, expect, it } from "vitest";
+import { bucketize, scoreResource } from "@/lib/recommend";
+import type { ResourceRow } from "@/lib/recommend";
+import type { FounderPassportInput } from "@/types/api";
+
+// ─── Resource fixtures ─────────────────────────────────────────────
+
+const r = (overrides: Partial<ResourceRow> & { id: string }): ResourceRow => ({
+  title: overrides.id,
+  description: null,
+  sourceUrl: null,
+  kind: null,
+  topics: [],
+  industries: [],
+  communities: [],
+  locations: [],
+  ...overrides,
+});
+
+const fundingSLC: ResourceRow = r({
+  id: "r_funding_slc",
+  title: "Salt Lake Angels",
+  topics: ["funding", "investors"],
+  industries: ["software and information technology"],
+  communities: [],
+  locations: [{ county: "Salt Lake", city: null, statewide: false }],
+});
+
+const educationSLC: ResourceRow = r({
+  id: "r_edu_slc",
+  title: "Founder 101",
+  topics: ["education", "pre-seed"],
+  industries: [],
+  communities: ["student"],
+  locations: [{ county: "Salt Lake", city: null, statewide: false }],
+});
+
+const ruralWomen: ResourceRow = r({
+  id: "r_rural_women",
+  title: "Rural Women's AgriBusiness Fund",
+  topics: ["funding", "growth"],
+  industries: ["agriculture"],
+  communities: ["rural", "women"],
+  locations: [{ county: null, city: null, statewide: true }],
+});
+
+const veteranMfg: ResourceRow = r({
+  id: "r_vet_mfg",
+  title: "Utah Veterans in Manufacturing",
+  topics: ["early stage", "talent"],
+  industries: ["manufacturing"],
+  communities: ["veteran"],
+  locations: [{ county: "Weber", city: null, statewide: false }],
+});
+
+const techTransfer: ResourceRow = r({
+  id: "r_tech_transfer",
+  title: "Univ Utah Tech Transfer Office",
+  topics: ["tech transfer", "research", "pre-seed"],
+  industries: ["software and information technology"],
+  communities: ["researcher"],
+  locations: [{ county: "Salt Lake", city: null, statewide: false }],
+});
+
+const exportPgm: ResourceRow = r({
+  id: "r_export",
+  title: "STEP Export Program",
+  topics: ["exports", "international"],
+  industries: ["life sciences and healthcare"],
+  communities: [],
+  locations: [{ county: null, city: null, statewide: true }],
+});
+
+const generic: ResourceRow = r({
+  id: "r_generic",
+  title: "Generic resource with no metadata",
+});
+
+// ─── Persona fixtures ──────────────────────────────────────────────
+
+const jordan: FounderPassportInput = {
+  county: "Salt Lake",
+  city: "Salt Lake City",
+  stage: "idea",
+  industry: "general",
+  communities: ["student"],
+  goal: "start_business",
+  needs: [],
+  constraints: [],
+};
+
+const priya: FounderPassportInput = {
+  county: "Salt Lake",
+  city: "Salt Lake City",
+  stage: "paying_customers",
+  industry: "b2b_saas",
+  communities: ["women"],
+  goal: "raise_seed_round",
+  needs: [],
+  constraints: [],
+};
+
+const maria: FounderPassportInput = {
+  county: "Washington",
+  city: "St. George",
+  stage: "growth",
+  industry: "agriculture",
+  communities: ["rural", "women"],
+  goal: "scale_business",
+  needs: [],
+  constraints: [],
+};
+
+const marcus: FounderPassportInput = {
+  county: "Weber",
+  city: "Ogden",
+  stage: "mvp",
+  industry: "manufacturing",
+  communities: ["veteran"],
+  goal: "hire",
+  needs: [],
+  constraints: [],
+};
+
+const david: FounderPassportInput = {
+  county: "Utah",
+  city: "Provo",
+  stage: "growth",
+  industry: "medical_device",
+  communities: [],
+  goal: "export",
+  needs: [],
+  constraints: [],
+};
+
+const amir: FounderPassportInput = {
+  county: "Salt Lake",
+  city: "Salt Lake City",
+  stage: "idea",
+  industry: "deep_tech",
+  communities: ["researcher"],
+  goal: "commercialize_research",
+  needs: [],
+  constraints: [],
+};
+
+// ─── Helper ────────────────────────────────────────────────────────
+
+const score = (resource: ResourceRow, p: FounderPassportInput) =>
+  scoreResource(resource, p).score;
+
+// ─── Persona tests ─────────────────────────────────────────────────
+
+describe("Priya (raising, B2B SaaS, SLC, women)", () => {
+  it("ranks Funding above Education", () => {
+    expect(score(fundingSLC, priya)).toBeGreaterThan(
+      score(educationSLC, priya),
+    );
+  });
+  it("at least one reason mentions Funding for Salt Lake Angels", () => {
+    const result = scoreResource(fundingSLC, priya);
+    expect(result.reasons.some((r) => /Funding/i.test(r))).toBe(true);
+  });
+  it("matches industry alias B2B SaaS → Software and Information Technology", () => {
+    const result = scoreResource(fundingSLC, priya);
+    expect(
+      result.reasons.some((r) =>
+        /software and information technology/i.test(r),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("Maria (rural growth, agriculture, Washington county, women)", () => {
+  it("ranks Rural Women's fund highest among fixtures", () => {
+    const fixtures = [
+      fundingSLC,
+      educationSLC,
+      ruralWomen,
+      veteranMfg,
+      techTransfer,
+      exportPgm,
+      generic,
+    ];
+    const ranked = fixtures
+      .map((res) => ({ res, ...scoreResource(res, maria) }))
+      .sort((a, b) => b.score - a.score);
+    expect(ranked[0].res.id).toBe("r_rural_women");
+  });
+  it("statewide rural resource scores higher than county-mismatched local resource", () => {
+    expect(score(ruralWomen, maria)).toBeGreaterThan(score(fundingSLC, maria));
+  });
+});
+
+describe("Marcus (veteran, manufacturing, Weber, mvp, hire)", () => {
+  it("ranks veteran manufacturing resource highest", () => {
+    const fixtures = [fundingSLC, educationSLC, veteranMfg, exportPgm, generic];
+    const ranked = fixtures
+      .map((res) => ({ res, ...scoreResource(res, marcus) }))
+      .sort((a, b) => b.score - a.score);
+    expect(ranked[0].res.id).toBe("r_vet_mfg");
+  });
+  it("reasons cite veteran community", () => {
+    const result = scoreResource(veteranMfg, marcus);
+    expect(result.reasons.some((r) => /veteran/i.test(r))).toBe(true);
+  });
+});
+
+describe("Jordan (idea, SLC, student, start_business)", () => {
+  it("ranks Education+Pre-Seed resource highest", () => {
+    const fixtures = [fundingSLC, educationSLC, ruralWomen, generic];
+    const ranked = fixtures
+      .map((res) => ({ res, ...scoreResource(res, jordan) }))
+      .sort((a, b) => b.score - a.score);
+    expect(ranked[0].res.id).toBe("r_edu_slc");
+  });
+});
+
+describe("David (growth, medical device, Utah county, export)", () => {
+  it("ranks export program highest", () => {
+    const fixtures = [fundingSLC, educationSLC, exportPgm, generic];
+    const ranked = fixtures
+      .map((res) => ({ res, ...scoreResource(res, david) }))
+      .sort((a, b) => b.score - a.score);
+    expect(ranked[0].res.id).toBe("r_export");
+  });
+});
+
+describe("Amir (idea, deep tech, SLC, researcher, commercialize_research)", () => {
+  it("ranks tech transfer highest", () => {
+    const fixtures = [
+      fundingSLC,
+      educationSLC,
+      veteranMfg,
+      techTransfer,
+      generic,
+    ];
+    const ranked = fixtures
+      .map((res) => ({ res, ...scoreResource(res, amir) }))
+      .sort((a, b) => b.score - a.score);
+    expect(ranked[0].res.id).toBe("r_tech_transfer");
+  });
+});
+
+// ─── Edge cases ────────────────────────────────────────────────────
+
+describe("Edge cases", () => {
+  it("statewide resource beats county-mismatched local resource", () => {
+    const generalFounder: FounderPassportInput = {
+      county: "Box Elder",
+      city: null as never,
+      stage: "growth",
+      industry: "agriculture",
+      communities: [],
+      goal: "scale_business",
+      needs: [],
+      constraints: [],
+    };
+    expect(score(ruralWomen, generalFounder)).toBeGreaterThan(
+      score(fundingSLC, generalFounder),
+    );
+  });
+
+  it("empty founder industry doesn't penalize", () => {
+    const noIndustry: FounderPassportInput = {
+      county: "Salt Lake",
+      stage: "paying_customers",
+      industry: "",
+      communities: [],
+      goal: "raise_seed_round",
+      needs: [],
+      constraints: [],
+    };
+    // Should still score on stage + location + goal.
+    expect(score(fundingSLC, noIndustry)).toBeGreaterThan(0);
+  });
+
+  it("empty resource community doesn't penalize", () => {
+    // exportPgm has empty communities but high goal/location match for david.
+    expect(score(exportPgm, david)).toBeGreaterThan(0);
+  });
+
+  it("resource with no metadata returns a low score", () => {
+    expect(score(generic, priya)).toBeLessThan(40);
+  });
+
+  it("bucketize splits top 3 / next 3 / ignore", () => {
+    const fixtures = [
+      fundingSLC,
+      educationSLC,
+      ruralWomen,
+      veteranMfg,
+      techTransfer,
+      exportPgm,
+      generic,
+    ];
+    const scored = fixtures.map((resource) => ({
+      resource,
+      ...scoreResource(resource, priya),
+    }));
+    const buckets = bucketize(scored);
+    expect(buckets.now.length).toBe(3);
+    expect(buckets.next.length).toBe(3);
+    // Remainder (after 6) might or might not show in ignore depending on
+    // their scores. Just assert it's an array.
+    expect(Array.isArray(buckets.ignore)).toBe(true);
+  });
+});
