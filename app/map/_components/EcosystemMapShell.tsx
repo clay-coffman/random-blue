@@ -13,6 +13,7 @@ import { ViewModeToggle, type ViewMode } from "./ViewModeToggle";
 import { MapControls } from "./MapControls";
 import { InvestorBrief } from "./InvestorBrief";
 import { SectorLegend } from "./SectorLegend";
+import { CompanyList } from "./CompanyList";
 
 // MapLibre WebGL must not run at SSR — load only on the client.
 const EcosystemMap = dynamic(
@@ -62,8 +63,12 @@ export function EcosystemMapShell({
   // back through this state machine without prop drilling.
   const view: ViewMode = useMemo(() => {
     const v = searchParams.get("view");
-    return v === "clusters" || v === "heat" ? v : "companies";
+    return v === "clusters" || v === "heat" || v === "list"
+      ? v
+      : "companies";
   }, [searchParams]);
+
+  const isList = view === "list";
 
   // Build the API-relevant query string. View mode + camera position +
   // brief-open flag are client-only state and shouldn't trigger a
@@ -221,20 +226,31 @@ export function EcosystemMapShell({
           companies={companies}
         />
 
-        {/* Map area */}
+        {/* Map / list area */}
         <div className="relative flex-1 min-h-0">
-          <div className="absolute inset-0">
-            <EcosystemMap
+          {isList ? (
+            <CompanyList
               companies={companies}
-              view={view}
-              initialCamera={initialCamera}
-              onPinClick={handlePinClick}
+              total={total}
+              loading={loading}
+              onSelect={handlePinClick}
               selectedSlug={selectedSlug}
             />
-          </div>
-
-          <SectorLegend />
-          <MapControls />
+          ) : (
+            <>
+              <div className="absolute inset-0">
+                <EcosystemMap
+                  companies={companies}
+                  view={view}
+                  initialCamera={initialCamera}
+                  onPinClick={handlePinClick}
+                  selectedSlug={selectedSlug}
+                />
+              </div>
+              <SectorLegend />
+              <MapControls />
+            </>
+          )}
 
           {empty ? (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4">
@@ -247,8 +263,8 @@ export function EcosystemMapShell({
                   No companies match these filters.
                 </p>
                 <p className="mt-1 text-sm text-ink-3">
-                  Try clearing one or two filter chips. The map shows up to
-                  500 companies.
+                  Try clearing one or two filter chips. Showing up to 500
+                  companies.
                 </p>
                 <Link
                   href="/map"
@@ -268,7 +284,7 @@ export function EcosystemMapShell({
                 className="pointer-events-auto max-w-md border-ember/60"
               >
                 <p className="font-serif text-base">
-                  Couldn&apos;t refresh the map.
+                  Couldn&apos;t refresh.
                 </p>
                 <p className="mt-1 text-sm text-ink-3">
                   {loadError}. Try changing a filter to retry.

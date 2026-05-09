@@ -34,10 +34,12 @@ function flatten(sp: SearchParams): URLSearchParams {
   return out;
 }
 
-type ViewMode = "companies" | "clusters" | "heat";
+type ViewMode = "companies" | "clusters" | "heat" | "list";
 
 function isViewMode(v: unknown): v is ViewMode {
-  return v === "companies" || v === "clusters" || v === "heat";
+  return (
+    v === "companies" || v === "clusters" || v === "heat" || v === "list"
+  );
 }
 
 export default async function MapPage({

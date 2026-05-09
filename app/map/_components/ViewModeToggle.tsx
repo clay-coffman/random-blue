@@ -2,12 +2,13 @@
 
 import { cn } from "@/lib/utils";
 
-export type ViewMode = "companies" | "clusters" | "heat";
+export type ViewMode = "companies" | "clusters" | "heat" | "list";
 
 const OPTIONS: { value: ViewMode; label: string; icon: string }[] = [
   { value: "companies", label: "Companies", icon: "•" },
   { value: "clusters", label: "Clusters", icon: "◯" },
   { value: "heat", label: "Heat", icon: "▒" },
+  { value: "list", label: "List", icon: "≡" },
 ];
 
 export function ViewModeToggle({
