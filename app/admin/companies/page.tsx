@@ -84,6 +84,12 @@ export default async function AdminCompaniesPage({
           </li>
         ))}
       </ul>
+      {visible.length === 0 ? (
+        <p className="rounded-tile border border-dashed border-topo bg-paper-2 p-6 text-center text-sm text-ink-3">
+          No companies match this filter.
+        </p>
+      ) : (
+        <>
       <div className="hidden lg:block overflow-x-auto rounded-tile border-[1.5px] border-topo">
         <table className="w-full min-w-[560px] text-sm">
           <thead className="bg-paper">
@@ -160,14 +166,14 @@ export default async function AdminCompaniesPage({
               {status === "pending" ? (
                 <Link
                   href={`/admin/submissions?company=${c.slug}`}
-                  className="rounded-pill border border-ember px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ember hover:bg-ember-tint"
+                  className="inline-flex min-h-[44px] items-center rounded-pill border border-ember px-4 py-2 font-mono text-xs uppercase tracking-wider text-ember hover:bg-ember-tint"
                 >
                   Review
                 </Link>
               ) : (
                 <Link
                   href={`/companies/${c.slug}/edit`}
-                  className="rounded-pill border border-ink px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ink hover:bg-stone"
+                  className="inline-flex min-h-[44px] items-center rounded-pill border border-ink px-4 py-2 font-mono text-xs uppercase tracking-wider text-ink hover:bg-stone"
                 >
                   Edit
                 </Link>
@@ -176,6 +182,8 @@ export default async function AdminCompaniesPage({
           );
         })}
       </ul>
+        </>
+      )}
     </div>
   );
 }

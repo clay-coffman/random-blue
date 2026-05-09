@@ -8,9 +8,11 @@ const FLIPPABLE = ["owner", "goeo_admin", "founder", "investor"];
 export function UserRoleDropdown({
   userId,
   currentRole,
+  size = "sm",
 }: {
   userId: string;
   currentRole: string;
+  size?: "sm" | "lg";
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -48,7 +50,9 @@ export function UserRoleDropdown({
         value={currentRole}
         onChange={(e) => setRole(e.target.value)}
         disabled={submitting}
-        className="rounded-tile border border-ink bg-paper px-2 py-1 text-xs disabled:opacity-60"
+        className={`rounded-tile border border-ink bg-paper disabled:opacity-60 ${
+          size === "lg" ? "min-h-[44px] px-3 py-2 text-sm" : "px-2 py-1 text-xs"
+        }`}
       >
         {FLIPPABLE.map((r) => (
           <option key={r} value={r}>

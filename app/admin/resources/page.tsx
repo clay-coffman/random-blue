@@ -58,6 +58,12 @@ export default async function AdminResourcesPage() {
         </Link>
       </header>
       <ScribbleDivider className="my-5" />
+      {rows.length === 0 ? (
+        <p className="rounded-tile border border-dashed border-topo bg-paper-2 p-6 text-center text-sm text-ink-3">
+          No resources yet.
+        </p>
+      ) : (
+        <>
       <div className="hidden lg:block overflow-x-auto rounded-tile border-[1.5px] border-topo">
         <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-paper">
@@ -130,13 +136,15 @@ export default async function AdminResourcesPage() {
             </span>
             <Link
               href={`/admin/resources/${r.id}`}
-              className="rounded-pill border border-ink px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ink hover:bg-stone"
+              className="inline-flex min-h-[44px] items-center rounded-pill border border-ink px-4 py-2 font-mono text-xs uppercase tracking-wider text-ink hover:bg-stone"
             >
               Edit
             </Link>
           </li>
         ))}
       </ul>
+        </>
+      )}
     </div>
   );
 }

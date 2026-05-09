@@ -203,7 +203,11 @@ export default async function AdminUsersPage({
                 {u.role}
               </span>
               {isSuper && !isSelf && u.role !== "superadmin" ? (
-                <UserRoleDropdown userId={u.id} currentRole={u.role} />
+                <UserRoleDropdown
+                  userId={u.id}
+                  currentRole={u.role}
+                  size="lg"
+                />
               ) : null}
             </li>
           );
