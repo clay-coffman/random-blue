@@ -33,8 +33,10 @@ export const RecommendedResource = z.object({
   // Suggested next action; empty string when none.
   action_text: z.string(),
   kind: z.string().optional(),
-  source_url: z.string().optional(),
-  contact_email: z.string().optional(),
+  // URLs and emails come from upstream CSV data; format-validate here so
+  // malformed values can't round-trip into a clickable link / mailto.
+  source_url: z.string().url().optional(),
+  contact_email: z.string().email().optional(),
 });
 export type RecommendedResource = z.infer<typeof RecommendedResource>;
 

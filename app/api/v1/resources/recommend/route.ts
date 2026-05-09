@@ -83,7 +83,11 @@ export async function POST(req: Request) {
 
       // Validate enum-typed columns at the boundary. The DB stores text
       // without CHECK constraints, so a corrupt or out-of-vocab value is
-      // possible. Hard-fail rather than silently degrade the scorer.
+      // possible. Asymmetric handling on purpose:
+      //   - stage / goal are required for scoring → hard-fail with
+      //     INTERNAL so the corrupt row surfaces loudly.
+      //   - urgency is optional in the schema → coerce to undefined on
+      //     unknown values rather than 500.
       const stage = FounderStage.safeParse(row.stage);
       const goal = FounderGoal.safeParse(row.goal);
       if (!stage.success || !goal.success) {

@@ -84,7 +84,32 @@ function htmlToText(html: string): string {
 // ever reused outside the Worker runtime. Not exhaustive; a determined
 // attacker can still resolve a public hostname onto a private IP, which
 // is why we rely on the platform layer too.
-function isPrivateOrLocalHost(rawUrl: string): boolean {
+// Hosts where the founder probably pasted a profile/social, not a
+// business site. Brief: defer LinkedIn enrichment; require a real
+// business website.
+const DENYLIST_HOSTS = [
+  "linkedin.com",
+  "facebook.com",
+  "instagram.com",
+  "x.com",
+  "twitter.com",
+  "youtube.com",
+  "tiktok.com",
+  "github.com",
+];
+
+export function isDenylistedHost(rawUrl: string): boolean {
+  try {
+    const host = new URL(rawUrl).hostname.toLowerCase();
+    return DENYLIST_HOSTS.some(
+      (bad) => host === bad || host.endsWith(`.${bad}`),
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function isPrivateOrLocalHost(rawUrl: string): boolean {
   try {
     const host = new URL(rawUrl).hostname.toLowerCase();
     if (
@@ -119,19 +144,39 @@ function isPrivateOrLocalHost(rawUrl: string): boolean {
   }
 }
 
+const MAX_REDIRECT_HOPS = 3;
+
+// Manual redirect handling: the lib-layer `isPrivateOrLocalHost` guard
+// only sees the user-supplied URL; if `fetch` follows a 3xx Location
+// into a private IP, the platform layer is the only thing left
+// (Cloudflare blocks egress to RFC-1918 in production, but defense-in-
+// depth is cheap). We re-validate every hop here.
 async function fetchPageText(url: string): Promise<string | null> {
   if (isPrivateOrLocalHost(url)) return null;
   try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; StartupStateAtlasBot/1.0; +https://startup.utah.gov)",
-        Accept: "text/html,application/xhtml+xml",
-      },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      redirect: "follow",
-    });
-    if (!res.ok) return null;
+    let current = url;
+    let res: Response | null = null;
+    for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
+      res = await fetch(current, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; StartupStateAtlasBot/1.0; +https://startup.utah.gov)",
+          Accept: "text/html,application/xhtml+xml",
+        },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        redirect: "manual",
+      });
+      // Status 0 ("opaqueredirect") on platforms that don't expose
+      // headers; treat as a redirect and bail.
+      if (res.status === 0) return null;
+      if (res.status < 300 || res.status >= 400) break;
+      const loc = res.headers.get("location");
+      if (!loc) break;
+      const next = new URL(loc, current).toString();
+      if (isPrivateOrLocalHost(next)) return null;
+      current = next;
+    }
+    if (!res || !res.ok) return null;
     const ct = res.headers.get("content-type") ?? "";
     if (!/text\/html|application\/xhtml/.test(ct)) return null;
 
@@ -146,7 +191,6 @@ async function fetchPageText(url: string): Promise<string | null> {
       if (done) break;
       received += value.byteLength;
       html += decoder.decode(value, { stream: true });
-      if (html.length > MAX_HTML_BYTES) break;
     }
     // Flush any bytes the decoder buffered (e.g. a multi-byte UTF-8 char
     // split across the last chunk boundary).

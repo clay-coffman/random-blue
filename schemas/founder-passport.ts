@@ -46,6 +46,15 @@ export const FounderPassportInput = z.object({
   business_type: z.string().optional(),
   needs: z.array(z.string()).default([]),
   constraints: z.array(z.string()).default([]),
-  website_url: z.string().url().optional(),
+  // Same http(s) constraint as EnrichRequest — `javascript:`/`data:`/`file:`
+  // URLs would persist into `founder_passports.website_url` and could be
+  // rendered as `<a href={...}>` downstream (stored XSS surface).
+  website_url: z
+    .string()
+    .url()
+    .refine((u) => /^https?:\/\//i.test(u), {
+      message: "website_url must use http or https.",
+    })
+    .optional(),
 });
 export type FounderPassportInput = z.infer<typeof FounderPassportInput>;

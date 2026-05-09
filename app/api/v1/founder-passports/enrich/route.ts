@@ -1,30 +1,8 @@
 import { ApiError, errorResponse } from "@/lib/api-error";
 import { EnrichRequest } from "@/schemas/recommend";
-import { enrichWebsite } from "@/lib/website-enrich";
+import { enrichWebsite, isDenylistedHost } from "@/lib/website-enrich";
 
 export const runtime = "edge";
-
-// Hosts where the founder probably pasted a profile/social, not a business
-// site. Brief: defer LinkedIn enrichment; require a real business website.
-const DENYLIST = [
-  "linkedin.com",
-  "facebook.com",
-  "instagram.com",
-  "x.com",
-  "twitter.com",
-  "youtube.com",
-  "tiktok.com",
-  "github.com",
-];
-
-function isDenylisted(rawUrl: string): boolean {
-  try {
-    const host = new URL(rawUrl).hostname.toLowerCase();
-    return DENYLIST.some((bad) => host === bad || host.endsWith(`.${bad}`));
-  } catch {
-    return false;
-  }
-}
 
 export async function POST(req: Request) {
   try {
@@ -40,7 +18,7 @@ export async function POST(req: Request) {
     }
     const url = parsed.data.website_url;
 
-    if (isDenylisted(url)) {
+    if (isDenylistedHost(url)) {
       throw new ApiError({
         code: "BAD_REQUEST",
         message:

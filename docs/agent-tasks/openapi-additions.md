@@ -10,17 +10,24 @@ endpoints are final; Agent 6 reconciles.
 - Error shape (frozen): `{ "error": { "code": string, "message": string, "details"?: unknown } }`.
 - `Content-Type: application/json` on every request and response.
 - Status codes used: `200`, `201`, `400` (`BAD_REQUEST`), `404` (`NOT_FOUND`), `500` (`INTERNAL`).
+- All wire fields are `snake_case`. Internal TS uses `camelCase` and
+  converts at the boundary via `lib/api-codec.ts`.
 
 ---
 
 ## Agent 2 — Recommendation engine
 
-**Owner:** Agent 2 (`feat/recommend`).
-**Status:** shipped (PR pending).
+**Owner:** Agent 2 (`feat/recommend`, PR #16).
+**Status:** shipped.
+**Source of truth:** `schemas/founder-passport.ts`, `schemas/recommend.ts`,
+`types/api.ts` (re-exports `*Wire` types `z.infer`-derived from the
+zod schemas).
 
 ### Shared types
 
 ```ts
+type Bucket = "now" | "next" | "ignore";
+
 type FounderStage =
   | "idea" | "pre_seed" | "mvp"
   | "paying_customers" | "growth" | "mature";
@@ -32,36 +39,37 @@ type FounderGoal =
   | "commercialize_research" | "find_workspace"
   | "find_mentors" | "scale_business";
 
+// Listed in chronological order (soonest → latest).
 type FounderUrgency =
   | "this_week" | "this_month"
-  | "this_quarter" | "this_year" | "next_quarter";
+  | "this_quarter" | "next_quarter" | "this_year";
 
-type FounderPassportInput = {
+type FounderPassportInputWire = {
+  website_url?: string;          // http(s) only — validated server-side
   county?: string;
   city?: string;
-  stage: FounderStage;
-  industry: string;
-  communities: string[];   // default []
-  goal: FounderGoal;
+  stage?: FounderStage;
+  industry?: string;
+  communities: string[];         // default []
+  goal?: FounderGoal;
   urgency?: FounderUrgency;
   business_size?: string;
   business_type?: string;
-  needs: string[];         // default []
-  constraints: string[];   // default []
-  website_url?: string;    // RFC 3986 URL
+  needs: string[];               // default []
+  constraints: string[];         // default []
 };
 
-type Bucket = "now" | "next" | "ignore";
-
-type RecommendedResource = {
-  resource_id: string;            // "r_<csv_id>"
+type RecommendedResourceWire = {
+  resource_id: string;           // "r_<csv_id>"
   title: string;
-  source_url: string | null;
-  score: number;                  // 0–100
+  score: number;                 // 0–100, integer
   bucket: Bucket;
-  reasons: string[];              // deterministic, e.g. "Tagged Funding"
-  why: string | null;             // LLM "Because…" sentence
-  action: string | null;          // null in v1
+  reasons: string[];             // deterministic, e.g. "Tagged Funding"
+  because: string;               // LLM "Because…" sentence; "" on fallback
+  action_text: string;           // suggested next action; "" today
+  kind?: string;                 // primary topic, lowercased
+  source_url?: string;           // http(s) URL when present
+  contact_email?: string;
 };
 ```
 
@@ -69,19 +77,19 @@ type RecommendedResource = {
 
 Score and bucket Utah resources for a founder's profile. Pass
 either `passport_id` (re-uses an existing passport row) or a full
-`FounderPassportInput` (creates one). LLM "Because…" enabled by
-default; on Anthropic error/timeout the response degrades gracefully
-(`why: null`, `llm_used: false`) — the endpoint never 5xxs on the LLM.
+`FounderPassportInputWire` (creates one) — but **not both**.
 
-**Request:** `FounderPassportInput & { passport_id?: string }`
+LLM "Because…" is enabled by default; on Anthropic error/timeout
+the response degrades gracefully (`because: ""`) — the endpoint
+never 5xxs on the LLM.
+
+**Request:** `FounderPassportInputWire & { passport_id?: string }`
 
 ```json
-{
-  "passport_id": "fp_priya"
-}
+{ "passport_id": "fp_priya" }
 ```
 
-or
+or a full body:
 
 ```json
 {
@@ -101,22 +109,25 @@ or
 ```json
 {
   "passport_id": "fp_priya",
-  "llm_used": true,
+  "generated_at": "2026-05-09T00:31:24.123Z",
   "recommendations": [
     {
-      "resource_id": "r_2543",
-      "title": "Salt Lake Angels",
-      "source_url": "https://saltlakeangels.com",
-      "score": 87,
+      "resource_id": "r_2628",
+      "title": "Small Business Administration (SBA)",
+      "score": 78,
       "bucket": "now",
       "reasons": [
-        "Matches stage: paying_customers",
-        "Applies in Salt Lake County",
+        "Adjacent stage tagged (growth)",
+        "Statewide resource",
         "Tagged funding (matches your goal: raise_seed_round)",
-        "Tagged software and information technology"
+        "Tagged software and information technology",
+        "For women-focused founders"
       ],
-      "why": "Because you have paying customers and are raising your seed round in Salt Lake County, this angel group invests in B2B SaaS at exactly your stage.",
-      "action": null
+      "because": "Because the SBA is statewide, supports women in software/IT, and tags funding — aligning with your seed-round goal as a B2B SaaS founder.",
+      "action_text": "",
+      "kind": "funding",
+      "source_url": "https://www.sba.gov",
+      "contact_email": "info@sba.gov"
     }
   ]
 }
@@ -125,11 +136,13 @@ or
 **Errors:**
 
 - `400 BAD_REQUEST` — invalid request body (zod details in `details`),
-  or both `passport_id` AND a full passport body sent. Send one or the
-  other; if `passport_id` is provided, the saved row wins.
+  or both `passport_id` AND a full passport body sent. Send one or
+  the other; if `passport_id` is provided, the saved row wins.
 - `404 NOT_FOUND` — `passport_id` provided but doesn't exist.
 - `500 INTERNAL` — DB or unexpected error, or the stored passport's
-  `stage` / `goal` is corrupt (out of vocab).
+  `stage` / `goal` is corrupt (out of vocab). Stored `urgency` is
+  permissive: corrupt values coerce to `undefined` rather than 500
+  (it's `optional` in the schema).
 
 **Side effects:**
 
@@ -143,7 +156,7 @@ or
 
 Create a founder passport without computing recommendations.
 
-**Request:** `FounderPassportInput`
+**Request:** `FounderPassportInputWire`
 
 **Response 201:**
 
@@ -153,7 +166,7 @@ Create a founder passport without computing recommendations.
 
 **Errors:**
 
-- `400 BAD_REQUEST` — invalid input.
+- `400 BAD_REQUEST` — invalid input (incl. non-http(s) `website_url`).
 - `500 INTERNAL` — DB error.
 
 ---
@@ -165,12 +178,11 @@ shareable plan URL the front-end exposes at `/plan/{id}`.
 
 **Path params:** `id` — `fp_…`.
 
-**Response 200:**
-
-Same shape as the recommend endpoint (`passport_id`,
-`recommendations[]`, `llm_used`). Empty `recommendations[]` if no
-plan has been computed yet — front-end can call POST `/resources/recommend`
-to populate.
+**Response 200:** Same shape as `RecommendResponseWire` from the
+recommend endpoint (`passport_id`, `generated_at`,
+`recommendations[]`). Empty `recommendations[]` if no plan has been
+computed yet — front-end can call `POST /resources/recommend` to
+populate.
 
 **Errors:**
 
@@ -183,13 +195,13 @@ to populate.
 
 Founder pastes a website URL on the intake form; this endpoint
 fetches the page directly and pipes the text through Anthropic
-with a structured-output prompt, returning a partial
-`FounderPassportInput` with per-field confidences so the front-end
-can prefill chips. **No persistence** — the founder reviews + edits,
-then submits via `POST /founder-passports`. (Originally designed
-around Parallel.ai but their Search API doesn't return structured
-data and their Task API exceeds the form-UX latency budget; the
-fetch+LLM path lands in ~5–10s.)
+with a structured-output prompt, returning a partial set of fields
+the front-end can use to prefill chips. **No persistence** — the
+founder reviews + edits, then submits via `POST /founder-passports`.
+
+(Originally designed around Parallel.ai but their Search API
+doesn't return structured data and their Task API exceeds the
+form-UX latency budget; the fetch+LLM path lands in ~5–10s.)
 
 **Request:**
 
@@ -197,36 +209,35 @@ fetch+LLM path lands in ~5–10s.)
 { "website_url": "https://example.com" }
 ```
 
-Rejects social / profile hosts (`linkedin.com`, `facebook.com`,
-`instagram.com`, `x.com`, `twitter.com`, `youtube.com`, `tiktok.com`,
-`github.com`) with `400 BAD_REQUEST`.
+- Must be `http://` or `https://` (rejects `javascript:` / `data:` /
+  `file:` schemes at the schema layer).
+- Rejects social / profile hosts (`linkedin.com`, `facebook.com`,
+  `instagram.com`, `x.com`, `twitter.com`, `youtube.com`,
+  `tiktok.com`, `github.com`) with `400 BAD_REQUEST`.
+- Rejects RFC-1918 / loopback / link-local / metadata-service IPs at
+  the lib layer (defense-in-depth; Cloudflare blocks egress to
+  private IPs at the platform layer in production).
 
 **Response 200:**
 
 ```json
 {
-  "fields": {
-    "industry": { "value": "Software and Information Technology", "confidence": 0.85 },
-    "stage":    { "value": "mvp",                                  "confidence": 0.6 },
-    "city":     { "value": "Lehi",                                 "confidence": 0.9 },
-    "county":   { "value": "Utah",                                 "confidence": 0.9 },
-    "business_type": { "value": "B2B SaaS",                        "confidence": 0.7 },
-    "needs":    { "value": ["customers", "talent"],                "confidence": 0.5 }
-  },
-  "source_url": "https://example.com",
-  "fetched_at": 1715199900000
+  "fields": [
+    { "name": "industry",      "value": "Software and Information Technology", "confidence": 0.7 },
+    { "name": "stage",         "value": "mvp",                                  "confidence": 0.7 },
+    { "name": "city",          "value": "Lehi",                                 "confidence": 0.7 },
+    { "name": "county",        "value": "Utah",                                 "confidence": 0.7 },
+    { "name": "business_type", "value": "B2B SaaS",                             "confidence": 0.7 },
+    { "name": "needs",         "value": ["customers", "talent"],                "confidence": 0.7 }
+  ]
 }
 ```
 
-**Degraded mode** (fetch failure / non-HTML response / LLM timeout / parse failure / denylist match):
+**Degraded mode** (fetch failure / non-HTML response / LLM timeout /
+parse failure / private-IP rejection):
 
 ```json
-{
-  "fields": {},
-  "source_url": "https://example.com",
-  "fetched_at": 1715199900000,
-  "degraded": true
-}
+{ "fields": [], "degraded": true }
 ```
 
 The endpoint **never returns 5xx** for upstream provider failures —
@@ -234,16 +245,21 @@ the front-end can quietly fall back to manual fill.
 
 **Errors:**
 
-- `400 BAD_REQUEST` — invalid URL or denylisted host.
+- `400 BAD_REQUEST` — invalid URL (non-http(s) scheme) or
+  denylisted host.
 - `500 INTERNAL` — only on bugs in this handler, not upstream.
 
 ---
 
 ### Coordination notes for Agent 6
 
-- Endpoints are stable; expect no shape changes.
+- Endpoints are stable on the wire format above; expect no further
+  shape changes from Agent 2.
 - Reasons are localized at the API layer (English-only for now).
-- `llm_used` toggles per-request (true when Anthropic returned ≥1
-  parseable explanation, false on full fallback).
-- The OpenAPI generator should mark `passport_id` with the regex
+- The OpenAPI generator should mark `passport_id` with regex
   `^fp_[a-zA-Z0-9_-]+$` and `resource_id` with `^r_[0-9]+$`.
+- `score` is a number `0..100` (integer in practice; clients can
+  treat as int for sorting/display).
+- `generated_at` is RFC 3339 / ISO 8601.
+- `kind` is the primary topic, lowercased — same vocabulary as
+  `resource_topics.topic` rows.
