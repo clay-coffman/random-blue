@@ -3,7 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { businessOwnershipSubmissions, companies } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
-import { getApiSession } from "@/lib/auth-utils";
+import { authorizeSessionWrite, getApiSession } from "@/lib/auth-utils";
 import { newId } from "@/lib/ids";
 import { env } from "@/lib/cf";
 
@@ -35,8 +35,30 @@ function extFromMime(mime: string): string {
 // POST /api/v1/ownership-submissions — owner uploads a verification doc
 // for a company. Multipart with `company_slug` + `file`.
 export async function POST(req: Request) {
-  const session = await getApiSession(req);
-  if (!session) return errorResponse("unauthorized", "Sign in required.", 401);
+  const auth = await authorizeSessionWrite(req);
+  if (auth.kind === "denied") {
+    if (auth.reason === "csrf") {
+      return errorResponse("forbidden", "Cross-origin request blocked.", 403);
+    }
+    return errorResponse("unauthorized", "Sign in required.", 401);
+  }
+  const session = { user: auth.user };
+
+  // Per-IP rate limit on uploads (10 / minute). Cloudflare's native
+  // ratelimit binding is fixed-window in-edge — no DB writes, no
+  // KV calls. The auth gate above already drops unauthenticated
+  // callers; this throttle's job is bounding *authenticated* upload
+  // abuse (stolen session, misbehaving owner) before we pay the
+  // multipart-parse + R2 cost.
+  const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+  const { success } = await env().UPLOAD_LIMIT.limit({ key: ip });
+  if (!success) {
+    return errorResponse(
+      "rate_limited",
+      "Too many uploads. Try again in a minute.",
+      429,
+    );
+  }
 
   let form: FormData;
   try {

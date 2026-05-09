@@ -1,5 +1,6 @@
 import { getAuth } from "@/auth";
 import { env } from "./cf";
+import { isSameOriginRequest } from "./csrf";
 
 export type SessionUser = {
   id: string;
@@ -33,6 +34,39 @@ export function hasMachineToken(req: Request): boolean {
   const expected = env().ATLAS_ADMIN_TOKEN;
   if (!expected) return false;
   return timingSafeStringEqual(token, expected);
+}
+
+// Authentication + CSRF gate for /api/v1/* state-changing routes.
+// Routes still apply their own role/ownership checks on the returned
+// principal — this only answers "who is calling, and may they?".
+export type WriteAuth =
+  | { kind: "session"; user: SessionUser }
+  | { kind: "machine" }
+  | { kind: "denied"; reason: "unauth" | "csrf" };
+
+export async function authorizeWrite(req: Request): Promise<WriteAuth> {
+  const session = await getApiSession(req);
+  if (session) {
+    if (!isSameOriginRequest(req)) return { kind: "denied", reason: "csrf" };
+    return { kind: "session", user: session.user };
+  }
+  if (hasMachineToken(req)) return { kind: "machine" };
+  return { kind: "denied", reason: "unauth" };
+}
+
+// Session-only variant for routes that don't accept the machine token
+// (admin invites, role flips, ownership-submission review, etc.).
+export type SessionWriteAuth =
+  | { kind: "session"; user: SessionUser }
+  | { kind: "denied"; reason: "unauth" | "csrf" };
+
+export async function authorizeSessionWrite(
+  req: Request,
+): Promise<SessionWriteAuth> {
+  const session = await getApiSession(req);
+  if (!session) return { kind: "denied", reason: "unauth" };
+  if (!isSameOriginRequest(req)) return { kind: "denied", reason: "csrf" };
+  return { kind: "session", user: session.user };
 }
 
 // Constant-time string compare. Length mismatch returns false fast
