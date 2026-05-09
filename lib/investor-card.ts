@@ -1,8 +1,8 @@
 // Canonical investor public card formatter. Single source of truth for:
-//   - GET /api/v1/investor-profiles/:slug   (the JSON shape)
+//   - GET /api/v1/investor-profiles/:slug   (JSON shape)
 //   - GET /investors/:slug.json             (same JSON shape)
 //   - GET /investors/:slug.md               (markdown rendering)
-//   - app/investors/[slug]/page.tsx         (server-component page render — reads card.*)
+//   - app/investors/[slug]/page.tsx         (server-component page — reads card.*)
 //
 // Mirrors lib/company-card.ts. snake_case wire format throughout.
 // Email is NEVER in the output — the only way to surface contact info
