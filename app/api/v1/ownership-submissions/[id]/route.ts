@@ -81,12 +81,26 @@ export async function PATCH(
     );
   }
 
-  const [submission] = await db()
-    .select()
+  // Single joined read: pulls the submission row plus the recipient
+  // email and the company name/slug needed for the decision email.
+  // Saves a second post-update lookup just for those fields.
+  const [row] = await db()
+    .select({
+      submission: businessOwnershipSubmissions,
+      email: userTable.email,
+      companyName: companies.name,
+      companySlug: companies.slug,
+    })
     .from(businessOwnershipSubmissions)
+    .leftJoin(userTable, eq(businessOwnershipSubmissions.userId, userTable.id))
+    .leftJoin(
+      companies,
+      eq(businessOwnershipSubmissions.companyId, companies.id),
+    )
     .where(eq(businessOwnershipSubmissions.id, id))
     .limit(1);
-  if (!submission) return errorResponse("not_found", "Submission not found.", 404);
+  if (!row) return errorResponse("not_found", "Submission not found.", 404);
+  const submission = row.submission;
 
   const now = new Date();
   await db()
@@ -115,30 +129,12 @@ export async function PATCH(
   // Notify the submitter. Failure here must not roll back the status
   // change — log and move on; the admin already decided.
   try {
-    const [recipient] = await db()
-      .select({
-        email: userTable.email,
-        companyName: companies.name,
-        companySlug: companies.slug,
-      })
-      .from(businessOwnershipSubmissions)
-      .leftJoin(userTable, eq(businessOwnershipSubmissions.userId, userTable.id))
-      .leftJoin(
-        companies,
-        eq(businessOwnershipSubmissions.companyId, companies.id),
-      )
-      .where(eq(businessOwnershipSubmissions.id, id))
-      .limit(1);
-    if (
-      recipient?.email &&
-      recipient.companyName &&
-      recipient.companySlug
-    ) {
+    if (row.email && row.companyName && row.companySlug) {
       await sendClaimDecisionEmail({
-        to: recipient.email,
+        to: row.email,
         status: body.status!,
-        companyName: recipient.companyName,
-        companySlug: recipient.companySlug,
+        companyName: row.companyName,
+        companySlug: row.companySlug,
         notes: body.review_notes ?? null,
       });
     }
@@ -146,10 +142,12 @@ export async function PATCH(
     console.error("[ownership-submissions] decision email failed", err);
   }
 
-  const [updated] = await db()
-    .select()
-    .from(businessOwnershipSubmissions)
-    .where(eq(businessOwnershipSubmissions.id, id))
-    .limit(1);
+  const updated = {
+    ...submission,
+    status: body.status!,
+    reviewedByUserId: session.user.id,
+    reviewedAt: now,
+    reviewNotes: body.review_notes ?? null,
+  };
   return NextResponse.json({ submission: updated });
 }

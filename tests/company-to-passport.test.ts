@@ -75,6 +75,10 @@ describe("companyToPassportInitial", () => {
 
   it("derives businessSize from an employee bucket", () => {
     expect(
+      companyToPassportInitial({ ...empty, employeeCount: "1" })
+        .businessSize,
+    ).toBe("solo");
+    expect(
       companyToPassportInitial({ ...empty, employeeCount: "2-10" })
         .businessSize,
     ).toBe("small");

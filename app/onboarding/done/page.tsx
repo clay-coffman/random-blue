@@ -111,7 +111,23 @@ export default async function OnboardingDonePage() {
           href: `/companies/${latest.slug}/edit`,
         };
         primaryHref = copy.primary.href;
+      } else if (latest.status === "needs_more_info") {
+        copy.lede = "GOEO needs one more thing for your claim.";
+        copy.primary = {
+          label: "See what's needed →",
+          href: "/me/submissions",
+        };
+        primaryHref = copy.primary.href;
+      } else if (latest.status === "rejected") {
+        copy.lede =
+          "Your claim wasn't verified. See the reviewer's note and try again.";
+        copy.primary = {
+          label: "See claim status →",
+          href: "/me/submissions",
+        };
+        primaryHref = copy.primary.href;
       } else {
+        // pending
         copy.lede = "Your verification doc is in review.";
         copy.primary = {
           label: "See claim status →",

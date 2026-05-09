@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   businessOwnershipSubmissions,
@@ -75,7 +75,13 @@ export default async function MySubmissionsPage({
       eq(companyLocations.companyId, companies.id),
     )
     .where(eq(businessOwnershipSubmissions.userId, session.user.id))
-    .orderBy(desc(businessOwnershipSubmissions.submittedAt));
+    // Tie-break the location fan-out (`companyLocations.id ASC`) so
+    // the first row per submission picks the earliest location
+    // deterministically, regardless of D1 row order.
+    .orderBy(
+      desc(businessOwnershipSubmissions.submittedAt),
+      asc(companyLocations.id),
+    );
 
   // Collapse to one row per submission. The leftJoin on companyLocations
   // can fan out when a company has multiple location rows; keep the
@@ -107,19 +113,23 @@ export default async function MySubmissionsPage({
     });
   }
 
-  // Hero candidate: the most-recent unresolved submission (pending or
-  // needs_more_info), OR the most-recent approved submission within
-  // the last week so the success state isn't immediately demoted to
-  // history. Approved older than 7 days falls back to the list view.
+  // Hero candidate: any unresolved submission (pending or
+  // needs_more_info), OR a terminal one (approved / rejected) reviewed
+  // in the last week so the user doesn't immediately demote into a
+  // history list. Older terminal rows fall back to the list view.
   const now = Date.now();
   const WEEK = 7 * 24 * 60 * 60 * 1000;
+  const isRecentTerminal = (reviewedAt: Date | null) => {
+    const ts = reviewedAt?.getTime() ?? 0;
+    return ts > 0 && now - ts < WEEK;
+  };
   const heroIndex = rows.findIndex((r) => {
     if (r.submission.status === "pending") return true;
     if (r.submission.status === "needs_more_info") return true;
-    if (r.submission.status === "approved") {
-      const ts = r.submission.reviewedAt?.getTime() ?? 0;
-      return ts > 0 && now - ts < WEEK;
-    }
+    if (r.submission.status === "approved")
+      return isRecentTerminal(r.submission.reviewedAt);
+    if (r.submission.status === "rejected")
+      return isRecentTerminal(r.submission.reviewedAt);
     return false;
   });
   const hero = heroIndex >= 0 ? rows[heroIndex] : null;
@@ -202,6 +212,12 @@ export default async function MySubmissionsPage({
 function HeroPanel({ row }: { row: SubmissionRow }) {
   const { submission, company, location } = row;
   const status = submission.status;
+  const locationLabel = [
+    location.city,
+    location.county && `${location.county} County`,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   if (status === "approved") {
     return (
@@ -224,6 +240,45 @@ function HeroPanel({ row }: { row: SubmissionRow }) {
             Edit your profile →
           </Link>
         ) : null}
+      </Tile>
+    );
+  }
+
+  if (status === "rejected") {
+    return (
+      <Tile variant="default" shadow="sketch" className="border-danger">
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-danger">
+          Not approved
+        </p>
+        <h2 className="mt-1 font-serif text-2xl leading-tight">
+          Your claim of {company.name} wasn&rsquo;t verified.
+        </h2>
+        {submission.reviewNotes ? (
+          <div className="mt-3 rounded-tile border border-topo bg-paper-2 p-3 text-sm">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-ink-3">
+              Reviewer note
+            </p>
+            <p className="mt-1 whitespace-pre-line text-ink-2">
+              {submission.reviewNotes}
+            </p>
+          </div>
+        ) : null}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {company.slug ? (
+            <Link
+              href={`/companies/${company.slug}/claim`}
+              className="inline-flex min-h-[44px] items-center justify-center rounded-pill bg-ember px-4 font-mono text-[11px] uppercase tracking-wider text-paper"
+            >
+              Try again →
+            </Link>
+          ) : null}
+          <a
+            href={`mailto:atlas@goed.utah.gov?subject=Claim%20dispute:%20${encodeURIComponent(company.slug ?? "")}`}
+            className="inline-flex min-h-[44px] items-center justify-center rounded-pill border-[1.5px] border-ink bg-paper px-4 font-mono text-[11px] uppercase tracking-wider"
+          >
+            Contact GOEO
+          </a>
+        </div>
       </Tile>
     );
   }
@@ -293,16 +348,7 @@ function HeroPanel({ row }: { row: SubmissionRow }) {
           </p>
           <ul className="mt-2 space-y-1 font-mono text-[11px] uppercase tracking-wider text-ink-3">
             {company.sector ? <li>· {company.sector}</li> : null}
-            {[location.city, location.county && `${location.county} County`]
-              .filter(Boolean)
-              .join(", ") ? (
-              <li>
-                ·{" "}
-                {[location.city, location.county && `${location.county} County`]
-                  .filter(Boolean)
-                  .join(", ")}
-              </li>
-            ) : null}
+            {locationLabel ? <li>· {locationLabel}</li> : null}
             {company.employeeCount ? (
               <li>· {company.employeeCount} employees</li>
             ) : null}

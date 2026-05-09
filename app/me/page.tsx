@@ -73,7 +73,7 @@ export default async function MeHubPage() {
   }
   // Owner-leaning users get a "find your company" card. We surface it
   // for every non-investor / non-admin role since claiming isn't gated.
-  if (role === "founder" || role === "owner" || !role) {
+  if (role === "founder" || role === "owner") {
     cards.push({
       href: "/onboarding/owner",
       title: "Find your company",

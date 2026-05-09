@@ -117,10 +117,14 @@ function pickBusinessSize(
 ): string | undefined {
   const range = parseBucket(employeeCount);
   if (!range) return undefined;
-  if (range.max <= 1) return "solo";
-  if (range.max <= 10) return "small";
-  if (range.max <= 50) return "medium";
-  const candidate = "large";
+  const candidate =
+    range.max <= 1
+      ? "solo"
+      : range.max <= 10
+        ? "small"
+        : range.max <= 50
+          ? "medium"
+          : "large";
   return BUSINESS_SIZE_VALUES.has(candidate) ? candidate : undefined;
 }
 

@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { getAuth } from "@/auth";
 import { SectionHeader } from "@/components/brand";
 import { db } from "@/lib/db";
@@ -39,6 +39,10 @@ async function loadCompanyPrefill(
     .from(companies)
     .leftJoin(companyLocations, eq(companyLocations.companyId, companies.id))
     .where(eq(companies.slug, slug))
+    // Schema allows multiple location rows per company; pick the
+    // earliest deterministically so the prefill doesn't flip when a
+    // company gains a second location.
+    .orderBy(asc(companyLocations.id))
     .limit(1);
   if (!row) return null;
   const c: CompanyForPassport = {
