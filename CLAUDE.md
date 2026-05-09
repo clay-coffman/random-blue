@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-The single coding-agent policy doc for this repo. The phase-by-phase
-execution map lives in `docs/implementation-plan.md`; the per-agent
-briefs live in `docs/agent-tasks/`.
+The single coding-agent policy doc for this repo. The product spec is
+`docs/requirements.md`; the build status snapshot (what's shipped vs.
+left) lives in `docs/implementation-plan.md`.
 
 > Agent infrastructure (skills, hooks, workflows, agents) lives as
 > real files under `.agents/skills/`, `.claude/hooks/`,
