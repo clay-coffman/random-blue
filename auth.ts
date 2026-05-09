@@ -36,17 +36,27 @@ function buildAuth(env?: CloudflareEnv) {
   // __Host- prefix requires Secure + Path=/ + no Domain. Browsers reject
   // it over plain HTTP, so fall back to a plain prefix in dev.
   const isHttps = baseURL?.startsWith("https://") ?? false;
-  const isLocalhost =
-    !!baseURL &&
-    (baseURL.includes("localhost") || baseURL.includes("127.0.0.1"));
+  // URL-parsed hostname check — substring `.includes("localhost")`
+  // would match `https://localhost.evil.com`. Malformed URLs throw and
+  // are treated as non-localhost (the boot-check below will refuse).
+  let isLocalhost = false;
+  if (baseURL) {
+    try {
+      const h = new URL(baseURL).hostname;
+      isLocalhost = h === "localhost" || h === "127.0.0.1" || h === "::1";
+    } catch {
+      isLocalhost = false;
+    }
+  }
 
-  // Fail loud if a real Worker boots with a non-https BETTER_AUTH_URL.
-  // Without this, the cookie silently downgrades to the plain `atlas`
-  // prefix and drops Secure, defeating the __Host- protection. The
-  // codegen path (env undefined) skips the check.
-  if (env && baseURL && !isHttps && !isLocalhost) {
+  // Fail loud if a real Worker boots without a usable BETTER_AUTH_URL.
+  // The check fires when the env binding exists (i.e. real runtime, not
+  // codegen) AND the URL is missing OR not https-or-localhost. Without
+  // this, the cookie silently downgrades to the plain `atlas` prefix
+  // and drops Secure, defeating the __Host- protection.
+  if (env && !isHttps && !isLocalhost) {
     throw new Error(
-      `BETTER_AUTH_URL must be https:// in non-localhost environments. Got: ${baseURL}`,
+      `BETTER_AUTH_URL must be set to an https:// URL in production (or localhost in dev). Got: ${baseURL ?? "<unset>"}`,
     );
   }
 
