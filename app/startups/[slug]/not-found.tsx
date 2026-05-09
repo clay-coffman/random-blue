@@ -24,7 +24,7 @@ export default function StartupNotFound() {
           <li>
             <Link
               href="/map"
-              className="text-ember underline-offset-2 hover:underline"
+              className="inline-flex min-h-[44px] items-center text-ember underline-offset-2 hover:underline"
             >
               → Browse the Utah Startup Map
             </Link>
@@ -32,7 +32,7 @@ export default function StartupNotFound() {
           <li>
             <Link
               href="/api/v1/companies"
-              className="text-ember underline-offset-2 hover:underline"
+              className="inline-flex min-h-[44px] items-center text-ember underline-offset-2 hover:underline"
             >
               → /api/v1/companies (full directory JSON)
             </Link>
@@ -40,7 +40,7 @@ export default function StartupNotFound() {
           <li>
             <Link
               href="/"
-              className="text-ember underline-offset-2 hover:underline"
+              className="inline-flex min-h-[44px] items-center text-ember underline-offset-2 hover:underline"
             >
               → Atlas home
             </Link>

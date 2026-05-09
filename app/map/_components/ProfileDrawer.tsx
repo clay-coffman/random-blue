@@ -99,14 +99,15 @@ export function ProfileDrawer({ slug, onClose }: Props) {
           {error ? (
             <Tile variant="subtle" shadow="none" className="mt-4 p-4">
               <p className="text-sm text-ink-2">
-                Couldn&apos;t load this company.{" "}
-                <button
-                  className="underline decoration-ember/40 underline-offset-2 hover:text-ink"
-                  onClick={() => setRetryNonce((n) => n + 1)}
-                >
-                  Retry
-                </button>
+                Couldn&apos;t load this company.
               </p>
+              <button
+                type="button"
+                className="mt-2 inline-flex min-h-[44px] items-center font-mono text-[11px] uppercase tracking-wider text-ember underline-offset-2 hover:underline"
+                onClick={() => setRetryNonce((n) => n + 1)}
+              >
+                ↻ Retry
+              </button>
             </Tile>
           ) : loading || !card ? (
             <DrawerSkeleton />

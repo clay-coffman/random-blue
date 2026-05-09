@@ -401,7 +401,7 @@ function VariantAProfile({ card }: { card: CompanyCard }) {
                 <li key={row.href}>
                   <Link
                     href={row.href}
-                    className="flex items-center justify-between rounded bg-paper/5 px-2 py-1.5 font-mono text-[11px] text-paper transition hover:bg-paper/15"
+                    className="flex min-h-[44px] items-center justify-between rounded bg-paper/5 px-3 py-2 font-mono text-[11px] text-paper transition hover:bg-paper/15"
                   >
                     <span className="truncate">{row.label}</span>
                     <span className="text-ember-tint">↗</span>
@@ -457,7 +457,7 @@ function VariantAProfile({ card }: { card: CompanyCard }) {
                 <p className="font-serif text-base font-medium">Cluster</p>
                 <Link
                   href={`/map?sector=${encodeURIComponent(card.sector ?? "")}`}
-                  className="mt-1 block text-sm text-ink-3 underline-offset-2 hover:text-ink-2 hover:underline"
+                  className="mt-1 inline-flex min-h-[44px] items-center text-sm text-ink-3 underline-offset-2 hover:text-ink-2 hover:underline"
                 >
                   All Utah {card.sector_display.toLowerCase()} →
                 </Link>
@@ -467,7 +467,7 @@ function VariantAProfile({ card }: { card: CompanyCard }) {
                   <p className="font-serif text-base font-medium">County</p>
                   <Link
                     href={`/map?county=${encodeURIComponent(card.county)}`}
-                    className="mt-1 block text-sm text-ink-3 underline-offset-2 hover:text-ink-2 hover:underline"
+                    className="mt-1 inline-flex min-h-[44px] items-center text-sm text-ink-3 underline-offset-2 hover:text-ink-2 hover:underline"
                   >
                     All companies in {card.county} County →
                   </Link>

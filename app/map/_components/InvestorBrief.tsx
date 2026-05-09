@@ -174,12 +174,12 @@ export function InvestorBrief({ companies, filters, open, onClose }: Props) {
                         {t.summary}
                       </p>
                       {t.slugs.length > 0 ? (
-                        <div className="mt-2 flex flex-wrap gap-1">
+                        <div className="mt-2 flex flex-wrap gap-1.5">
                           {t.slugs.map((slug) => (
                             <a
                               key={slug}
                               href={`/startups/${slug}`}
-                              className="inline-flex items-center rounded-pill bg-paper/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-paper hover:bg-paper/20"
+                              className="inline-flex min-h-[44px] items-center rounded-pill bg-paper/10 px-3 font-mono text-[10px] uppercase tracking-wider text-paper hover:bg-paper/20"
                             >
                               {slug}
                             </a>
@@ -199,17 +199,16 @@ export function InvestorBrief({ companies, filters, open, onClose }: Props) {
                 </p>
                 <ul className="mt-2 space-y-1.5">
                   {data.notable_raises.slice(0, 4).map((r, i) => (
-                    <li
-                      key={i}
-                      className="flex items-center justify-between rounded-md border border-paper/15 bg-paper/5 px-3 py-1.5 text-sm"
-                    >
+                    <li key={i}>
                       <a
                         href={`/startups/${r.slug}`}
-                        className="font-mono text-[11px] uppercase tracking-wider hover:underline"
+                        className="flex min-h-[44px] items-center justify-between rounded-md border border-paper/15 bg-paper/5 px-3 py-1.5 text-sm transition hover:bg-paper/10"
                       >
-                        {r.slug}
+                        <span className="font-mono text-[11px] uppercase tracking-wider">
+                          {r.slug}
+                        </span>
+                        <span className="font-serif text-sm">{r.amount}</span>
                       </a>
-                      <span className="font-serif text-sm">{r.amount}</span>
                     </li>
                   ))}
                   {data.notable_raises.length > 4 ? (
