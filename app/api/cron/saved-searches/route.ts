@@ -108,8 +108,11 @@ async function run(req: Request): Promise<NextResponse> {
       if (!parsed.success) {
         result.errors.push({ id: c.id, error: "invalid_filters" });
         // Still advance lastRunAt so this row leaves the candidate
-        // set until either the user fixes it via PATCH or the next
-        // cadence window. Otherwise it's a perpetual error spam.
+        // set until the next cadence window. PATCH only accepts
+        // name/cadence today, so the actual repair path for corrupt
+        // filters_json is delete + re-create from /map; advancing
+        // lastRunAt at least keeps this row from re-erroring every
+        // cron tick.
       } else {
         // listCompanies caps at 500. For searches whose filters
         // legitimately match more than that, the order-dependent

@@ -8,6 +8,14 @@
 // "disable saved-search ssX"), no PII, no cookie. Stateless on
 // purpose so that a recipient who lost their account can still stop
 // the emails.
+//
+// Trade-off: tokens are reusable within their TTL. A user who clicks
+// to unsubscribe, then re-enables the alert in /settings, can be
+// re-paused by a second click on the same email link (forwarded
+// message, archived inbox, browser back-button). Caller-side guards
+// (e.g. "no-op if already in the target state") soften this; if the
+// trade-off ever stops being acceptable, switch to a tokens-used
+// table and reject reuse here.
 
 import { env } from "./cf";
 
