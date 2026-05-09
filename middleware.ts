@@ -41,7 +41,10 @@ export default async function middleware(req: NextRequest) {
     if (!cookie || !timingSafeEqual(cookie, expected)) {
       const url = req.nextUrl.clone();
       url.pathname = "/gate";
-      url.searchParams.set("next", pathname + search);
+      // safeNext sanitizes the same way the post-submit redirect
+      // does — defense-in-depth so a bouncy URL fragment can't
+      // slip through if the upstream pathname was unusual.
+      url.searchParams.set("next", safeNext(pathname + search));
       return NextResponse.redirect(url);
     }
   }
