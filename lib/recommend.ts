@@ -192,6 +192,13 @@ function scoreGoal(
   resource: ResourceRow,
   passport: FounderPassportInput,
 ): { score: number; reason: string | null } {
+  // Empty topics returns 0 (NOT the 0.5 neutral fallback used by stage /
+  // location / industry). Reasoning: ~99% of resources DO carry topics, so
+  // missing topics is a real "this resource is unclassified for goal" signal
+  // rather than missing data. Combined with stage, location, industry, and
+  // community all giving partial neutrals, raising goal to 0.5 here would
+  // push every fully-empty resource over the actionable bucket floor and
+  // bury real matches. Same intent as scoreCommunity's special-case below.
   const wanted = GOAL_TO_TOPICS[passport.goal] ?? [];
   if (overlap(wanted, resource.topics)) {
     const matched = resource.topics.find((t) =>
@@ -266,6 +273,11 @@ export function scoreResource(
   const industry = scoreIndustry(resource, passport);
   const community = scoreCommunity(resource, passport);
 
+  // Round to integer for display + persistence. The weighted sum can land
+  // on .5 when neutral fallbacks (0.5) hit non-divisible weights, but at
+  // hackathon-grade resolution a 1-point ranking gap from rounding is
+  // immaterial; downstream code (`bucketize`, the cached plan response)
+  // expects an integer score.
   const score = Math.round(
     25 * stage.score +
       20 * location.score +

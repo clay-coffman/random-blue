@@ -80,7 +80,49 @@ function htmlToText(html: string): string {
     .slice(0, MAX_TEXT_CHARS);
 }
 
+// Block obvious SSRF targets at the application layer. Cloudflare Workers
+// already blocks egress to RFC-1918 / loopback / link-local in production,
+// so this is defense-in-depth — and the only protection if this code is
+// ever reused outside the Worker runtime. Not exhaustive; a determined
+// attacker can still resolve a public hostname onto a private IP, which
+// is why we rely on the platform layer too.
+function isPrivateOrLocalHost(rawUrl: string): boolean {
+  try {
+    const host = new URL(rawUrl).hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host === "0.0.0.0" ||
+      host.endsWith(".localhost") ||
+      host.endsWith(".local")
+    ) {
+      return true;
+    }
+    // IPv4 literal in private / link-local / loopback ranges.
+    const v4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (v4) {
+      const [a, b] = [Number(v4[1]), Number(v4[2])];
+      if (a === 10) return true;
+      if (a === 127) return true;
+      if (a === 169 && b === 254) return true; // link-local + AWS metadata
+      if (a === 172 && b >= 16 && b <= 31) return true;
+      if (a === 192 && b === 168) return true;
+      if (a === 0) return true;
+    }
+    // IPv6 loopback / link-local / unique-local literal in [..] form.
+    if (host.startsWith("[")) {
+      const v6 = host.slice(1, -1).toLowerCase();
+      if (v6 === "::1" || v6.startsWith("fe80:") || v6.startsWith("fc") || v6.startsWith("fd")) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 async function fetchPageText(url: string): Promise<string | null> {
+  if (isPrivateOrLocalHost(url)) return null;
   try {
     const res = await fetch(url, {
       headers: {
@@ -108,6 +150,9 @@ async function fetchPageText(url: string): Promise<string | null> {
       html += decoder.decode(value, { stream: true });
       if (html.length > MAX_HTML_BYTES) break;
     }
+    // Flush any bytes the decoder buffered (e.g. a multi-byte UTF-8 char
+    // split across the last chunk boundary).
+    html += decoder.decode();
     return htmlToText(html);
   } catch {
     return null;
