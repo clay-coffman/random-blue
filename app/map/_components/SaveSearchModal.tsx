@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,12 +25,20 @@ const CADENCES = [
 type Cadence = (typeof CADENCES)[number]["value"];
 
 export function SaveSearchModal({ filters, defaultName, signedIn }: Props) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(defaultName ?? "");
   const [cadence, setCadence] = useState<Cadence>("daily");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // After a successful save, flash a confirmation in the trigger
+  // button (subtle, non-blocking) instead of yanking the user off
+  // the map. Cleared after 3s.
+  const [savedFlash, setSavedFlash] = useState(false);
+  useEffect(() => {
+    if (!savedFlash) return;
+    const t = setTimeout(() => setSavedFlash(false), 3000);
+    return () => clearTimeout(t);
+  }, [savedFlash]);
 
   // Disabled state: nothing to save (no filters at all).
   const filterKeys = Object.keys(filters).filter(
@@ -75,8 +82,10 @@ export function SaveSearchModal({ filters, defaultName, signedIn }: Props) {
       }
       setOpen(false);
       setName("");
-      // Soft-bump the toaster: link the user to settings to manage.
-      router.push("/settings#notifications");
+      // Stay on the map. The button shows "Saved ✓" for 3s; the user
+      // can manage cadences from /settings#notifications when they
+      // want to.
+      setSavedFlash(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save.");
     } finally {
@@ -98,7 +107,8 @@ export function SaveSearchModal({ filters, defaultName, signedIn }: Props) {
                 : "Set at least one filter first"
             }
           >
-            <span aria-hidden>★</span> Save search
+            <span aria-hidden>{savedFlash ? "✓" : "★"}</span>{" "}
+            {savedFlash ? "Saved" : "Save search"}
           </button>
         }
       />

@@ -18,11 +18,26 @@ const CreateBody = z.object({
   cadence: z.enum(CADENCES).default("daily"),
 });
 
+function safeParseFilters(s: string): Record<string, unknown> {
+  try {
+    const v: unknown = JSON.parse(s);
+    return v && typeof v === "object" && !Array.isArray(v)
+      ? (v as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 function toWire(row: typeof savedSearches.$inferSelect) {
+  // Don't 500 the whole list when one row's `filters_json` is corrupt
+  // (manual SQL edit, half-failed write, future schema drift). Empty
+  // filters render as "no filters" in the UI; the user can delete or
+  // re-create.
   return {
     id: row.id,
     name: row.name,
-    filters: JSON.parse(row.filtersJson) as Record<string, unknown>,
+    filters: safeParseFilters(row.filtersJson),
     cadence: row.cadence as Cadence,
     last_run_at: row.lastRunAt ? row.lastRunAt.toISOString() : null,
     created_at: row.createdAt.toISOString(),

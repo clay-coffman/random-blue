@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   blob,
+  check,
   index,
   integer,
   real,
@@ -341,6 +343,14 @@ export const savedSearches = sqliteTable(
   (t) => [
     index("saved_searches_user_idx").on(t.userId),
     index("saved_searches_cadence_idx").on(t.cadence),
+    // Closed set enforced in zod at the API boundary; the CHECK
+    // catches direct SQL writes (wrangler d1 execute, future admin
+    // tooling) that would otherwise silently store an unknown value
+    // and get filtered out of the cron candidate query.
+    check(
+      "saved_searches_cadence_check",
+      sql`${t.cadence} IN ('daily', 'weekly', 'off')`,
+    ),
   ],
 );
 

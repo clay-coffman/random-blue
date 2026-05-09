@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "96ada9c0-9399-42c8-b973-7b6bb5160696",
+  "id": "81d01a78-4ca1-445d-bca4-b51ab6ac7bf1",
   "prevId": "45391d59-87b1-4aff-a33f-550301dfc987",
   "tables": {
     "admin_invites": {
@@ -1551,7 +1551,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "saved_searches_cadence_check": {
+          "name": "saved_searches_cadence_check",
+          "value": "\"saved_searches\".\"cadence\" IN ('daily', 'weekly', 'off')"
+        }
+      }
     },
     "search_alert_deliveries": {
       "name": "search_alert_deliveries",

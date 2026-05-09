@@ -14,8 +14,11 @@ import { env } from "./cf";
 type Payload = {
   k: string; // capability key, e.g. "ss-unsub"
   id: string; // resource id (e.g. saved_search id)
-  exp?: number; // ms epoch; tokens default to 90 days when issued
+  /** ms epoch; defaults to 30 days from issue. */
+  exp?: number;
 };
+
+const DEFAULT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function b64urlEncode(buf: Uint8Array): string {
   let s = "";
@@ -50,7 +53,11 @@ async function hmacKey(): Promise<CryptoKey> {
 }
 
 export async function signToken(p: Payload): Promise<string> {
-  const payload = JSON.stringify(p);
+  const sealed: Payload = {
+    ...p,
+    exp: p.exp ?? Date.now() + DEFAULT_TTL_MS,
+  };
+  const payload = JSON.stringify(sealed);
   const enc = new TextEncoder().encode(payload);
   const payloadB64 = b64urlEncode(enc);
   const key = await hmacKey();

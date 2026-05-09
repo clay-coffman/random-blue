@@ -39,5 +39,32 @@ jobs:
             -X POST \
             -H "X-Atlas-Admin-Token: $TOKEN" \
             "$BASE_URL/api/cron/saved-searches" \
-            | tee response.json
+            -o response.json
+          cat response.json
           echo
+
+          # The cron route returns 200 with an `errors` array on
+          # partial failure (one bad saved search shouldn't fail the
+          # whole batch). Surface those to the Actions UI so a
+          # broken row doesn't sit silent for weeks.
+          ERRORS=$(jq -r '.errors | length' response.json 2>/dev/null || echo 0)
+          RAN=$(jq -r '.ran' response.json 2>/dev/null || echo 0)
+          EMAILED=$(jq -r '.emailed' response.json 2>/dev/null || echo 0)
+          {
+            echo "## saved-search cron"
+            echo ""
+            echo "- ran: $RAN"
+            echo "- emailed: $EMAILED"
+            echo "- errors: $ERRORS"
+            if [ "$ERRORS" -gt 0 ]; then
+              echo ""
+              echo "### Error detail"
+              echo '```json'
+              jq '.errors' response.json
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::warning::Cron ran with $ERRORS partial errors. See job summary."
+            exit 1
+          fi

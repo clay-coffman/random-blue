@@ -8,7 +8,8 @@ CREATE TABLE `saved_searches` (
 	`last_match_ids_json` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "saved_searches_cadence_check" CHECK("saved_searches"."cadence" IN ('daily', 'weekly', 'off'))
 );
 --> statement-breakpoint
 CREATE INDEX `saved_searches_user_idx` ON `saved_searches` (`user_id`);--> statement-breakpoint

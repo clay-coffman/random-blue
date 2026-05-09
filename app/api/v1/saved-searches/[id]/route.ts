@@ -19,11 +19,24 @@ const PatchBody = z
     message: "Provide at least one of: name, cadence.",
   });
 
+function safeParseFilters(s: string): Record<string, unknown> {
+  try {
+    const v: unknown = JSON.parse(s);
+    return v && typeof v === "object" && !Array.isArray(v)
+      ? (v as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 function toWire(row: typeof savedSearches.$inferSelect) {
+  // Mirrors the safe parse in the list endpoint — keeps PATCH replies
+  // consumable even if the row's filters_json is malformed.
   return {
     id: row.id,
     name: row.name,
-    filters: JSON.parse(row.filtersJson) as Record<string, unknown>,
+    filters: safeParseFilters(row.filtersJson),
     cadence: row.cadence,
     last_run_at: row.lastRunAt ? row.lastRunAt.toISOString() : null,
     created_at: row.createdAt.toISOString(),
