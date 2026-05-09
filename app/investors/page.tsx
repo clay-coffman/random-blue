@@ -99,8 +99,8 @@ export default async function InvestorsLandingPage() {
             <Link href="/map" className={`${ctaBase} ${ctaSky}`}>
               Open the map →
             </Link>
-            <Link href="/investors/all" className={`${ctaBase} ${ctaGhost}`}>
-              Browse investors
+            <Link href="/map" className={`${ctaBase} ${ctaGhost}`}>
+              Browse companies
             </Link>
           </div>
         </div>
