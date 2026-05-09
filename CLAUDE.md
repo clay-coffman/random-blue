@@ -173,6 +173,13 @@ When set, `auth.ts` drops the `emailOTP` plugin and flips
 auto-verifies and drops you on the authenticated page — no
 verify screen, no code to grab. Use this 90% of the time.
 
+Seed users (full list in `db/seed/README.md`) share the password
+`passport12345`. The 12-char floor is enforced by Better Auth
+(`auth.ts` `minPasswordLength: 12`) and mirrored in the sign-up
+zod schema, so any real account form (including admin-invite
+acceptance) needs ≥ 12 chars too. If you bump the seed value,
+update both files in lockstep.
+
 ### Testing the real OTP flow: route mail to mailpit
 
 ```

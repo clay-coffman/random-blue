@@ -21,7 +21,7 @@ export type TestUser = {
   role: Role;
 };
 
-export const TEST_PASSWORD = "passport123";
+export const TEST_PASSWORD = "passport12345";
 
 export const testUsers: TestUser[] = [
   // 6 owners, one per persona.
