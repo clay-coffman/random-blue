@@ -209,6 +209,11 @@ export const founderPassports = sqliteTable(
     websiteUrl: text("website_url"),
     enrichedAt: integer("enriched_at", { mode: "timestamp_ms" }),
     enrichmentSource: text("enrichment_source"),
+    // Plan-scoped LLM synthesis paragraph from `synthesizeNarrative` —
+    // mirrors what the route returns so a future server-rendered
+    // `/plan/[id]` doesn't have to re-call Anthropic just to repaint.
+    // Overwritten on each /recommend call for this passport.
+    narrativeText: text("narrative_text"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(now),
   },
   (t) => [index("founder_passports_user_idx").on(t.userId)],

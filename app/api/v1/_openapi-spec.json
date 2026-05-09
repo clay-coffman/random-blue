@@ -1536,7 +1536,7 @@
           },
           "because": {
             "type": "string",
-            "description": "LLM \"Because…\" sentence; empty string on Anthropic timeout / parse failure."
+            "description": "Humanized one-liner — for now/next this is the strongest\nscoring reason translated to natural language; for ignore\nit's the negative `explainSkip` output. Always non-empty\nfor actionable rows. Never contains snake_case enums.\n"
           },
           "action_text": {
             "type": "string",
@@ -1560,6 +1560,7 @@
         "type": "object",
         "required": [
           "passport_id",
+          "narrative",
           "recommendations",
           "generated_at"
         ],
@@ -1567,6 +1568,10 @@
           "passport_id": {
             "type": "string",
             "pattern": "^fp_[a-zA-Z0-9_-]+$"
+          },
+          "narrative": {
+            "type": "string",
+            "description": "Plan-scoped synthesis paragraph (60–100 words). Hedges\nadjacency in plain English, names specific orgs, uses\nthe founder's chosen labels. Falls back to a deterministic\ntemplated paragraph when Anthropic fails, so this is\nnon-empty whenever there is at least one positive\nrecommendation; \"\" only when there are no recommendations.\n"
           },
           "recommendations": {
             "type": "array",

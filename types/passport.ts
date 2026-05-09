@@ -47,6 +47,7 @@ export type RecommendedResource = {
 
 export type RecommendResult = {
   passportId: string;
+  narrative: string;
   recommendations: RecommendedResource[];
   generatedAt: string;
 };

@@ -18,9 +18,10 @@ import {
 } from "@/lib/recommend";
 import { loadAllResourceRows } from "@/lib/resources-loader";
 import {
-  explainRecommendations,
+  bestPositiveBecause,
   explainSkip,
   resourceRowToSkipFacets,
+  synthesizeNarrative,
 } from "@/lib/recommend-explain";
 import { safeParseJson } from "@/lib/json-safe";
 import type {
@@ -32,7 +33,7 @@ import type {
 // Note: `maxDuration` (Vercel Functions config) is intentionally omitted —
 // the deploy target is Cloudflare Workers, where it has no effect. The
 // real long-tail caps are the AbortController timeouts in
-// explainRecommendations (12s) and enrichWebsite (8s fetch + 10s LLM).
+// synthesizeNarrative (12s) and enrichWebsite (8s fetch + 10s LLM).
 
 export async function POST(req: Request) {
   try {
@@ -183,13 +184,26 @@ export async function POST(req: Request) {
       ...buckets.ignore.map((s) => ({ ...s, bucket: "ignore" as const })),
     ];
 
-    // 3. Source-bound LLM "Because…" for top 6 (now + next).
+    // 3. Plan-scoped LLM synthesis paragraph over the top 6 (now + next).
+    //    Falls back to a deterministic templated paragraph on any
+    //    Anthropic failure so the response is always populated.
     const topForLLM = labelled.filter((s) => s.bucket !== "ignore");
-    const explanations = await explainRecommendations(passport, topForLLM);
+    const narrative = await synthesizeNarrative(passport, topForLLM);
 
-    // 4. Persist (idempotent: replace). The DB column `actionText` carries
-    // the "Because…" sentence today; if a future iteration wants a separate
-    // suggested-action field, add a `because_text` column and migrate.
+    // 4. Compute per-rec humanized because:
+    //    - now/next → humanized top scoring reason via bestPositiveBecause
+    //    - ignore   → deterministic explainSkip negative reason
+    //    Always non-empty; never contains snake_case enums.
+    const becauseFor = (s: Scored & { bucket: Bucket }): string =>
+      s.bucket === "ignore"
+        ? explainSkip(resourceRowToSkipFacets(s.resource), passport)
+        : bestPositiveBecause(s, passport);
+
+    // 5. Persist. `recommendations.actionText` carries the per-rec
+    //    `because` so the cached GET /plan/[id] read can serve it
+    //    without re-deriving. Plan-scoped narrative is mirrored onto
+    //    the passport so a future server-rendered /plan/[id] doesn't
+    //    have to re-call Anthropic to repaint.
     await d
       .delete(recommendations)
       .where(eq(recommendations.passportId, passportId));
@@ -201,26 +215,24 @@ export async function POST(req: Request) {
           resourceId: s.resource.id,
           score: s.score,
           reasonsJson: JSON.stringify(s.reasons),
-          actionText: explanations.get(s.resource.id) ?? null,
+          actionText: becauseFor(s),
           bucket: s.bucket,
           createdAt: new Date(),
         })),
       );
     }
+    await d
+      .update(founderPassports)
+      .set({ narrativeText: narrative })
+      .where(eq(founderPassports.id, passportId));
 
-    // 5. Shape response. Ignore-bucket items get a deterministic
-    //    *negative* skip explanation; positive buckets get the LLM
-    //    "Because…" (or empty if the LLM call failed/timed out).
     const recs: RecommendedResourceWire[] = labelled.map((s) => ({
       resource_id: s.resource.id,
       title: s.resource.title,
       score: s.score,
       bucket: s.bucket,
       reasons: s.reasons,
-      because:
-        s.bucket === "ignore"
-          ? explainSkip(resourceRowToSkipFacets(s.resource), passport)
-          : (explanations.get(s.resource.id) ?? ""),
+      because: becauseFor(s),
       action_text: "",
       kind: s.resource.kind ?? undefined,
       source_url: s.resource.sourceUrl ?? undefined,
@@ -229,6 +241,7 @@ export async function POST(req: Request) {
 
     const payload: RecommendResponseWire = {
       passport_id: passportId,
+      narrative,
       recommendations: recs,
       generated_at: new Date().toISOString(),
     };
