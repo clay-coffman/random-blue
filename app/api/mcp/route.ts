@@ -15,9 +15,8 @@
 import { NextResponse } from "next/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { env } from "@/lib/cf";
 import { createAtlasClient } from "@/cli/lib/atlas-client";
-import { registerTools } from "@/mcp/shared/tools";
+import { registerReadTools } from "@/mcp/shared/tools";
 import { registerResources } from "@/mcp/shared/resources";
 import { registerPrompts } from "@/mcp/shared/prompts";
 
@@ -28,20 +27,21 @@ export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 async function handleMcpRequest(req: Request): Promise<Response> {
-  // The remote MCP server uses the SAME backing API as the stdio
-  // server. Tools call public read endpoints unauthenticated and use
-  // ATLAS_ADMIN_TOKEN (worker secret) for `update_company_profile`.
+  // Public, unauthenticated MCP endpoint. Read tools only —
+  // `update_company_profile` (and any other writes) are local-stdio
+  // only (see mcp/server.ts) because routing them through here would
+  // need the worker's admin token and would expose privileged writes
+  // to anyone on the internet. See issue #35.
   //
   // Self-target the deployed worker so tools don't bounce out to the
   // open internet for an in-Worker call.
   const url = new URL(req.url);
   const baseUrl = `${url.protocol}//${url.host}`;
 
-  // Worker secret lives on `env().ATLAS_ADMIN_TOKEN` — `process.env`
-  // does not pick up `.dev.vars` since `initOpenNextCloudflareForDev`
-  // wires bindings through Cloudflare context, not Node `process.env`.
-  const adminToken = env().ATLAS_ADMIN_TOKEN ?? "";
-  const client = createAtlasClient({ baseUrl, adminToken });
+  // No admin token — defense-in-depth so a future refactor that
+  // accidentally registers a write tool on this surface still can't
+  // make a privileged call.
+  const client = createAtlasClient({ baseUrl });
 
   const server = new McpServer(
     {
@@ -50,9 +50,9 @@ async function handleMcpRequest(req: Request): Promise<Response> {
     },
     {
       instructions: [
-        "Startup State Atlas — Utah's startup ecosystem API (remote MCP).",
+        "Startup State Atlas — Utah's startup ecosystem API (remote MCP, read-only).",
         "",
-        "Read endpoints are public. Writes use ATLAS_ADMIN_TOKEN configured on the worker.",
+        "Read endpoints are public. Write tools (e.g. update_company_profile) are exposed only via the local stdio MCP server (`npm run mcp` from a checkout with ATLAS_ADMIN_TOKEN in env).",
         "Required intake fields: county/city, stage, industry, goal.",
         "",
         "Never recommend a resource that does not appear in an API result. Always cite resource_id and link.",
@@ -60,7 +60,7 @@ async function handleMcpRequest(req: Request): Promise<Response> {
     },
   );
 
-  registerTools(server, client);
+  registerReadTools(server, client);
   registerResources(server, client);
   registerPrompts(server);
 

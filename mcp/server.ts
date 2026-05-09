@@ -12,7 +12,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createAtlasClient } from "@/cli/lib/atlas-client";
-import { registerTools } from "@/mcp/shared/tools";
+import {
+  registerReadTools,
+  registerWriteTools,
+} from "@/mcp/shared/tools";
 import { registerResources } from "@/mcp/shared/resources";
 import { registerPrompts } from "@/mcp/shared/prompts";
 
@@ -37,7 +40,10 @@ async function main() {
     },
   );
 
-  registerTools(server, client);
+  // Local stdio: full surface (read + write). Operators run this
+  // themselves with their own ATLAS_ADMIN_TOKEN.
+  registerReadTools(server, client);
+  registerWriteTools(server, client);
   registerResources(server, client);
   registerPrompts(server);
 

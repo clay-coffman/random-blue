@@ -1,7 +1,18 @@
-// 8 MCP tools that the local stdio server (mcp/server.ts) and the
-// remote Streamable-HTTP endpoint (app/api/mcp/route.ts, stateless
-// `WebStandardStreamableHTTPServerTransport`) both expose. Each tool
-// wraps an HTTP call to the deployed Worker via `AtlasClient`.
+// MCP tools split into two registration entry points so the remote
+// Streamable-HTTP endpoint (app/api/mcp/route.ts, stateless
+// `WebStandardStreamableHTTPServerTransport`) can stay strictly
+// read-only while the local stdio server (mcp/server.ts) keeps the
+// full surface for trusted operators.
+//
+//  - `registerReadTools` — 7 read tools (recommend / search / get /
+//    plan / tour). Safe to expose unauthenticated.
+//  - `registerWriteTools` — `update_company_profile` only.
+//    Calls `PATCH /api/v1/companies/<slug>` with the worker-side
+//    admin token. Local stdio only — see issue #35 for why this is
+//    not on the public endpoint.
+//
+// Each tool wraps an HTTP call to the deployed Worker via
+// `AtlasClient`.
 
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -81,7 +92,7 @@ const profileShape = {
   website_url: z.string().url().optional(),
 };
 
-export function registerTools(server: McpServer, client: AtlasClient) {
+export function registerReadTools(server: McpServer, client: AtlasClient) {
   // 1) recommend_resources
   server.registerTool(
     "recommend_resources",
@@ -193,42 +204,6 @@ export function registerTools(server: McpServer, client: AtlasClient) {
     async ({ slug }) => {
       try {
         const out = await client.getCompany(slug);
-        return jsonText(out);
-      } catch (err) {
-        return errorText(err);
-      }
-    },
-  );
-
-  // 6) update_company_profile
-  server.registerTool(
-    "update_company_profile",
-    {
-      title: "Update a company profile (privileged)",
-      description:
-        "Apply a partial update to a company. Requires the X-Atlas-Admin-Token header (the MCP server reads ATLAS_ADMIN_TOKEN from env). Refuses when no token is configured.",
-      inputSchema: {
-        slug: z.string(),
-        patch: z
-          .record(z.string(), z.unknown())
-          .describe(
-            "Partial update body. Fields: name, website, description, sector, stage, employee_count, hiring_status, founding_year, logo_url, founder_team_json, lat, lng, slug (admin), linkedin (admin), address_text (admin).",
-          ),
-      },
-    },
-    async ({ slug, patch }) => {
-      if (!client.hasAdminToken()) {
-        return errorText(
-          new AtlasError({
-            code: "missing_admin_token",
-            message:
-              "Set ATLAS_ADMIN_TOKEN before calling update_company_profile.",
-            status: 0,
-          }),
-        );
-      }
-      try {
-        const out = await client.patchCompany(slug, patch);
         return jsonText(out);
       } catch (err) {
         return errorText(err);
@@ -349,6 +324,48 @@ export function registerTools(server: McpServer, client: AtlasClient) {
         return {
           content: [{ type: "text", text: lines.join("\n").trimEnd() }],
         };
+      } catch (err) {
+        return errorText(err);
+      }
+    },
+  );
+}
+
+// Write tools — local stdio MCP only. The remote /api/mcp endpoint
+// constructs the AtlasClient WITHOUT an admin token, so even if a
+// future caller wires this in by mistake, the hasAdminToken() check
+// below refuses (defense-in-depth — the real protection is that
+// app/api/mcp/route.ts never invokes this function).
+export function registerWriteTools(server: McpServer, client: AtlasClient) {
+  server.registerTool(
+    "update_company_profile",
+    {
+      title: "Update a company profile (privileged)",
+      description:
+        "Apply a partial update to a company. Requires the X-Atlas-Admin-Token header (the MCP server reads ATLAS_ADMIN_TOKEN from env). Refuses when no token is configured. Local stdio MCP only — not exposed via the remote /api/mcp endpoint.",
+      inputSchema: {
+        slug: z.string(),
+        patch: z
+          .record(z.string(), z.unknown())
+          .describe(
+            "Partial update body. Fields: name, website, description, sector, stage, employee_count, hiring_status, founding_year, logo_url, founder_team_json, lat, lng, slug (admin), linkedin (admin), address_text (admin).",
+          ),
+      },
+    },
+    async ({ slug, patch }) => {
+      if (!client.hasAdminToken()) {
+        return errorText(
+          new AtlasError({
+            code: "missing_admin_token",
+            message:
+              "Set ATLAS_ADMIN_TOKEN before calling update_company_profile.",
+            status: 0,
+          }),
+        );
+      }
+      try {
+        const out = await client.patchCompany(slug, patch);
+        return jsonText(out);
       } catch (err) {
         return errorText(err);
       }

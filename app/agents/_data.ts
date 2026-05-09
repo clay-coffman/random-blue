@@ -144,6 +144,12 @@ export type McpTool = {
   name: string;
   summary: string;
   privileged?: boolean;
+  /**
+   * Tool is registered only by the local stdio MCP server
+   * (`npm run mcp`); the remote /api/mcp endpoint refuses it.
+   * See issue #35.
+   */
+  localOnly?: boolean;
 };
 
 export const mcpTools: McpTool[] = [
@@ -163,8 +169,10 @@ export const mcpTools: McpTool[] = [
   { name: "get_company", summary: "Fetch a company by slug." },
   {
     name: "update_company_profile",
-    summary: "Apply a partial company update (writes).",
+    summary:
+      "Apply a partial company update (writes). Local stdio MCP only — exposed via `npm run mcp` with ATLAS_ADMIN_TOKEN in env, NOT via the remote /api/mcp endpoint.",
     privileged: true,
+    localOnly: true,
   },
   {
     name: "generate_founder_plan",
