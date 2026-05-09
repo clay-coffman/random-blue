@@ -3,7 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/auth";
 import { isAdminRole, isSuperadmin } from "@/lib/auth-utils";
-import { getPendingSubmissionsCount } from "@/lib/admin/pending";
+import {
+  getPendingIntrosCount,
+  getPendingSubmissionsCount,
+} from "@/lib/admin/pending";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +22,8 @@ const NAV_GROUPS: Array<{
     label: "Moderation",
     items: [
       { href: "/admin/submissions", label: "Claim queue" },
+      { href: "/admin/intros", label: "Intro requests" },
+      { href: "/admin/investors", label: "Investor verification" },
     ],
   },
   {
@@ -49,9 +54,13 @@ export default async function AdminLayout({
   const isSuper = isSuperadmin(role);
 
   const user = session.user as { name: string; email: string };
-  const pendingSubmissions = await getPendingSubmissionsCount();
+  const [pendingSubmissions, pendingIntros] = await Promise.all([
+    getPendingSubmissionsCount(),
+    getPendingIntrosCount(),
+  ]);
   const pendingByRoute: Record<string, number> = {
     "/admin/submissions": pendingSubmissions,
+    "/admin/intros": pendingIntros,
   };
 
   return (

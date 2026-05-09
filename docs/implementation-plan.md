@@ -76,13 +76,15 @@ companies, 213 resources, 6 personas. First superadmin minted via
 | 0004 | `striped_ulik` | PR #36 — `rate_limit` table for Better Auth's `storage: "database"` |
 | 0005 | `even_medusa` | PR #38 — `saved_searches` + `search_alert_deliveries` |
 
-Next free index: **0006**.
+Next free index: **0007** (PR #52 / `feat/investor-public` reserves
+0006 — `military_scarlet_spider`, public investor columns + `saved_companies`
++ `intro_requests`).
 
 ---
 
 ## In flight
 
-Four open PRs as of last refresh. All branched off `main` after PR #42;
+Five open PRs as of last refresh. All branched off `main` after PR #42;
 check each one for current status before assuming.
 
 | PR | What | Mergeable | Closes |
@@ -91,10 +93,13 @@ check each one for current status before assuming.
 | #44 | E2E quick-wins bundle — B1 (D1-derived landing stats), B5 (Better Auth `trustedOrigins`), B9 (persona quick-test submit), B11 (Priya naming) | UNSTABLE (checks pending) | — |
 | #45 | Plan page fixes — B7 (skip-bucket explainer wording), B8 (mailto CTAs prepopulated from passport) | UNSTABLE | — |
 | #46 | Header rewrite — B2 (mobile sign-in CTA), B6 (auth-state branching), B10 (sign-out CTA + UserMenu) | UNSTABLE | — |
+| #52 | Phase 6 — Agent 8 — investor public surface (`/investors`, `/investors/<slug>` + `.md` + `.json`, `/me/saved`, `/me/intros`, `/admin/intros`, `/admin/investors`, intro-brokerage emails). Migration `0006_military_scarlet_spider`. | UNSTABLE | — |
 | #53 | Middleware cookie-prefix fix — pass `cookiePrefix` to `getSessionCookie` so authenticated users aren't bounced from every gated route | OPEN | #49 |
 
 Between #44, #45, #46 — **9 of the 11** e2e bugs close. The remaining
-two (B3, B4) are not yet PR'd; see _Open issues_ below.
+two (B3, B4) are not yet PR'd; see _Open issues_ below. PR #52 ships
+the post-launch investor surface against `main`; admin-token /
+verification flow is testable from `/admin/investors`.
 
 ---
 
@@ -156,17 +161,8 @@ then evaluate Phase 6.
 
 ## Out of scope until launch
 
-### Phase 6 — Investor public surface (Agent 8)
-
-Brief: `docs/agent-tasks/agent-8-investor.md`
-
-Public investor directory (`/investors`), public profile pages
-(`/investors/<slug>` + `.md` + `.json`), saved-companies watchlists
-(`/me/saved`), and admin-brokered intro requests (`/admin/intros`).
-Phase 4 already shipped the `investor_profiles` table and investor
-sign-up; Phase 6 surfaces them publicly.
-
-**Do not pick this up unless explicitly asked.**
+(Phase 6 — Investor public surface — moved to **In flight** above as
+PR #52.)
 
 ---
 

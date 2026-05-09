@@ -22,6 +22,14 @@ const nextConfig: NextConfig = {
         source: "/startups/:slug.json",
         destination: "/startups/:slug/route.json",
       },
+      {
+        source: "/investors/:slug.md",
+        destination: "/investors/:slug/route.md",
+      },
+      {
+        source: "/investors/:slug.json",
+        destination: "/investors/:slug/route.json",
+      },
     ];
   },
 };

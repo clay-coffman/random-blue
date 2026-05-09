@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import Papa from "papaparse";
 import { newId } from "../../lib/ids";
+import { slugify } from "../../lib/slugify";
 import { geocodeFromAddress } from "./centroids";
 
 export type CompanySeed = {
@@ -36,17 +37,6 @@ type CompanyRow = {
   [COL_EMP]?: string;
   Section?: string;
 };
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "") // combining diacriticals
-    .replace(/[‘’]/g, "") // smart single quotes
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
-}
 
 function normalizeUrl(raw: string | undefined): string | null {
   const v = (raw ?? "").trim();

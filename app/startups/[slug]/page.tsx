@@ -1,15 +1,22 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { and, eq } from "drizzle-orm";
 import { Tile, Chip, ScribbleDivider } from "@/components/brand";
 import { sectorChipClass, sectorDisplayName } from "@/lib/sectors";
 import { parseBucket } from "@/lib/employee-bucket";
 import { companyCard, type CompanyCard } from "@/lib/company-card";
 import { cn } from "@/lib/utils";
+import { db } from "@/lib/db";
+import { investorProfiles, savedCompanies } from "@/db/schema";
+import { getApiSession } from "@/lib/auth-utils";
 import { ProfileTabs } from "./_components/ProfileTabs";
 import { MiniMap } from "./_components/MiniMap";
 import { UpdateWithClaude } from "./_components/UpdateWithClaude";
 import { DualPaneReveal } from "./_components/DualPaneReveal";
+import { SaveButton } from "./_components/SaveButton";
+import { RequestIntroButton } from "./_components/RequestIntroButton";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -64,10 +71,59 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
     return <DualPaneReveal card={result.card} />;
   }
 
-  return <VariantAProfile card={result.card} />;
+  // Read session — drives whether to show Save / Request intro buttons.
+  const headerStore = await headers();
+  const fakeReq = new Request(`https://startup.utah.gov/startups/${slug}`, {
+    headers: headerStore,
+  });
+  const session = await getApiSession(fakeReq);
+
+  // For investor sessions, check if this company is already saved.
+  let isInvestor = false;
+  let isSaved = false;
+  if (session?.user.role === "investor") {
+    isInvestor = true;
+    const [investor] = await db()
+      .select({ id: investorProfiles.id })
+      .from(investorProfiles)
+      .where(eq(investorProfiles.userId, session.user.id))
+      .limit(1);
+    if (investor) {
+      const [savedRow] = await db()
+        .select({ id: savedCompanies.id })
+        .from(savedCompanies)
+        .where(
+          and(
+            eq(savedCompanies.investorId, investor.id),
+            eq(savedCompanies.companyId, result.card.id),
+          ),
+        )
+        .limit(1);
+      isSaved = !!savedRow;
+    }
+  }
+
+  return (
+    <VariantAProfile
+      card={result.card}
+      signedIn={!!session}
+      isInvestor={isInvestor}
+      isSaved={isSaved}
+    />
+  );
 }
 
-function VariantAProfile({ card }: { card: CompanyCard }) {
+function VariantAProfile({
+  card,
+  signedIn,
+  isInvestor,
+  isSaved,
+}: {
+  card: CompanyCard;
+  signedIn: boolean;
+  isInvestor: boolean;
+  isSaved: boolean;
+}) {
   const jobsCount = card.jobs.length;
   // Tab labels track render order in the main column. The Agent Card
   // teaser lives in the right rail, not the main column — so it's
@@ -210,6 +266,15 @@ function VariantAProfile({ card }: { card: CompanyCard }) {
             >
               View {jobsCount} open role{jobsCount === 1 ? "" : "s"}
             </Link>
+          ) : null}
+          {isInvestor ? (
+            <SaveButton companyId={card.id} initialSaved={isSaved} />
+          ) : null}
+          {signedIn ? (
+            <RequestIntroButton
+              companyId={card.id}
+              companyName={card.name}
+            />
           ) : null}
           <Link
             href={`/companies/${card.slug}/claim`}
