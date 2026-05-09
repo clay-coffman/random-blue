@@ -15,21 +15,21 @@ const ROLES: Array<{
 }> = [
   {
     id: "founder",
-    glyph: "▲",
+    glyph: "⛰",
     title: "Founder",
     desc:
       "Building a company in Utah. Wants a 90-day plan, resources, capital, mentors.",
   },
   {
     id: "owner",
-    glyph: "⬣",
+    glyph: "★",
     title: "Business owner",
     desc:
       "Already running a Utah company. Wants to claim, update, and verify a profile.",
   },
   {
     id: "investor",
-    glyph: "◈",
+    glyph: "⌖",
     title: "Investor / partner",
     desc:
       "Looking at the Utah ecosystem. Wants the map, briefs, deal flow.",
