@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq, like, or, sql } from "drizzle-orm";
+import { like, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { companies, businessOwnershipSubmissions } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";

@@ -5,7 +5,6 @@ import { getSessionCookie } from "better-auth/cookies";
 // with `auth.api.getSession({ headers })` for role-aware decisions —
 // defense-in-depth per the brief's pitfalls list.
 export default function middleware(req: NextRequest) {
-  const path = req.nextUrl.pathname;
   const session = getSessionCookie(req);
 
   if (!session) {

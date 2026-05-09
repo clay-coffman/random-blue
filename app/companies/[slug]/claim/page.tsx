@@ -5,7 +5,6 @@ import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { companies, businessOwnershipSubmissions } from "@/db/schema";
 import { getAuth } from "@/auth";
-import { errorResponse } from "@/lib/api-error";
 import { ScribbleDivider } from "@/components/brand";
 import { ClaimUploadForm } from "./_form";
 

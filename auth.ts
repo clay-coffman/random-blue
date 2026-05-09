@@ -42,6 +42,12 @@ function buildAuth(env?: CloudflareEnv) {
           input: true,
         },
       },
+      changeEmail: { enabled: true },
+      deleteUser: {
+        enabled: true,
+        // No password re-prompt for the demo build — the wireframe's
+        // confirm dialog is the safety net.
+      },
     },
     plugins: [
       emailOTP({
