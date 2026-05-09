@@ -140,7 +140,7 @@ conventions. Don't restate them; just know what's locked:
   `WRANGLER_PORT`, and `CLOUDFLARE_API_TOKEN` — read by
   `process.env` (Next.js, drizzle-kit, wrangler CLI).
 - **`.dev.vars`** (also gitignored, template at `.dev.vars.example`)
-  carries provider secrets (`ANTHROPIC_API_KEY`, `PARALLEL_API_KEY`,
+  carries provider secrets (`ANTHROPIC_API_KEY`,
   `BETTER_AUTH_SECRET`, etc.) — read by `env()` (the Cloudflare
   binding helper in `lib/cf.ts`) via `initOpenNextCloudflareForDev()`
   in `next.config.ts`. Code in `lib/*` reads secrets through

@@ -28,8 +28,8 @@ Create a new git worktree with its own SQLite-backed local D1, its own
   - `.dev.vars` — `env()` consumers (anything in `lib/*` reading via
     the Cloudflare binding helper, populated in dev by
     `initOpenNextCloudflareForDev()`). Carries `ANTHROPIC_API_KEY`,
-    `PARALLEL_API_KEY`, `ATLAS_ADMIN_TOKEN`, `BETTER_AUTH_SECRET`,
-    `BETTER_AUTH_URL`, `RESEND_API_KEY`. If a secret only lives in
+    `ATLAS_ADMIN_TOKEN`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`,
+    `RESEND_API_KEY`. If a secret only lives in
     `.env.local`, lib code can't see it.
 - **Per-worktree differences:** `PORT` and `WRANGLER_PORT` in
   `.env.local`, plus the port suffix on `BETTER_AUTH_URL` in

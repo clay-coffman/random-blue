@@ -65,7 +65,7 @@ is `N=0`.
      `WRANGLER_PORT` is absent, append it. Leave any other keys
      (CLI tokens, etc.) alone.
    - If a non-main worktree's `.env.local` contains lib/ secrets
-     (`ANTHROPIC_API_KEY`, `PARALLEL_API_KEY`, `RESEND_API_KEY`,
+     (`ANTHROPIC_API_KEY`, `RESEND_API_KEY`,
      `ATLAS_ADMIN_TOKEN`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`),
      surface that as a mismatch — those belong in `.dev.vars`, and
      the secrets file is what lib/ code actually reads via `env()`.
