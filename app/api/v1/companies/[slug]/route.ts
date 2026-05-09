@@ -2,13 +2,17 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { companies, profileUpdates } from "@/db/schema";
-import { errorResponse } from "@/lib/api-error";
+import { ApiError, errorResponse } from "@/lib/api-error";
+import { getCompanyCard, toWireCompanyCard } from "@/lib/company-card";
 import {
   getApiSession,
   hasMachineToken,
   isAdminRole,
 } from "@/lib/auth-utils";
 
+// Mixed-runtime file: GET (Agent 4) reads via Drizzle; PATCH/DELETE
+// (Agent 5) call Better Auth which needs Node APIs, so we keep the
+// default Node runtime here rather than `runtime = "edge"`.
 export const dynamic = "force-dynamic";
 
 // Owner-edit whitelist. Excludes (per brief): slug, linkedin,
@@ -48,21 +52,29 @@ const WIRE_TO_DB: Record<string, string> = {
   address_text: "addressText",
 };
 
-// Stub GET for Agent 4 to replace. Minimal company row + locations
-// are out of scope here; just enough for /companies/[slug]/claim and
-// /edit pages to read.
+// GET — full company agent card (Agent 4). Same shape as
+// `/startups/{slug}/route.json`. Used by /startups/{slug} (server),
+// `lib/company-card.ts` consumers, and CLI/MCP tooling.
 export async function GET(
   _req: Request,
-  ctx: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ slug: string }> },
 ) {
-  const { slug } = await ctx.params;
-  const [row] = await db()
-    .select()
-    .from(companies)
-    .where(eq(companies.slug, slug))
-    .limit(1);
-  if (!row) return errorResponse("not_found", "Company not found.", 404);
-  return NextResponse.json({ company: row });
+  try {
+    const { slug } = await params;
+    const card = await getCompanyCard(slug);
+    if (!card) {
+      throw new ApiError({
+        code: "company_not_found",
+        message: `No company with slug ${slug}`,
+        status: 404,
+      });
+    }
+    return NextResponse.json(toWireCompanyCard(card));
+  } catch (err) {
+    if (err instanceof ApiError) return err.toResponse();
+    console.error("companies/[slug] GET error", err);
+    return errorResponse("internal_error", "Failed to load company", 500);
+  }
 }
 
 // PATCH with three auth modes: owner edit (whitelist), admin edit
