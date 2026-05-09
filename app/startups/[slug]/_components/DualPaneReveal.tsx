@@ -165,6 +165,13 @@ function AgentTabs({ card }: { card: CompanyCard }) {
   // the .md and llms.txt formats actually need a network round-trip.
   // The cache lives in a ref so writes don't re-fire the fetch
   // effect (the visible content state is what triggers re-render).
+  //
+  // useRef seeds once at mount; the .json / .api strings here capture
+  // the FIRST `card` we see. That's safe today because the parent
+  // server-component re-renders this whole tree on slug change (full
+  // unmount + remount), so a fresh ref is created. If a future
+  // refactor keeps this component mounted across slug changes, swap
+  // to a useEffect that re-seeds on card.id transition.
   const cacheRef = useRef<Record<FormatTab, string | null>>({
     md: null,
     json: JSON.stringify(card, null, 2),

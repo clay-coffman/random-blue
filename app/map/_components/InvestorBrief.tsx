@@ -107,7 +107,7 @@ export function InvestorBrief({ companies, filters, open, onClose }: Props) {
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex h-9 min-h-[40px] items-center rounded-pill border-[1.5px] border-paper/30 bg-paper/5 px-3 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:bg-paper/15"
+          className="inline-flex h-11 min-h-[44px] items-center rounded-pill border-[1.5px] border-paper/30 bg-paper/5 px-3 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:bg-paper/15"
         >
           Close
         </button>
@@ -244,7 +244,7 @@ export function InvestorBrief({ companies, filters, open, onClose }: Props) {
           type="button"
           onClick={copySummary}
           disabled={!data || data.degraded}
-          className="inline-flex h-9 min-h-[40px] items-center gap-1 rounded-pill border-[1.5px] border-paper/30 bg-paper/5 px-3 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:bg-paper/15 disabled:opacity-40"
+          className="inline-flex h-11 min-h-[44px] items-center gap-1 rounded-pill border-[1.5px] border-paper/30 bg-paper/5 px-3 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:bg-paper/15 disabled:opacity-40"
         >
           ↗ Copy summary
         </button>

@@ -89,7 +89,7 @@ export function ProfileDrawer({ slug, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-9 min-h-[40px] items-center rounded-pill border-[1.5px] border-ink/30 bg-paper-2 px-3 font-mono text-[11px] uppercase tracking-wider transition hover:bg-paper"
+              className="inline-flex h-11 min-h-[44px] items-center rounded-pill border-[1.5px] border-ink/30 bg-paper-2 px-3 font-mono text-[11px] uppercase tracking-wider transition hover:bg-paper"
               aria-label="Close drawer"
             >
               Close

@@ -41,7 +41,7 @@ export function MapControls() {
         <button
           type="button"
           onClick={shareView}
-          className="inline-flex h-8 min-h-[36px] items-center gap-1.5 rounded-pill px-3 font-mono text-[11px] uppercase tracking-wider text-ink-2 transition hover:bg-paper"
+          className="inline-flex h-11 min-h-[44px] items-center gap-1.5 rounded-pill px-3 font-mono text-[11px] uppercase tracking-wider text-ink-2 transition hover:bg-paper"
         >
           {shared ? "✓ Copied" : "Share view"}
         </button>

@@ -198,7 +198,7 @@ function FilterControls({
           <button
             type="button"
             onClick={clearAll}
-            className="mt-1 font-mono text-[11px] uppercase tracking-wider text-ink-3 underline-offset-2 hover:text-ink-2 hover:underline"
+            className="mt-1 inline-flex min-h-[44px] items-center font-mono text-[11px] uppercase tracking-wider text-ink-3 underline-offset-2 hover:text-ink-2 hover:underline"
           >
             Clear all
           </button>
@@ -313,15 +313,17 @@ function FilterControls({
         </select>
       </label>
 
-      {/* Hiring */}
-      <label className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-ink-2">
+      {/* Hiring — wrap in a 44px-tall label so the whole row is the
+          tap target (the native click handler routes through the
+          label to the checkbox). */}
+      <label className="flex min-h-[44px] cursor-pointer items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-ink-2">
         <input
           type="checkbox"
           checked={hiring === "true"}
           onChange={(e) =>
             writeParam("hiring_status", e.target.checked ? "true" : null)
           }
-          className="h-4 w-4 rounded border-ink/40"
+          className="h-5 w-5 rounded border-ink/40"
         />
         Hiring now
       </label>
