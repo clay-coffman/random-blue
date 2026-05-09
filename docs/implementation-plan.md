@@ -1,40 +1,26 @@
-# Implementation Plan — Startup State Atlas
+# Build status — Startup State Atlas
 
-**Status snapshot — what's shipped, what's in flight, what's left.**
+This file tracks build status. Product spec lives in
+`docs/requirements.md`; frozen contracts in `docs/architecture.md`
+and `docs/conventions.md`; current production state in
+`docs/deploy-log.md`.
 
-The product spec (what to build) lives in `docs/requirements.md`. Frozen
-contracts live in `docs/architecture.md` and
-`docs/agent-tasks/00-shared-context.md`. This file tracks build status
-only.
-
-Last refreshed **2026-05-09** (after PR #42 merge). Per-deploy state
-lives in `docs/deploy-log.md`. The e2e walkthrough that surfaced the
-`B1`–`B11` bug bucket lives in `docs/e2e-findings-2026-05-09.md`. The
-parallel admin-role walkthrough (A1–A4 + dev-DX + UX polish) lives in
-`docs/e2e-admin-2026-05-09.md`. The investor-role walkthrough (4
-majors + intro-brokerage / watchlist / onboarding polish + dev-DX)
-lives in `docs/e2e-investor-2026-05-09.md`.
+Last refreshed **2026-05-09** — post launch + post Phase 6 polish.
 
 ---
 
 ## Live
 
-**Production URL:** <https://startup-state-atlas.claymcoffman.workers.dev>
-(custom domain `startupstateatlas.dev` lands with PR #43; the final
-hostname will be set by GOEO).
+**Production URL:** <https://startupstateatlas.dev>
+(also `https://www.startupstateatlas.dev`).
 
-First production deploy: **PR #41** (2026-05-09). DB seeded with 220
-companies, 213 resources, 6 personas. First superadmin minted via
-`scripts/bootstrap-superadmin.ts`. Nine Worker secrets configured.
+Cloudflare Worker deployed via `wrangler deploy` (manual — no CI
+auto-deploy). The site is currently behind a `SITE_PASSWORD` gate;
+delete that secret to flip public, or rotate it via
+`wrangler secret put SITE_PASSWORD`.
 
-> **Prod is behind `main`.** Deploys are manual (`wrangler deploy` —
-> there is no CI auto-deploy). The Worker is currently running
-> `dc7fa59` (PR #41 merge), which includes PR #36 (auth security)
-> but **not** PR #38 (saved-search alerts) or **PR #42 (MCP write-tool
-> exposure fix — security-critical)**. A re-deploy is needed before
-> the MCP fix is live. Prod D1 is still at migration `0003`; the
-> next deploy needs `npm run db:migrate:remote` to apply `0004`
-> (Better Auth `rate_limit`) and `0005` (`saved_searches`).
+Latest applied D1 migration: **`0007_sloppy_paper_doll`**
+(`founder_passports.narrative_text`).
 
 ---
 
@@ -44,15 +30,15 @@ companies, 213 resources, 6 personas. First superadmin minted via
 
 | PR | What |
 |----|------|
-| #6  | Phase 1 — Agent 0 — Next.js scaffold + Cloudflare Workers + D1 binding + lib stubs + shadcn |
-| #10 / #13 | Phase 2 — Agent 1 — schema + migrations + seed (companies, resources, personas) |
-| #11 | Phase 2 — Agent 7 — brand & shell (Tailwind tokens, layout, homepage, persona tiles) |
-| #16 | Phase 3a — Agent 2 — recommendation engine, founder-passport API, Parallel.ai enrich endpoint |
-| #17 | Phase 3b — Agent 3 — Founder Navigator UI (`/founder` intake, `/plan/:id`, share link) |
-| #20 | Phase 4b — Agent 5 — Better Auth + OTP + onboarding + claim flow + GOEO admin |
-| #24 / #28 | Phase 4a — Agent 4 — ecosystem map (MapLibre), company profiles, agent cards (#28 added view modes / dual-pane reveal / dominant-sector cluster colors / scroll-spy tabs / mobile drawer) |
+| #6  | Phase 1 — Next.js scaffold + Cloudflare Workers + D1 binding + lib stubs + shadcn |
+| #10 / #13 | Phase 2 — schema + migrations + seed (companies, resources, personas) |
+| #11 | Phase 2 — brand & shell (Tailwind tokens, layout, homepage, persona tiles) |
+| #16 | Phase 3a — recommendation engine, founder-passport API, Parallel.ai enrich endpoint |
+| #17 | Phase 3b — Founder Navigator UI (`/founder` intake, `/plan/:id`, share link) |
+| #20 | Phase 4b — Better Auth + OTP + onboarding + claim flow + GOEO admin |
+| #24 / #28 | Phase 4a — ecosystem map (MapLibre), company profiles, view modes / cluster colors / scroll-spy / mobile drawer |
 | #26 | Activity ticker — homepage feed off real D1 events |
-| #27 | Phase 3c — Agent 6 — agent-native layer (OpenAPI 3.1, CLI, local stdio MCP, remote MCP, `/llms.txt`, `/AGENTS.md`, `/agents` page) |
+| #27 | Phase 3c — agent-native layer (OpenAPI 3.1, CLI, local stdio MCP, remote MCP, `/llms.txt`, `/AGENTS.md`, `/agents` page) |
 | #31 | GOEO operator runbook + admin nav gate fix |
 | #32 | Auth UI polish — match Auth.html wireframe; drop magic-link & Google |
 
@@ -60,120 +46,88 @@ companies, 213 resources, 6 personas. First superadmin minted via
 
 | PR | What | Closes |
 |----|------|--------|
-| #36 | Auth security pass — `__Host-` cookies, CSRF on `/api/v1/*` writes, Better Auth rate limits, Cloudflare upload rate-limit binding | — |
-| #38 | Saved-search email alerts — daily/weekly cadence, GitHub Actions cron, signed unsubscribe (post-judge-feedback addition) | — |
+| #36 | Auth security pass — `__Host-` cookies, CSRF on `/api/v1/*` writes, Better Auth rate limits, R2 upload rate-limit binding | — |
+| #38 | Saved-search email alerts — daily/weekly cadence, GitHub Actions cron, signed unsubscribe | — |
 | #40 | E2E founder walkthrough — findings doc + Playwright fixtures | — |
 | #41 | First production deploy — `wrangler deploy` + D1 remote migrate + Worker secrets + bootstrap superadmin | — |
 | #42 | MCP write-tool exposure fix — drop `update_company_profile` from public `/api/mcp` | #35 |
 
-(Documentation, CI, dev-DX, and skill PRs not listed for brevity — see
+### Phase 5b — launch polish
+
+| PR | What | Closes |
+|----|------|--------|
+| #43 | Custom domain `startupstateatlas.dev` + env-driven preview gate | — |
+| #44 | E2E quick-wins bundle — B1 (D1-derived stats), B5 (`trustedOrigins`), B9 (persona quick-test), B11 (Priya naming) | — |
+| #45 | Plan page fixes — B7 skip-bucket explainer wording, B8 mailto CTAs prepopulated from passport | — |
+| #46 | Header rewrite — B2 mobile sign-in CTA, B6 auth-state branching, B10 sign-out + UserMenu | — |
+| #53 | Middleware cookie-prefix fix — pass `cookiePrefix` to `getSessionCookie` | #49 |
+| #54 | Rate-limit unauthenticated LLM-backed endpoints (Anthropic / Parallel.ai cost protection) | #34 |
+| #55 | Top-bar nav typography — Hanken Grotesk small-caps | — |
+| #56 | Plan page — LLM-synthesized "Where to focus" narrative + humanized per-rec `because` | — |
+| #57 | Async `getAuth()` to unblock prerender; first successful re-deploy since #46 | — |
+
+### Phase 6 — investor public surface
+
+| PR | What |
+|----|------|
+| #52 | Public investor directory, profiles (`.md` + `.json`), saved companies watchlist, intro-request brokerage flow, GOED admin queue (`/admin/intros`, `/admin/investors`), intro-brokerage emails. Migration `0006_military_scarlet_spider`. |
+
+### Phase 6 polish
+
+| PR | What |
+|----|------|
+| #59 | Admin-role e2e walkthrough findings doc (now archived) |
+| #60 | Admin tables — card-collapse below lg breakpoint |
+| #61 | Admin dashboard polish — sign-out, investor pill, dashboard cleanup |
+| #62 | Companies edit form — align sector/stage options with seeded vocabulary |
+| #63 | Skip-OTP signups route straight to onboarding |
+| #65 | Investor-role e2e walkthrough findings doc (now archived) |
+| #66 | Admin resource-affinity editor + R2 dev preview proxy + seed password ≥12 chars |
+| #67 | Onboarding — role-aware done page + drop step counter |
+| #68 | Dev preflight check for `PORT` / `WRANGLER_PORT` before `next dev` / `preview` |
+| #69 | Header refresh after sign-in/up + per-role nav |
+| #70 | Company profile — render LinkedIn; hide empty gallery section |
+| #71 | Watchlist + investor editor — inline confirm + a11y polish |
+| #72 | Intros — owner CTA, success/dup callouts, accessible queue tabs |
+| #73 | gitignore engagement-specific notes (`docs/_internal/`, `docs/talking-points.md`) |
+
+(CI, dev-DX, and skill-vendor PRs not listed for brevity — see
 `git log --oneline main`.)
 
 ### Migration state on `main`
 
 | # | Tag | Source |
 |---|-----|--------|
-| 0000 | `flaky_scarlet_spider` | Agent 1 (PR #10 / #13) |
+| 0000 | `flaky_scarlet_spider` | PR #10 / #13 |
 | 0001 | `brainy_sentinels` | PR #16 |
 | 0002 | `slow_shotgun` | PR #16 |
 | 0003 | `curious_fat_cobra` | PR #20 |
 | 0004 | `striped_ulik` | PR #36 — `rate_limit` table for Better Auth's `storage: "database"` |
 | 0005 | `even_medusa` | PR #38 — `saved_searches` + `search_alert_deliveries` |
 | 0006 | `military_scarlet_spider` | PR #52 — public investor columns + `saved_companies` + `intro_requests` |
-| 0007 | `sloppy_paper_doll` | feat/recommend-narrative — `founder_passports.narrative_text` |
+| 0007 | `sloppy_paper_doll` | PR #56 — `founder_passports.narrative_text` |
 
-Next free index: **0008**.
-
----
-
-## In flight
-
-Five open PRs as of last refresh. All branched off `main` after PR #42;
-check each one for current status before assuming.
-
-| PR | What | Mergeable | Closes |
-|----|------|-----------|--------|
-| #43 | Custom domain `startupstateatlas.dev` + env-driven preview gate (site-wide password gate so we can share the URL pre-launch) | CLEAN | — |
-| #44 | E2E quick-wins bundle — B1 (D1-derived landing stats), B5 (Better Auth `trustedOrigins`), B9 (persona quick-test submit), B11 (Priya naming) | UNSTABLE (checks pending) | — |
-| #45 | Plan page fixes — B7 (skip-bucket explainer wording), B8 (mailto CTAs prepopulated from passport) | UNSTABLE | — |
-| #46 | Header rewrite — B2 (mobile sign-in CTA), B6 (auth-state branching), B10 (sign-out CTA + UserMenu) | UNSTABLE | — |
-| #52 | Phase 6 — Agent 8 — investor public surface (`/investors`, `/investors/<slug>` + `.md` + `.json`, `/me/saved`, `/me/intros`, `/admin/intros`, `/admin/investors`, intro-brokerage emails). Migration `0006_military_scarlet_spider`. | UNSTABLE | — |
-| #53 | Middleware cookie-prefix fix — pass `cookiePrefix` to `getSessionCookie` so authenticated users aren't bounced from every gated route | OPEN | #49 |
-| #66 | Admin resource affinity editor + R2 dev preview proxy + seed password ≥12 chars — closes P5 / D1 / D2 from `docs/e2e-admin-2026-05-09.md` | OPEN | — |
-
-Between #44, #45, #46 — **9 of the 11** e2e bugs close. The remaining
-two (B3, B4) are not yet PR'd; see _Open issues_ below. PR #52 ships
-the post-launch investor surface against `main`; admin-token /
-verification flow is testable from `/admin/investors`. PR #66 closes
-P5 / D1 / D2 from the parallel admin-walkthrough doc.
+Next free index: **0008**. All seven applied to prod D1.
 
 ---
 
-## Open issues
+## Open follow-ups
 
-| # | What | Priority |
-|---|------|----------|
-| #34 | Rate-limit unauthenticated LLM-backed endpoints (Anthropic / Parallel.ai cost protection) | **closes with this PR** — `unsafe.bindings` ratelimits on `/resources/recommend`, `/founder-passports/enrich`, `/founder-passports`, `/companies/investor-brief` |
-| #37 | Smaller hardening follow-ups — `cookieCache.maxAge` propagation on role demotion; `rate_limit` table cleanup; `unsafe.bindings` → top-level `ratelimit` binding when wrangler supports it | post-launch |
+| # | What |
+|---|------|
+| #37 | Security follow-ups from PR #36 review — `cookieCache.maxAge` propagation on role demotion, `rate_limit` table cleanup, `unsafe.bindings` → top-level `ratelimit` binding when wrangler supports it |
+| #47 | Investor user e2e QA pass — broader walkthrough beyond what the dated doc covered |
+| #48 | Admin user e2e testing — same |
+| #51 | Site gate rate-limit branch drops the `next` query param; the `rate=1` flag is dead UX |
 
-Also from `docs/e2e-findings-2026-05-09.md` but not yet ticketed:
-
-- **B3** — worktree dev: applying migration 0003 wasn't flagged in the
-  worktree refresh skill.
-- **B4** — `AUTH_SKIP_OTP=true` signup still routes to
-  `/sign-up/verify` instead of dropping the user on the founder
-  dashboard.
-
----
-
-## Phase 5b — Polish
-
-Original 5b scope, with current status:
-
-- ✅ End-to-end Playwright smoke test — fixtures in PR #40.
-- ✅ Activity ticker wire-up — PR #26.
-- ✅ Mobile sweep at 375 / 768 / 1280px — most of the surface, with
-  the header gap (B2) closing in #46.
-- 🟡 Empty / error / loading states on every surface — handled
-  ad-hoc as found; no single sweep PR.
-- 🟡 InvestorBrief prompt tuning — not yet on a PR.
-
----
-
-## Pre-launch sequencing (recommended)
-
-1. **Re-deploy now** to ship the MCP fix (PR #42) and saved-search
-   alerts (PR #38) to prod: `npm run deploy` + `npm run db:migrate:remote`
-   to apply `0004` + `0005`. The MCP exposure is the security-critical
-   one — it's been patched on `main` but until prod re-deploys, the
-   live `/api/mcp` still accepts `update_company_profile`.
-2. Land #46 → #45 → #44 (e2e-bug PRs). #46 touches the shared header,
-   so the others may rebase cleaner with it in first.
-3. Land #43 (custom domain + preview gate).
-4. Re-deploy after each batch of merges (or set up a CI auto-deploy
-   workflow if doing this by hand becomes annoying).
-5. Fix #34 (founder-passport rate limits) — modest effort, real cost
-   surface for unauthenticated Claude calls.
-6. Triage B3 + B4 (assign or punt).
-7. Confirm `BETTER_AUTH_URL` is set on prod (PR #36's boot-check
-   enforces this — Worker refuses to boot otherwise).
-8. Smoke test against the live URL.
-9. Coordinate with GOEO on DNS for `startup.utah.gov`.
-
-After launch: #37 (small hardening), InvestorBrief prompt tuning,
-then evaluate Phase 6.
-
----
-
-## Out of scope until launch
-
-(Phase 6 — Investor public surface — moved to **In flight** above as
-PR #52.)
+The repo is in **maintenance mode**. New work is small follow-ups +
+ad-hoc bug fixes; no further phase planned.
 
 ---
 
 ## Archived detail
 
-Shipped agent briefs (Agents 0–7) and the parallel-build coordination
-matrix are under `docs/archive/agent-tasks/`. Read for historical
-context or line-number citations — they are not operational.
+Shipped agent briefs (Agents 0–8) and the dated e2e walkthrough
+findings (founder, admin, investor) live under `docs/archive/`.
+Read for historical context or line-number citations — they are
+not operational.
