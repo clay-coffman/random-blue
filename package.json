@@ -29,7 +29,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.1",
     "@base-ui/react": "^1.4.1",
+    "@hookform/resolvers": "^5.2.2",
     "@opennextjs/cloudflare": "^1.0.0",
+    "aws4fetch": "^1.0.20",
     "better-auth": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -41,6 +43,7 @@
     "papaparse": "^5.5.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-hook-form": "^7.75.0",
     "resend": "^4.0.0",
     "shadcn": "^4.7.0",
     "tailwind-merge": "^3.5.0",

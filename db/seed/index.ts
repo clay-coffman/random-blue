@@ -6,6 +6,7 @@ import { personas } from "./personas";
 import { loadResources } from "./resources";
 import { loadCompanies } from "./companies";
 import { buildAccounts, testUsers } from "./users";
+import { investorProfiles } from "./investor-profiles";
 
 const SOURCE = path.resolve(process.cwd(), "docs/source_data");
 const RESOURCES_CSV = path.join(
@@ -84,6 +85,14 @@ async function buildSql(): Promise<string> {
   for (const a of accounts) {
     stmts.push(
       `INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES (${sqlString(a.id)}, ${sqlString(a.userId)}, 'credential', ${sqlString(a.userId)}, ${sqlString(a.passwordHash)}, unixepoch() * 1000, unixepoch() * 1000) ON CONFLICT(id) DO UPDATE SET password=excluded.password, updated_at=excluded.updated_at;`,
+    );
+  }
+
+  // ─── Investor profiles (UPSERT keyed by user_id) ───────────────────
+  // Tied to investor test users seeded above.
+  for (const ip of investorProfiles) {
+    stmts.push(
+      `INSERT INTO investor_profiles (id, user_id, firm_name, investor_type, stages_json, sectors_json, check_size_min, check_size_max, geo_focus_json, created_at, updated_at) VALUES (${sqlString(ip.id)}, ${sqlString(ip.userId)}, ${sqlString(ip.firmName)}, ${sqlString(ip.investorType)}, ${sqlString(JSON.stringify(ip.stages))}, ${sqlString(JSON.stringify(ip.sectors))}, ${sqlNum(ip.checkSizeMin)}, ${sqlNum(ip.checkSizeMax)}, ${sqlString(JSON.stringify(ip.geoFocus))}, unixepoch() * 1000, unixepoch() * 1000) ON CONFLICT(user_id) DO UPDATE SET firm_name=excluded.firm_name, investor_type=excluded.investor_type, stages_json=excluded.stages_json, sectors_json=excluded.sectors_json, check_size_min=excluded.check_size_min, check_size_max=excluded.check_size_max, geo_focus_json=excluded.geo_focus_json, updated_at=excluded.updated_at;`,
     );
   }
 

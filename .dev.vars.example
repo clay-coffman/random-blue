@@ -23,3 +23,10 @@ ATLAS_ADMIN_TOKEN=
 BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:3000
 RESEND_API_KEY=
+
+# R2 S3-compat credentials for signing OWNERSHIP_DOCS doc previews
+# (60-second presigned GET URLs in /admin/submissions/[id]).
+# Generate at: Cloudflare dashboard → R2 → Manage R2 API Tokens → Create.
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=

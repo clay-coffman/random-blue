@@ -7,7 +7,12 @@
 
 import { hashPassword } from "better-auth/crypto";
 
-export type Role = "owner" | "goeo_admin" | "superadmin";
+export type Role =
+  | "founder"
+  | "owner"
+  | "investor"
+  | "goeo_admin"
+  | "superadmin";
 
 export type TestUser = {
   id: string;
@@ -30,6 +35,13 @@ export const testUsers: TestUser[] = [
   { id: "u_admin", email: "admin@goed.test", name: "Sarah Chen (GOEO)", role: "goeo_admin" },
   // Superadmin (full system access).
   { id: "u_super", email: "super@startup-state-atlas.test", name: "Atlas Superadmin", role: "superadmin" },
+  // Investors — each tied to one investor_profiles row (firm/affiliation).
+  // Phase 4 demo seed: gives the admin user table representative investor
+  // rows on day one, and lets the map filter chips have real preferences
+  // to dogfood once Phase 5 wires personalization.
+  { id: "u_pelion", email: "deals@pelion.test", name: "D. Ortiz (Pelion)", role: "investor" },
+  { id: "u_slangels", email: "scout@slangels.test", name: "Casey Lin (SL Angels)", role: "investor" },
+  { id: "u_kickstart", email: "partner@kickstart.test", name: "Sam Patel (Kickstart)", role: "investor" },
 ];
 
 export const TEST_USER_IDS = testUsers.map((u) => u.id);
