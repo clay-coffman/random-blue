@@ -274,6 +274,7 @@ const baseResource = (
   },
   score: 78,
   reasons,
+  communityRestricted: false,
 });
 
 describe("deterministicNarrative", () => {

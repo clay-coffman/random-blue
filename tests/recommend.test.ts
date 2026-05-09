@@ -314,14 +314,37 @@ describe("Edge cases", () => {
   });
 
   it("bucketize splits top 3 / next 3 / ignore", () => {
+    // Use only resources without community tags (or with matching tags),
+    // so the identity gate doesn't shuffle them into ignore. Six unrestricted
+    // resources plus one ignore-tier item proves the top-3/next-3 split.
+    const fundingSLC2: ResourceRow = {
+      ...fundingSLC,
+      id: "r_funding_slc_2",
+      title: "Park City Angels",
+    };
+    const fundingSLC3: ResourceRow = {
+      ...fundingSLC,
+      id: "r_funding_slc_3",
+      title: "Wasatch Capital",
+    };
+    const generic2: ResourceRow = {
+      ...generic,
+      id: "r_generic_2",
+      title: "Another generic",
+    };
+    const generic3: ResourceRow = {
+      ...generic,
+      id: "r_generic_3",
+      title: "Yet another generic",
+    };
     const fixtures = [
       fundingSLC,
-      educationSLC,
-      ruralWomen,
-      veteranMfg,
-      techTransfer,
-      exportPgm,
+      fundingSLC2,
+      fundingSLC3,
       generic,
+      generic2,
+      generic3,
+      exportPgm,
     ];
     const scored = fixtures.map((resource) => ({
       resource,
@@ -330,9 +353,122 @@ describe("Edge cases", () => {
     const buckets = bucketize(scored);
     expect(buckets.now.length).toBe(3);
     expect(buckets.next.length).toBe(3);
-    // Remainder (after 6) might or might not show in ignore depending on
-    // their scores. Just assert it's an array.
     expect(Array.isArray(buckets.ignore)).toBe(true);
+  });
+
+  it("community-restricted resources don't enter now/next", () => {
+    // Demo-case regression: an MVP / B2B SaaS / University researcher
+    // passport must not see a student-only program in the actionable
+    // buckets, even when other signals (location/goal/industry) align.
+    const teenShaped: ResourceRow = r({
+      id: "r_teen_shaped",
+      title: "Teen Entrepreneur Support Center",
+      topics: ["funding", "entrepreneurship communities", "start a business"],
+      industries: ["software and information technology"],
+      communities: ["student"],
+      locations: [{ county: null, city: null, statewide: true }],
+    });
+    const researcherFounder: FounderPassportInput = {
+      county: "Salt Lake",
+      city: "Salt Lake City",
+      stage: "mvp",
+      industry: "b2b_saas",
+      communities: ["researcher"],
+      goal: "raise_seed_round",
+      needs: [],
+      constraints: [],
+    };
+    const result = scoreResource(teenShaped, researcherFounder);
+    expect(result.communityRestricted).toBe(true);
+    // Score still high enough to clear the actionable floor on signal alone —
+    // the gate, not the score, is what keeps Teen out of the top buckets.
+    expect(result.score).toBeGreaterThanOrEqual(25);
+
+    const fundingMatch: ResourceRow = r({
+      id: "r_funding_clean",
+      title: "Salt Lake Seed Capital",
+      topics: ["funding", "investors", "seed"],
+      industries: ["software and information technology"],
+      communities: [],
+      locations: [{ county: "Salt Lake", city: null, statewide: false }],
+    });
+    const fixtures = [teenShaped, fundingMatch];
+    const scored = fixtures.map((resource) => ({
+      resource,
+      ...scoreResource(resource, researcherFounder),
+    }));
+    const buckets = bucketize(scored);
+    const inNowOrNext = [...buckets.now, ...buckets.next].map(
+      (s) => s.resource.id,
+    );
+    expect(inNowOrNext).not.toContain("r_teen_shaped");
+    expect(inNowOrNext).toContain("r_funding_clean");
+    expect(buckets.ignore.map((s) => s.resource.id)).toContain("r_teen_shaped");
+  });
+
+  it("empty-community founder is gated out of community-tagged resources", () => {
+    // A founder who didn't pick any identity tags is also outside any
+    // identity-targeted program — those are not generic fallbacks.
+    const womenOnly: ResourceRow = r({
+      id: "r_women_only",
+      title: "Women's Business Center",
+      topics: ["funding", "mentorship"],
+      industries: [],
+      communities: ["women"],
+      locations: [{ county: null, city: null, statewide: true }],
+    });
+    const noIdentity: FounderPassportInput = {
+      county: "Salt Lake",
+      city: "Salt Lake City",
+      stage: "mvp",
+      industry: "b2b_saas",
+      communities: [],
+      goal: "raise_seed_round",
+      needs: [],
+      constraints: [],
+    };
+    const result = scoreResource(womenOnly, noIdentity);
+    expect(result.communityRestricted).toBe(true);
+  });
+
+  it("matching community is not restricted", () => {
+    // Sanity check the gate: when identity matches, the resource is
+    // unrestricted and should be eligible for now/next.
+    const result = scoreResource(ruralWomen, maria);
+    expect(result.communityRestricted).toBe(false);
+  });
+
+  it("empty-community resource is not restricted", () => {
+    // Generic resources with no community tag don't trip the gate for
+    // anyone, regardless of founder identity.
+    const result = scoreResource(fundingSLC, marcus);
+    expect(result.communityRestricted).toBe(false);
+  });
+
+  it("'any' sentinel in resource communities bypasses the gate", () => {
+    // GOEO source data uses `any` alongside specific communities to mean
+    // "we serve everyone, especially these groups." Resources with `any`
+    // (SBDC, SBA, StartUp State, …) must remain eligible for now/next
+    // even when the founder's identity isn't in the listed groups.
+    const broadServing: ResourceRow = r({
+      id: "r_broad_serving",
+      title: "Small Business Development Center (SBDC)",
+      topics: ["funding", "early stage"],
+      industries: [],
+      communities: ["any", "women", "veteran", "rural", "student"],
+      locations: [{ county: null, city: null, statewide: true }],
+    });
+    const researcherFounder: FounderPassportInput = {
+      county: "Salt Lake",
+      stage: "mvp",
+      industry: "b2b_saas",
+      communities: ["researcher"],
+      goal: "raise_seed_round",
+      needs: [],
+      constraints: [],
+    };
+    const result = scoreResource(broadServing, researcherFounder);
+    expect(result.communityRestricted).toBe(false);
   });
 });
 
