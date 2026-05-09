@@ -1,0 +1,70 @@
+name: Cron — saved-search alerts
+
+# Drives the daily delta runner that emails saved-search subscribers
+# when new companies match. We use GitHub Actions cron rather than
+# Cloudflare Workers Cron Triggers because OpenNext's generated
+# worker doesn't export a `scheduled()` handler, so a Worker cron
+# event would land on the default fetch handler and do nothing.
+#
+# This workflow simply curls the cron route with the admin token,
+# letting Workers handle the actual logic. Free, easy to monitor in
+# the Actions tab, easy to disable.
+
+on:
+  schedule:
+    # Daily at 13:00 UTC ≈ 07:00 Mountain Time.
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+    # Allows manual smoke-runs from the Actions UI.
+
+concurrency:
+  group: cron-saved-searches
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger /api/cron/saved-searches
+        env:
+          BASE_URL: ${{ vars.PROD_BASE_URL }}
+          TOKEN: ${{ secrets.ATLAS_ADMIN_TOKEN }}
+        run: |
+          if [ -z "$BASE_URL" ] || [ -z "$TOKEN" ]; then
+            echo "::error::Missing PROD_BASE_URL var or ATLAS_ADMIN_TOKEN secret. Configure them in repo settings before this workflow can run."
+            exit 1
+          fi
+          curl -sS --fail-with-body \
+            -X POST \
+            -H "X-Atlas-Admin-Token: $TOKEN" \
+            "$BASE_URL/api/cron/saved-searches" \
+            -o response.json
+          cat response.json
+          echo
+
+          # The cron route returns 200 with an `errors` array on
+          # partial failure (one bad saved search shouldn't fail the
+          # whole batch). Surface those to the Actions UI so a
+          # broken row doesn't sit silent for weeks.
+          ERRORS=$(jq -r '.errors | length' response.json 2>/dev/null || echo 0)
+          RAN=$(jq -r '.ran' response.json 2>/dev/null || echo 0)
+          EMAILED=$(jq -r '.emailed' response.json 2>/dev/null || echo 0)
+          {
+            echo "## saved-search cron"
+            echo ""
+            echo "- ran: $RAN"
+            echo "- emailed: $EMAILED"
+            echo "- errors: $ERRORS"
+            if [ "$ERRORS" -gt 0 ]; then
+              echo ""
+              echo "### Error detail"
+              echo '```json'
+              jq '.errors' response.json
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::warning::Cron ran with $ERRORS partial errors. See job summary."
+            exit 1
+          fi

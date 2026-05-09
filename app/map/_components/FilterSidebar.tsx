@@ -12,6 +12,8 @@ import { SECTOR_REGISTRY } from "@/lib/sectors";
 import { BUCKET_PRESETS } from "@/lib/employee-bucket";
 import type { CompanyListItem } from "@/lib/companies-list";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/lib/auth-client";
+import { SaveSearchModal } from "./SaveSearchModal";
 
 const STAGES = [
   "bootstrapped",
@@ -104,6 +106,8 @@ function FilterControls({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const session = useSession();
+  const signedIn = !!session.data?.user;
 
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
 
@@ -183,6 +187,28 @@ function FilterControls({
     searchParams.get("min_employees") ||
     searchParams.get("max_employees");
 
+  // Project the current URL filters into a flat record for the
+  // saved-search payload. Strip view/camera/brief — same logic as
+  // EcosystemMapShell's apiQuery, kept inline because passing
+  // searchParams down is enough.
+  const filtersForSave = (() => {
+    const out: Record<string, string> = {};
+    for (const [k, v] of searchParams.entries()) {
+      if (["view", "lat", "lng", "zoom", "brief"].includes(k)) continue;
+      out[k] = v;
+    }
+    return out;
+  })();
+  const defaultName = (() => {
+    const parts: string[] = [];
+    if (selectedSectors.size > 0) parts.push([...selectedSectors].join("/"));
+    if (stage) parts.push(stage);
+    if (county) parts.push(`${county} County`);
+    if (hiring === "true") parts.push("hiring");
+    if (parts.length === 0) return "";
+    return parts.join(" · ").slice(0, 80);
+  })();
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -203,6 +229,13 @@ function FilterControls({
             Clear all
           </button>
         ) : null}
+        <div className="mt-3">
+          <SaveSearchModal
+            filters={filtersForSave}
+            defaultName={defaultName}
+            signedIn={signedIn}
+          />
+        </div>
       </div>
 
       {/* Search */}

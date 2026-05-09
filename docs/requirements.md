@@ -175,9 +175,11 @@ before submitting.
   Profile (display name, email, time zone), Security (password,
   sessions, 2FA stub, connected accounts stub), role-specific
   (Founder Passport summary OR Investor preferences OR Claimed
-  companies), Notifications (stub), Agent tokens (stub for Phase
-  5 — distinct from the machine `X-Atlas-Admin-Token`), Danger
-  zone (delete account; "Switch role" link).
+  companies), Notifications (saved-search email alerts —
+  user-managed list of saved map filters with daily/weekly/off
+  cadence), Agent tokens (stub for Phase 5 — distinct from the
+  machine `X-Atlas-Admin-Token`), Danger zone (delete account;
+  "Switch role" link).
 - **Bootstrapping**: first `superadmin` is set by a one-shot
   `npm run bootstrap-superadmin <email>` script run by an
   operator with `wrangler` D1 access. After that, `superadmin`
@@ -373,9 +375,15 @@ Do not invest in:
   "Email me a magic link" button is a Phase-5 stub.
 - 2FA, connected accounts, per-user agent tokens UI — `/settings`
   shows these sections with "coming soon" badges in Phase 4.
-- Real-time notifications, weekly investor cluster-brief email,
-  and map-personalization wired from `investor_profiles` —
-  Phase 5.
+- **Saved-search email alerts (T3)** — shipped post-launch. Users
+  click "Save search" on the map, pick a cadence (daily/weekly/off),
+  receive email when new Utah companies match. Daily delta runner is
+  driven by GitHub Actions cron (OpenNext-on-Workers doesn't bridge
+  the `scheduled()` handler). One-click HMAC-signed unsubscribe at
+  `/u/saved-search`. Weekly investor cluster-brief email +
+  "what's new since last visit" digest (T6) is the next slice.
+- Real-time (instant) notifications and map-personalization wired
+  from `investor_profiles` — Phase 5+.
 - Complex CRM workflows.
 - LinkedIn enrichment. Deferred. The GOED brief explicitly puts
   scraped LinkedIn enrichment out of scope; using Parallel.ai
