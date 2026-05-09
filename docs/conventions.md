@@ -286,12 +286,13 @@ Loaded Claude Code skills (already active in your session):
    `claude-api`.
 3. **Check `.agents/skills/<name>/SKILL.md`** for the
    stripe-projects, ship, validate, etc. skills.
-4. **If you need a schema change** — write a request to
-   `docs/agent-tasks/schema-requests.md` (create the file if it
-   doesn't exist). Don't run `drizzle-kit generate` yourself.
+4. **If you need a schema change** — see § Schema ownership above.
+   Don't run `drizzle-kit generate` blindly across multiple worktrees;
+   rebase first.
 5. **If you need a new endpoint** — define it in
    `app/api/v1/openapi.yaml` and write the route under
-   `app/api/v1/...`. Coordinate with Agent 6 (agent-native).
+   `app/api/v1/...`. Run `npm run openapi:build` to regenerate the
+   committed `_openapi-spec.json` so CI doesn't bounce.
 6. **Anything else** — ask the user. Don't guess on architecture,
    auth, error shape, ID prefixes, or third-party SaaS additions.
 

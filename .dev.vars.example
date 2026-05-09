@@ -14,7 +14,7 @@
 # credentials (those tools read process.env directly).
 #
 # Per-worktree note: `BETTER_AUTH_URL` includes a port; main checkout uses
-# 3000, worktrees use 3000+N (see `docs/agent-tasks/00-shared-context.md`
+# 3000, worktrees use 3000+N (see `docs/conventions.md`
 # § Worktree port table). Adjust to match the worktree you're filling this
 # out in.
 

@@ -14,27 +14,24 @@ left) lives in `docs/implementation-plan.md`.
 
 ## Where to start
 
-The whole app has shipped to a Worker (see `docs/deploy-log.md`).
-Active work is **Phase 5a/5b polish** — landing the four open PRs
-that close 9 of the 11 e2e bugs in
-`docs/e2e-findings-2026-05-09.md`, plus the open hardening tickets
-(#34, #37). **Agent 8** (investor public surface) is post-launch
-and scope-locked — don't pick it up unless asked. All agent briefs
-(Agents 0–7) are archived under `docs/archive/agent-tasks/`.
+The whole app is shipped and live at <https://startupstateatlas.dev>
+(see `docs/deploy-log.md`). The repo is in **maintenance mode** —
+new work is small follow-ups + ad-hoc bugfixes; no further phase
+planned. Open follow-ups are listed at the bottom of
+`docs/implementation-plan.md`. Agent briefs (Agents 0–8) are
+archived under `docs/archive/agent-tasks/` for historical context;
+they are not operational.
 
 Reading order for an agent picking up work:
 
 1. **`CLAUDE.md`** (this file) — policy and conventions.
-2. **`docs/implementation-plan.md`** — what's shipped, in flight,
-   and left. Start here for any "what should I work on" question.
+2. **`docs/implementation-plan.md`** — what's shipped + open
+   follow-ups. Start here for any "what should I work on" question.
 3. **`docs/architecture.md`** — stack and frozen contracts.
-4. **`docs/agent-tasks/00-shared-context.md`** — port table, ID
-   prefixes, branch protocol, schema ownership, dual-auth model.
+4. **`docs/conventions.md`** — port table, ID prefixes, branch
+   protocol, schema ownership, dual-auth model.
 5. **`docs/screens.md`** — only if you own a UI surface.
 6. **`docs/design-guidelines.md`** — only if you own a UI surface.
-
-For post-launch investor work, the brief is
-`docs/agent-tasks/agent-8-investor.md`.
 
 ## Project at a glance
 
@@ -120,7 +117,7 @@ npm run deploy                    # wrangler deploy
 ## Hard rules
 
 Frozen contracts are documented once in `docs/architecture.md` §
-Contracts and `docs/agent-tasks/00-shared-context.md` § Pre-decided
+Contracts and `docs/conventions.md` § Pre-decided
 conventions. Don't restate them; just know what's locked:
 
 - API path prefix `/api/v1/...`
@@ -132,10 +129,10 @@ conventions. Don't restate them; just know what's locked:
 - snake_case on the wire, camelCase in TS — convert at the
   Drizzle/zod boundary
 - Dual auth model (Better Auth for humans, `X-Atlas-Admin-Token`
-  for machines) — full detail in `00-shared-context.md` § Auth-for-write
+  for machines) — full detail in `conventions.md` § Auth-for-write
 - Worktree port formula `PORT = 3000 + N`,
   `WRANGLER_PORT = 8787 + N` — see
-  `docs/agent-tasks/00-shared-context.md` § Worktree port table
+  `docs/conventions.md` § Worktree port table
 
 ## Two env files, two purposes
 
@@ -245,11 +242,11 @@ rename the loser's file to the next free index. Agent 1 owns the
 *initial* schema + persona seed; the Better Auth tables (`user`,
 `session`, `account`, `verification`) are frozen after Agent 1 runs
 `@better-auth/cli generate`. If you need a column you can't add
-yourself, append a request to `docs/agent-tasks/schema-requests.md`.
+yourself, open a GitHub issue describing the change and the
+downstream surfaces it touches.
 
-For migration-numbering during Phase 3-4 specifically (when several
-PRs each add a migration), see
-`docs/agent-tasks/00-shared-context.md` § Schema ownership.
+The full schema-coordination protocol lives in
+`docs/conventions.md` § Schema ownership.
 
 ## Coding Style
 

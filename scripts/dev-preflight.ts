@@ -4,7 +4,7 @@
 // Exit non-zero with a human-readable message if the port is held
 // by another process, or if the shell-exported port disagrees with
 // the worktree's `.env.local`. See B-DevSrv-1 in
-// `docs/investor-e2e-findings-2026-05-09.md` for the trap this fixes.
+// `docs/archive/e2e-investor-2026-05-09.md` for the trap this fixes.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
