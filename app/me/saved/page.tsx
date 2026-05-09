@@ -170,7 +170,9 @@ export default async function MySavedPage() {
                   <th className="px-4 py-3">Location</th>
                   <th className="px-4 py-3">Saved</th>
                   <th className="px-4 py-3">Note</th>
-                  <th className="px-4 py-3" />
+                  <th className="px-4 py-3">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
