@@ -21,11 +21,20 @@ person — they exist purely to exercise the upload pipeline on
 
 ## Regenerating
 
+Requires `weasyprint` and ImageMagick. Use `magick` on IM 7+;
+fall back to `convert` on IM 6.
+
 ```bash
 weasyprint _llc-articles.html priya-llc-articles.pdf
 weasyprint _ein-letter.html priya-ein-letter.pdf
+
+# ImageMagick 7+
 magick -size 256x256 xc:'#4A90E2' priya-headshot.png
 magick -size 512x256 xc:'#0F766E' priya-company-logo.png
+
+# ImageMagick 6 fallback
+# convert -size 256x256 xc:'#4A90E2' priya-headshot.png
+# convert -size 512x256 xc:'#0F766E' priya-company-logo.png
 ```
 
 Edit the `_*.html` sources and rerun if a finding requires different

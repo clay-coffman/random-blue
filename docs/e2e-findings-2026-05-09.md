@@ -1,14 +1,18 @@
 # E2E Founder Flow — Findings 2026-05-09
 
 **Persona:** Priya (`fp_priya`, B2B SaaS / paying customers / raising seed)
-**Branch:** `e2e-user-testing-founder` (worktree wt1, port 3001)
+**Branch:** `docs/e2e-founder-walkthrough` (worktree wt1; observation
+ran on a one-off `e2e-user-testing-founder` worktree branch before
+the PR was opened, hence the original repro environment)
 **Browser tool:** `agent-browser`
 **Test assets:** `tests/e2e-assets/priya-llc-articles.pdf`,
 `priya-ein-letter.pdf`, `priya-headshot.png`, `priya-company-logo.png`
 
 Severity rubric: **blocker** = founder cannot complete the flow ·
 **major** = wrong data / breaks responsive at 375px / silent failure ·
-**minor** = copy / spacing / polish.
+**minor** = copy / spacing / polish · **dev-DX** = developer-environment
+only, never reaches a user but slows down the next agent picking up the
+project.
 
 ---
 
@@ -19,9 +23,9 @@ Severity rubric: **blocker** = founder cannot complete the flow ·
 - **Repro:** Open `/`, look at the bottom stats strip.
 - **Expected:** Real count from `companies` table.
 - **Actual:** Hardcoded `"1,247"` shipped in JSX. Real count is **220**
-  (and `Map Data for Builder Day - Sheet1.csv` has 254 rows, of which
-  220 made it through seeding — also worth a sanity check on the
-  loader).
+  (and `Map Data for Builder Day  - Sheet1.csv` — note the **double
+  space** in the filename, per CLAUDE.md — has 254 rows, of which 220
+  made it through seeding; also worth a sanity check on the loader).
 - **File:** `app/page.tsx:21` —
   `{ value: "1,247", label: "Companies" }`. The other three stats
   (`312` resources, `29` counties, `84` profiles) are also hardcoded
@@ -44,8 +48,8 @@ Severity rubric: **blocker** = founder cannot complete the flow ·
   always, or add a hamburger that contains it.
 
 ### B3 — Worktree dev: applying migration 0003 was needed but not flagged
-- **Severity:** minor (dev-env only, blocker-grade for new
-  worktrees)
+- **Severity:** dev-DX (blocker-grade for the next agent who clones
+  a fresh worktree, but no production user is exposed to it)
 - **Repro:** Fresh worktree, run `npm run dev`, open `/`.
 - **Expected:** Either migrations auto-apply on dev start, or the
   homepage tolerates missing columns and the README/`refresh-worktrees`
@@ -53,10 +57,9 @@ Severity rubric: **blocker** = founder cannot complete the flow ·
 - **Actual:** Homepage threw a Next.js dev-overlay "1 issue" error
   because `profile_updates.source_client` was missing (migration
   `0003_curious_fat_cobra.sql` not applied even though the file was
-  on disk). The error originated in
-  `lib/activity.ts:72` (`recentActivity` query joins
-  `profile_updates` × `companies`). After
-  `npm run db:migrate:local`, error gone.
+  on disk). The error originated in `recentActivity` in
+  `lib/activity.ts:97` (joins `profile_updates` × `companies`).
+  After `npm run db:migrate:local`, error gone.
 - **Improvement:** `lib/activity.ts` should `try/catch` and return
   `[]` on schema errors so the homepage degrades gracefully — it
   already prints "recentActivity failed" so the catch exists, but
@@ -79,7 +82,7 @@ Severity rubric: **blocker** = founder cannot complete the flow ·
 
 ---
 
-## Accessibility / responsive
+## Auth / sign-up
 
 ### B4 — Sign-up: `AUTH_SKIP_OTP=true` still routes to `/sign-up/verify`
 - **Severity:** major (dev-DX; breaks the documented shortcut)
@@ -115,16 +118,17 @@ Severity rubric: **blocker** = founder cannot complete the flow ·
   `[Better Auth]: Invalid origin: http://localhost:3000`.
 - **Workaround:** Edit `.dev.vars` to match. Already done for this
   session.
-- **Improvement:** in `auth.ts:35`, set
-  `trustedOrigins: [baseURL, "http://localhost:3000",
-  "http://localhost:3001", "http://localhost:3002", ...]` for
+- **Improvement:** add a new `trustedOrigins: [...]` field next to
+  the existing `baseURL:` at `auth.ts:35` — `trustedOrigins` does not
+  yet exist in `auth.ts`. Populate with the worktree port range
+  (`http://localhost:3000`, `:3001`, `:3002`, …) for
   worktree-friendly dev, OR fall back to deriving the baseURL from
   the request URL when it's a localhost origin. Helps when
-  `create-worktree`/`refresh-worktrees` rotates ports.
+  `create-worktree` / `refresh-worktrees` rotates ports.
 
 ---
 
-## Accessibility / responsive
+## Header & navigation, plan, recommender
 
 ### B6 — Header still shows "Sign in" / "Claim a company" CTAs when authenticated
 - **Severity:** major
@@ -159,12 +163,13 @@ Severity rubric: **blocker** = founder cannot complete the flow ·
   not paying-customer stage," "Already covered by a higher-ranked
   resource." The current implementation appears to fall back to the
   same explanation generator the positive bucket uses.
-- **File hint:** `lib/recommend.ts` or wherever the ignore list's
-  per-item rationale is built. The positive bucket uses one
-  `explainMatch()`-style helper; the ignore bucket should use a
-  dedicated `explainSkip()` that picks the strongest *negative*
-  signal (industry mismatch, geo mismatch, stage mismatch,
-  community mismatch, capability already covered).
+- **File hint:** `lib/recommend-explain.ts` is the most likely
+  owner — it already exists and is where the per-item rationale
+  helpers live. The positive bucket uses one `explainMatch()`-style
+  helper; the ignore bucket should use a dedicated `explainSkip()`
+  that picks the strongest *negative* signal (industry mismatch,
+  geo mismatch, stage mismatch, community mismatch, capability
+  already covered).
 
 ### B8 — Plan: "Email <addr>" CTAs link to website URL, not `mailto:`
 - **Severity:** major (looks like a mailto, isn't)
@@ -334,10 +339,10 @@ don't accidentally regress them.
 (both as a fresh-signed-up account modeled on Priya Mehta and as
 the seeded `priya@persona.test` / `fp_priya`).
 
-**Findings tally:** **11 bugs** (1 blocker, 6 major, 4 minor) and
-**1 polish item** plus **1 a11y/responsive item**. The product is in
-remarkably good shape for an end-to-end walk — most failures are
-header-level cross-cutting (B6/B10), not page-specific.
+**Findings tally:** **11 bugs** (1 blocker, 6 major, 3 minor, 1
+dev-DX) and **1 polish item** plus **1 a11y/responsive item**. The
+product is in remarkably good shape for an end-to-end walk — most
+failures are header-level cross-cutting (B6/B10), not page-specific.
 
 **Top three things to fix first** (highest leverage, smallest blast
 radius):
