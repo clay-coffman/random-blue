@@ -30,7 +30,7 @@ const NAV_GROUPS: Array<{
   {
     label: "People",
     items: [
-      { href: "/admin/users", label: "Users", superadminOnly: true },
+      { href: "/admin/users", label: "Users" },
       { href: "/admin/admins", label: "Admins", superadminOnly: true },
     ],
   },
