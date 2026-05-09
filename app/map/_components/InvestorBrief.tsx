@@ -89,7 +89,7 @@ export function InvestorBrief({ open, onClose, filters, companies }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 place-items-center rounded-full border border-paper/40 text-lg leading-none transition hover:bg-paper hover:text-ink"
+            className="grid h-11 w-11 place-items-center rounded-full border border-paper/40 text-lg leading-none transition hover:bg-paper hover:text-ink"
             aria-label="Close"
           >
             ×

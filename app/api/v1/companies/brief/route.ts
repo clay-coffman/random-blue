@@ -11,7 +11,8 @@ import { db } from "@/lib/db";
 import { companies } from "@/db/schema";
 
 export const runtime = "edge";
-export const maxDuration = 30;
+// No `maxDuration` export — that's Vercel-only. On Workers the real
+// ceiling is the AbortController on the Anthropic call below (12s).
 
 const MAX_SLUGS = 80;
 
@@ -190,7 +191,10 @@ Output JSON only.`;
     const inputSet = new Set(rows.map((r) => r.slug));
     const safeClusters = briefBody.clusters.map((c) => {
       const safeSlugs = c.slugs.filter((s) => inputSet.has(s));
-      return { ...c, slugs: safeSlugs, count: safeSlugs.length || c.count };
+      // Trust the filtered list, never the model's count — otherwise
+      // a cluster that lost every slug to the input-set check would
+      // still display the model's invented count with zero links.
+      return { ...c, slugs: safeSlugs, count: safeSlugs.length };
     });
 
     return NextResponse.json({

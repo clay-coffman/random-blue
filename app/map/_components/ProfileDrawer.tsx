@@ -89,7 +89,7 @@ export function ProfileDrawer({ company, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="grid h-9 w-9 place-items-center rounded-full border-[1.5px] border-ink bg-paper-2 text-lg leading-none transition hover:-translate-y-0.5"
+            className="grid h-11 w-11 place-items-center rounded-full border-[1.5px] border-ink bg-paper-2 text-lg leading-none transition hover:-translate-y-0.5"
             aria-label="Close"
           >
             ×

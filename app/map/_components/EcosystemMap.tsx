@@ -140,13 +140,15 @@ export function EcosystemMap({ companies, selectedSlug, onSelect }: Props) {
         source: SOURCE_ID,
         filter: ["!", ["has", "point_count"]],
         paint: {
-          "circle-color": ["coalesce", ["get", "sector_color"], FALLBACK_SECTOR_COLOR],
-          "circle-radius": [
-            "case",
-            ["==", ["get", "slug"], ["literal", ""]],
-            6,
-            7,
+          "circle-color": [
+            "coalesce",
+            ["get", "sector_color"],
+            FALLBACK_SECTOR_COLOR,
           ],
+          // Default radius / stroke-width — the selected pin's halo
+          // is patched in via setPaintProperty in the selection
+          // useEffect below.
+          "circle-radius": 7,
           "circle-stroke-color": "#0f1b2d",
           "circle-stroke-width": 1.5,
           "circle-opacity": 0.95,
@@ -168,7 +170,9 @@ export function EcosystemMap({ companies, selectedSlug, onSelect }: Props) {
               duration: 500,
             });
           })
-          .catch(() => {});
+          .catch((err) => {
+            console.warn("cluster expansion zoom failed", err);
+          });
       });
 
       const onPointClick = (e: MapMouseEvent) => {

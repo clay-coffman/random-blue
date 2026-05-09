@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { and, eq, like, or, sql, type SQL } from "drizzle-orm";
+import { and, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { ApiError, errorResponse } from "@/lib/api-error";
 import {
@@ -83,13 +83,17 @@ export async function GET(req: NextRequest) {
     if (hiring === "true") filters.push(eq(companies.hiringStatus, true));
     if (hiring === "false") filters.push(eq(companies.hiringStatus, false));
     if (q) {
-      const term = `%${q.replace(/[%_]/g, "")}%`;
+      // Escape user input so a `%` or `_` in the search box matches
+      // literally instead of acting as a LIKE wildcard. The ESCAPE
+      // clause tells SQLite to treat `\` as the escape character.
+      const escaped = q.replace(/[\\%_]/g, (m) => `\\${m}`);
+      const term = `%${escaped}%`;
       const orClause = or(
-        like(companies.name, term),
-        like(companies.slug, term),
-        like(companies.website, term),
-        like(companies.description, term),
-        like(companies.sector, term),
+        sql`${companies.name} LIKE ${term} ESCAPE '\\'`,
+        sql`${companies.slug} LIKE ${term} ESCAPE '\\'`,
+        sql`${companies.website} LIKE ${term} ESCAPE '\\'`,
+        sql`${companies.description} LIKE ${term} ESCAPE '\\'`,
+        sql`${companies.sector} LIKE ${term} ESCAPE '\\'`,
       );
       if (orClause) filters.push(orClause);
     }
@@ -144,10 +148,10 @@ export async function GET(req: NextRequest) {
         .select({ companyId: businessOwnershipSubmissions.companyId })
         .from(businessOwnershipSubmissions)
         .where(
-          sql`${businessOwnershipSubmissions.companyId} IN (${sql.join(
-            ids.map((id) => sql`${id}`),
-            sql`, `,
-          )}) AND ${businessOwnershipSubmissions.status} = 'pending'`,
+          and(
+            inArray(businessOwnershipSubmissions.companyId, ids),
+            eq(businessOwnershipSubmissions.status, "pending"),
+          ),
         );
       pending = new Set(pendings.map((p) => p.companyId));
     }
