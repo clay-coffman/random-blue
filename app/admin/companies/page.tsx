@@ -84,7 +84,7 @@ export default async function AdminCompaniesPage({
           </li>
         ))}
       </ul>
-      <div className="overflow-x-auto rounded-tile border-[1.5px] border-topo">
+      <div className="hidden lg:block overflow-x-auto rounded-tile border-[1.5px] border-topo">
         <table className="w-full min-w-[560px] text-sm">
           <thead className="bg-paper">
             <tr className="text-left">
@@ -136,6 +136,46 @@ export default async function AdminCompaniesPage({
           </tbody>
         </table>
       </div>
+
+      <ul className="grid gap-2 lg:hidden">
+        {visible.map((c) => {
+          const status = statusOf(c);
+          return (
+            <li
+              key={c.id}
+              className="flex flex-wrap items-center gap-3 rounded-tile border-[1.5px] border-topo bg-paper p-4"
+            >
+              <span className="flex-1 min-w-0">
+                <Link
+                  href={`/companies/${c.slug}/edit`}
+                  className="block font-serif text-lg leading-tight hover:text-ember"
+                >
+                  {c.name}
+                </Link>
+                <span className="mt-0.5 block text-xs text-ink-3">
+                  {c.sector ?? "—"} · {c.stage ?? "—"}
+                </span>
+              </span>
+              <StatusChip status={status} />
+              {status === "pending" ? (
+                <Link
+                  href={`/admin/submissions?company=${c.slug}`}
+                  className="rounded-pill border border-ember px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ember hover:bg-ember-tint"
+                >
+                  Review
+                </Link>
+              ) : (
+                <Link
+                  href={`/companies/${c.slug}/edit`}
+                  className="rounded-pill border border-ink px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ink hover:bg-stone"
+                >
+                  Edit
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

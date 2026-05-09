@@ -58,7 +58,7 @@ export default async function AdminResourcesPage() {
         </Link>
       </header>
       <ScribbleDivider className="my-5" />
-      <div className="overflow-x-auto rounded-tile border-[1.5px] border-topo">
+      <div className="hidden lg:block overflow-x-auto rounded-tile border-[1.5px] border-topo">
         <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-paper">
             <tr className="text-left">
@@ -104,6 +104,39 @@ export default async function AdminResourcesPage() {
           </tbody>
         </table>
       </div>
+
+      <ul className="grid gap-2 lg:hidden">
+        {rows.map((r) => (
+          <li
+            key={r.id}
+            className="flex flex-wrap items-center gap-3 rounded-tile border-[1.5px] border-topo bg-paper p-4"
+          >
+            <span className="flex-1 min-w-0">
+              <Link
+                href={`/admin/resources/${r.id}`}
+                className="block font-serif text-lg leading-tight hover:text-ember"
+              >
+                {r.title}
+              </Link>
+              <span className="mt-0.5 block text-xs text-ink-3">
+                {r.kind ?? "—"} · updated{" "}
+                {r.lastUpdatedAt
+                  ? new Date(r.lastUpdatedAt).toLocaleDateString()
+                  : "—"}
+              </span>
+            </span>
+            <span className={STATUS_CHIP(r.lastUpdatedAt)}>
+              {statusLabel(r.lastUpdatedAt)}
+            </span>
+            <Link
+              href={`/admin/resources/${r.id}`}
+              className="rounded-pill border border-ink px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ink hover:bg-stone"
+            >
+              Edit
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -100,7 +100,7 @@ export default async function AdminUsersPage({
         })}
       </ul>
 
-      <div className="overflow-x-auto rounded-tile border-[1.5px] border-topo">
+      <div className="hidden lg:block overflow-x-auto rounded-tile border-[1.5px] border-topo">
         <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-paper">
             <tr className="text-left">
@@ -160,6 +160,55 @@ export default async function AdminUsersPage({
           </tbody>
         </table>
       </div>
+
+      <ul className="grid gap-2 lg:hidden">
+        {visible.map((u) => {
+          const isSelf = u.id === myUserId;
+          return (
+            <li
+              key={u.id}
+              className="flex flex-wrap items-center gap-3 rounded-tile border-[1.5px] border-topo bg-paper p-4"
+            >
+              <span className="flex-1 min-w-0">
+                <span className="block font-serif text-lg leading-tight">
+                  {u.name}
+                  {isSelf ? (
+                    <span className="ml-2 font-mono text-[10px] uppercase tracking-wider text-ink-3">
+                      (you)
+                    </span>
+                  ) : null}
+                </span>
+                <span className="mt-0.5 block break-all font-mono text-xs text-ink-3">
+                  {u.email}
+                </span>
+                <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-3">
+                  {u.emailVerified ? (
+                    <span className="rounded-pill bg-sage-tint px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-sage">
+                      verified
+                    </span>
+                  ) : (
+                    <span className="rounded-pill bg-ember-tint px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-ember">
+                      pending
+                    </span>
+                  )}
+                  <span>
+                    joined{" "}
+                    {u.createdAt
+                      ? new Date(u.createdAt).toLocaleDateString()
+                      : "—"}
+                  </span>
+                </span>
+              </span>
+              <span className={ROLE_CHIP[u.role] ?? ROLE_CHIP.founder}>
+                {u.role}
+              </span>
+              {isSuper && !isSelf && u.role !== "superadmin" ? (
+                <UserRoleDropdown userId={u.id} currentRole={u.role} />
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
       {!isSuper ? (
         <p className="mt-3 text-xs text-ink-3">
           Only superadmins can change roles. Use the bootstrap script for
