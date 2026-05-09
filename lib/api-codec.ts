@@ -28,6 +28,7 @@ const KNOWN_PASSPORT_FIELDS = [
   "goal",
   "urgency",
   "businessSize",
+  "businessType",
   "needs",
   "constraints",
 ] as const;
@@ -51,6 +52,7 @@ const STRING_FIELDS: ReadonlySet<PassportFieldName> = new Set([
   "goal",
   "urgency",
   "businessSize",
+  "businessType",
 ]);
 
 // snake_case → camelCase mapping for incoming enrich field names.
@@ -66,6 +68,8 @@ const WIRE_TO_CAMEL: Record<string, PassportFieldName> = {
   urgency: "urgency",
   business_size: "businessSize",
   businessSize: "businessSize",
+  business_type: "businessType",
+  businessType: "businessType",
   needs: "needs",
   constraints: "constraints",
 };
@@ -83,8 +87,10 @@ export function toWirePassportInput(
     goal: p.goal,
     urgency: p.urgency,
     business_size: p.businessSize,
+    business_type: p.businessType,
     needs: p.needs,
     constraints: p.constraints,
+    enrichment_source: p.enrichmentSource,
   };
 }
 
@@ -101,8 +107,10 @@ export function fromWirePassportInput(
     goal: w.goal,
     urgency: w.urgency,
     businessSize: w.business_size,
+    businessType: w.business_type,
     needs: w.needs ?? [],
     constraints: w.constraints ?? [],
+    enrichmentSource: w.enrichment_source,
   };
 }
 

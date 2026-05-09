@@ -45,7 +45,7 @@ export type SeededAccount = {
 // will validate at runtime.
 export async function buildAccounts(): Promise<SeededAccount[]> {
   const passwordHash = await hashPassword(TEST_PASSWORD);
-  return testUsers.map((u, i) => ({
+  return testUsers.map((u) => ({
     id: `acct_${u.id.slice(2)}`,
     userId: u.id,
     passwordHash,

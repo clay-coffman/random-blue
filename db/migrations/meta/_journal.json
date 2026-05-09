@@ -8,6 +8,20 @@
       "when": 1778282596125,
       "tag": "0000_flaky_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1778284641028,
+      "tag": "0001_brainy_sentinels",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1778287308246,
+      "tag": "0002_slow_shotgun",
+      "breakpoints": true
     }
   ]
 }

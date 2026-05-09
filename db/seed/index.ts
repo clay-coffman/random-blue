@@ -5,7 +5,7 @@ import path from "node:path";
 import { personas } from "./personas";
 import { loadResources } from "./resources";
 import { loadCompanies } from "./companies";
-import { buildAccounts, testUsers, TEST_USER_IDS } from "./users";
+import { buildAccounts, testUsers } from "./users";
 
 const SOURCE = path.resolve(process.cwd(), "docs/source_data");
 const RESOURCES_CSV = path.join(

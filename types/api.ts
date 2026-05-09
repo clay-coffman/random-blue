@@ -4,11 +4,21 @@
 // bodies on `/api/v1/...`. Internal TS code uses camelCase types from
 // `types/passport.ts`; convert at the boundary via `lib/api-codec.ts`.
 //
-// Scaffolded from `docs/architecture.md` § Data flow A and
-// `docs/requirements.md`. Agent 2 owns this file going forward and may
-// tighten the types when their endpoints land.
+// Request types are loose (partial — the form scaffolds them up over
+// time). Response types are strict and `z.infer`-derived from the
+// runtime validators in `schemas/*.ts` so the static types and the
+// runtime validators can never drift apart.
 
-export type Bucket = "now" | "next" | "ignore";
+import type {
+  EnrichField,
+  EnrichResponse,
+  RecommendResponse,
+  RecommendedResource,
+} from "@/schemas/recommend";
+
+export type { Bucket } from "@/schemas/recommend";
+
+// ─── Request shapes (loose — partial intake submissions allowed) ──────
 
 export type FounderPassportInputWire = {
   website_url?: string;
@@ -20,53 +30,33 @@ export type FounderPassportInputWire = {
   goal?: string;
   urgency?: string;
   business_size?: string;
+  business_type?: string;
   needs: string[];
   constraints: string[];
+  // When the front-end ran the enrich path before submitting, it sets
+  // this to the provider id (e.g. "anthropic-fetch"). The route
+  // handler then stamps `enriched_at = now` on the persisted row.
+  enrichment_source?: string;
 };
 
 export type FounderPassportWire = FounderPassportInputWire & {
   id: string;
   created_at: string;
   enriched_at?: string;
-  enrichment_source?: string;
 };
 
-export type RecommendRequestWire = FounderPassportInputWire;
-
-export type RecommendedResourceWire = {
-  resource_id: string;
-  title: string;
-  score: number;
-  bucket: Bucket;
-  reasons: string[];
-  because: string;
-  action_text: string;
-  kind?: string;
-  source_url?: string;
-  contact_email?: string;
+export type RecommendRequestWire = FounderPassportInputWire & {
+  passport_id?: string;
 };
 
-export type RecommendResponseWire = {
-  passport_id: string;
-  recommendations: RecommendedResourceWire[];
-  generated_at: string;
-};
+export type EnrichRequestWire = { website_url: string };
 
-// Smart prefill from a business website (Agent 2's enrich endpoint).
-export type EnrichRequestWire = {
-  website_url: string;
-};
+// ─── Response shapes (strict — match the zod schemas at runtime) ──────
 
-export type EnrichFieldWire = {
-  name: string;
-  value: unknown;
-  confidence: number;
-};
-
-export type EnrichResponseWire = {
-  fields: EnrichFieldWire[];
-  degraded?: boolean;
-};
+export type RecommendedResourceWire = RecommendedResource;
+export type RecommendResponseWire = RecommendResponse;
+export type EnrichFieldWire = EnrichField;
+export type EnrichResponseWire = EnrichResponse;
 
 // Documented error envelope from `lib/api-error.ts`.
 export type ApiError = {
