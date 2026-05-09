@@ -22,6 +22,13 @@
       "when": 1778287308246,
       "tag": "0002_slow_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1778295817837,
+      "tag": "0003_curious_fat_cobra",
+      "breakpoints": true
     }
   ]
 }

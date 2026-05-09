@@ -11,9 +11,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
-// Wires .dev.vars values into `env()` calls during `next dev`. Without
-// this, `getCloudflareContext().env` returns nothing in development and
-// every `lib/*` helper that reads a secret fails.
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
-initOpenNextCloudflareForDev();
