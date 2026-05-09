@@ -15,7 +15,7 @@
 import { NextResponse } from "next/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { createAtlasClient } from "@/cli/lib/atlas-client";
+import { createInProcessAtlasClient } from "@/mcp/shared/in-process-client";
 import { registerReadTools } from "@/mcp/shared/tools";
 import { registerResources } from "@/mcp/shared/resources";
 import { registerPrompts } from "@/mcp/shared/prompts";
@@ -34,20 +34,14 @@ async function handleMcpRequest(req: Request): Promise<Response> {
   // need the worker's admin token and would expose privileged writes
   // to anyone on the internet. See issue #35.
   //
-  // Self-target the deployed worker so tools don't bounce out to the
-  // open internet for an in-Worker call.
-  const url = new URL(req.url);
-  const baseUrl = `${url.protocol}//${url.host}`;
-
-  // No admin token — defense-in-depth so a future refactor that
-  // accidentally registers a write tool on this surface still can't
-  // make a privileged call. The explicit `adminToken: ""` matters:
-  // the `??` fallback in createAtlasClient (cli/lib/atlas-client.ts)
-  // only fires on null/undefined, so passing "" defeats the
-  // process.env.ATLAS_ADMIN_TOKEN lookup. Today that env var is
-  // unset on the Worker (secrets come through env()), but we don't
-  // want a future build/runtime change to silently re-arm writes.
-  const client = createAtlasClient({ baseUrl, adminToken: "" });
+  // In-process atlas client: tools call the route handler functions
+  // directly (no fetch hop). The HTTP atlas-client can't be used here
+  // because a Cloudflare Worker can't fetch its own custom domain
+  // (Cloudflare loops back into the same Worker → 522). The
+  // in-process client also doesn't expose any write methods, so even
+  // a future refactor that accidentally registered a write tool on
+  // this surface couldn't make a privileged call.
+  const client = createInProcessAtlasClient();
 
   const server = new McpServer(
     {
