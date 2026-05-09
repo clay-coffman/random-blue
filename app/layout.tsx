@@ -11,6 +11,7 @@ import "./globals.css";
 import { getAuth } from "@/auth";
 import { NavLinks } from "@/components/site/NavLinks";
 import { UserMenu } from "@/components/site/UserMenu";
+import { AtlasMark } from "@/components/brand";
 
 const robotoSerif = Roboto_Serif({
   subsets: ["latin"],
@@ -112,12 +113,7 @@ async function SiteNav() {
           className="group flex items-center gap-2"
           aria-label="Startup State Atlas — home"
         >
-          <span
-            aria-hidden
-            className="grid h-8 w-8 place-items-center rounded-full border-[1.5px] border-ink font-mono text-[12px] font-semibold"
-          >
-            N
-          </span>
+          <AtlasMark className="h-8 w-8" />
           <span className="font-serif leading-none">
             <span className="block text-[11px] uppercase tracking-[0.18em] text-ink-3">
               Startup State
@@ -163,12 +159,7 @@ function SiteFooter() {
     <footer className="mt-16 border-t border-topo bg-paper-2">
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-4 px-4 py-6 font-mono text-[11px] uppercase tracking-wider text-ink-3 sm:px-7">
         <span className="flex items-center gap-2">
-          <span
-            aria-hidden
-            className="grid h-5 w-5 place-items-center rounded-full border-[1.5px] border-ink-3 text-[9px]"
-          >
-            N
-          </span>
+          <AtlasMark className="h-5 w-5" />
           Atlas · startup.utah.gov
         </span>
         <nav aria-label="Resources" className="flex flex-wrap gap-4">
