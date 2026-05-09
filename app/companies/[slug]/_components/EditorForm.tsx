@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { KNOWN_SECTORS, sectorDisplayName } from "@/lib/sectors";
-import { STAGE_VALUES, stageDisplayName } from "@/lib/stages";
+import { STAGE_VALUES, isKnownStage, stageDisplayName } from "@/lib/stages";
 
 const optionalUrl = z
   .string()
@@ -239,6 +239,9 @@ export function EditorForm({ slug, company, canEditLockedFields }: Props) {
                         {showLegacy ? (
                           <option value={current}>Current: {current}</option>
                         ) : null}
+                        {/* Some entries share a paint key (Bio/Life Sciences/Health → bio,
+                            Consumer/Marketplaces → consumer); we intentionally keep them
+                            distinct here because each value round-trips back to D1. */}
                         {KNOWN_SECTORS.map((s) => (
                           <option key={s} value={s}>
                             {sectorDisplayName(s)}
@@ -256,9 +259,7 @@ export function EditorForm({ slug, company, canEditLockedFields }: Props) {
               name="stage"
               render={({ field }) => {
                 const current = field.value ?? "";
-                const showLegacy =
-                  current !== "" &&
-                  !(STAGE_VALUES as readonly string[]).includes(current);
+                const showLegacy = current !== "" && !isKnownStage(current);
                 return (
                   <FormItem>
                     <FormLabel>Stage</FormLabel>

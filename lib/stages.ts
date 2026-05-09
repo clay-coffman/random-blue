@@ -30,3 +30,7 @@ export function stageDisplayName(stage: string | null | undefined): string {
   if (!stage) return "—";
   return DISPLAY[stage as Stage] ?? stage;
 }
+
+export function isKnownStage(s: string): s is Stage {
+  return (STAGE_VALUES as readonly string[]).includes(s);
+}
