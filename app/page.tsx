@@ -10,6 +10,8 @@ import {
 import { recentActivity } from "@/lib/activity";
 import { personas } from "@/lib/personas";
 
+export const dynamic = "force-dynamic";
+
 const ctaBase =
   "inline-flex min-h-[44px] items-center justify-center gap-1 rounded-tile border-[1.5px] border-ink px-5 py-3 font-medium shadow-sketch transition-transform hover:-translate-y-0.5 hover:shadow-sketch-hover";
 const ctaEmber = "border-ember bg-ember text-paper";

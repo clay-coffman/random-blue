@@ -26,7 +26,7 @@ describe("Drizzle timestamp_ms coercion", () => {
 });
 
 describe("formatClaim", () => {
-  it("renders company name + sector", () => {
+  it("renders company name + sector and uses 'verified ownership' wording (matches the timestamp source: business_ownership_submissions.reviewed_at, which is the staff-approval moment, not the user-claim moment)", () => {
     expect(
       formatClaim({
         reviewedAt: 100,
@@ -35,7 +35,7 @@ describe("formatClaim", () => {
       }),
     ).toEqual({
       kind: "claim",
-      text: "Crew (FinTech) just claimed their profile",
+      text: "Crew (FinTech) just verified ownership",
       ts: 100,
     });
   });
@@ -46,7 +46,7 @@ describe("formatClaim", () => {
       companyName: "Acme",
       companySector: null,
     });
-    expect(e?.text).toBe("Acme just claimed their profile");
+    expect(e?.text).toBe("Acme just verified ownership");
   });
 
   it("returns null when reviewedAt missing", () => {
@@ -72,7 +72,6 @@ describe("formatPassport", () => {
       formatPassport({
         createdAt: 200,
         county: "Salt Lake",
-        city: "Salt Lake City",
         industry: "Software and Information Technology",
       }),
     ).toEqual({
@@ -87,7 +86,6 @@ describe("formatPassport", () => {
       formatPassport({
         createdAt: 200,
         county: "Washington",
-        city: null,
         industry: null,
       })?.text,
     ).toBe("New founder in Washington");
@@ -98,7 +96,6 @@ describe("formatPassport", () => {
       formatPassport({
         createdAt: 200,
         county: null,
-        city: null,
         industry: null,
       }),
     ).toBeNull();
@@ -109,7 +106,6 @@ describe("formatPassport", () => {
       formatPassport({
         createdAt: null,
         county: "Salt Lake",
-        city: null,
         industry: "Tech",
       }),
     ).toBeNull();

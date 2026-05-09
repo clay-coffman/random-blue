@@ -24,7 +24,6 @@ export type ClaimRow = {
 export type PassportRow = {
   createdAt: Timestamp;
   county: string | null;
-  city: string | null;
   industry: string | null;
 };
 
@@ -45,7 +44,7 @@ export function formatClaim(row: ClaimRow): ActivityEvent | null {
   const where = row.companySector ? ` (${row.companySector})` : "";
   return {
     kind: "claim",
-    text: `${row.companyName}${where} just claimed their profile`,
+    text: `${row.companyName}${where} just verified ownership`,
     ts,
   };
 }
@@ -125,7 +124,6 @@ export async function recentActivity(limit = 6): Promise<ActivityEvent[]> {
         .select({
           createdAt: founderPassports.createdAt,
           county: founderPassports.county,
-          city: founderPassports.city,
           industry: founderPassports.industry,
         })
         .from(founderPassports)
@@ -157,7 +155,8 @@ export async function recentActivity(limit = 6): Promise<ActivityEvent[]> {
       .filter((e): e is ActivityEvent => e !== null);
 
     return mergeEvents([claims, passports, updates], limit);
-  } catch {
+  } catch (err) {
+    console.error("recentActivity failed:", err);
     return [];
   }
 }
