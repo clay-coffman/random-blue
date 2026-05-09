@@ -25,7 +25,7 @@ export default async function MySubmissionsPage({
 }: {
   searchParams: Promise<{ submitted?: string }>;
 }) {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   if (!session?.user) redirect("/sign-in?next=/me/submissions");
   const params = await searchParams;
   const justSubmitted = params.submitted === "1";

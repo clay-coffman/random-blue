@@ -47,7 +47,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   if (!session?.user) redirect("/sign-in?next=/admin");
   const role = (session.user as { role?: string }).role ?? "founder";
   if (!isAdminRole(role)) redirect("/?error=forbidden");

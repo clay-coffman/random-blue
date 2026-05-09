@@ -87,7 +87,7 @@ async function loadRecentEdits() {
 }
 
 export default async function AdminDashboard() {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const userName = (session?.user.name ?? "there").split(" ")[0];
 
   const [stats, queue, edits] = await Promise.all([

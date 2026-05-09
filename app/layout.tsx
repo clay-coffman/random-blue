@@ -63,7 +63,7 @@ type HeaderUser = {
 };
 
 async function loadHeaderUser(): Promise<HeaderUser | null> {
-  const session = await getAuth()
+  const session = await (await getAuth())
     .api.getSession({ headers: await headers() })
     .catch(() => null);
   if (!session?.user) return null;

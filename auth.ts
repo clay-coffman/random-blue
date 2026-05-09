@@ -193,9 +193,15 @@ export const auth = buildAuth();
 // stable for the lifetime of an isolate, so we can build once and reuse.
 let runtimeAuth: ReturnType<typeof buildAuth> | null = null;
 
-export function getAuth() {
+// Async — uses `getCloudflareContext({ async: true })` so static
+// prerender of pages that transitively touch the root layout (which
+// calls getSession) doesn't throw the "sync mode in static route"
+// error. The async variant is a no-op fast path inside a real request
+// (the context is already populated); it only does work during
+// build-time prerender.
+export async function getAuth() {
   if (runtimeAuth) return runtimeAuth;
-  const { env } = getCloudflareContext();
+  const { env } = await getCloudflareContext({ async: true });
   runtimeAuth = buildAuth(env);
   return runtimeAuth;
 }

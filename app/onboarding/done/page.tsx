@@ -31,7 +31,7 @@ const COPY: Record<
 };
 
 export default async function OnboardingDonePage() {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   if (!session?.user) redirect("/sign-in?next=/onboarding/done");
 
   const role = (session.user as { role?: string }).role ?? "founder";

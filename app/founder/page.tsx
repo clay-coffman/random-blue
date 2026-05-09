@@ -23,7 +23,7 @@ export default async function FounderPage({ searchParams }: PageProps) {
   const rawPersona = Array.isArray(sp.persona) ? sp.persona[0] : sp.persona;
   const personaId =
     rawPersona && isPersonaId(rawPersona) ? rawPersona : undefined;
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   // Persona quick-test fixtures short-circuit submit to a seeded
   // passport (fp_priya etc). For a signed-in user that means landing
   // on someone else's plan, which is misleading. Hide the bar (and the

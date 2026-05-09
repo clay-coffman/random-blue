@@ -51,7 +51,7 @@ function buildSectionNav(
 }
 
 export default async function SettingsPage() {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   if (!session?.user) redirect("/sign-in?next=/settings");
   const user = session.user as {
     id: string;
