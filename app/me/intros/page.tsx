@@ -119,7 +119,7 @@ export default async function MyIntrosPage({
           where you&apos;re the target.
         </p>
 
-        <div className="mt-5 flex flex-wrap gap-2">
+        <nav aria-label="Intros queue" className="mt-5 flex flex-wrap gap-2">
           <TabLink
             label={`Outbound (${outboundRows.length})`}
             href="/me/intros?tab=outbound"
@@ -131,7 +131,7 @@ export default async function MyIntrosPage({
             active={tab === "inbound"}
             disabled={inboundRows.length === 0}
           />
-        </div>
+        </nav>
       </header>
 
       {tab === "outbound" ? (
@@ -156,7 +156,11 @@ function TabLink({
 }) {
   if (disabled) {
     return (
-      <span className="inline-flex h-10 min-h-[44px] cursor-not-allowed items-center justify-center rounded-pill border-[1.5px] border-ink/20 bg-paper-2 px-4 font-mono text-xs uppercase tracking-wider text-ink-3">
+      <span
+        role="link"
+        aria-disabled="true"
+        className="inline-flex h-10 min-h-[44px] cursor-not-allowed items-center justify-center rounded-pill border-[1.5px] border-ink/20 bg-paper-2 px-4 font-mono text-xs uppercase tracking-wider text-ink-3"
+      >
         {label}
       </span>
     );
@@ -164,6 +168,7 @@ function TabLink({
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={
         active
           ? "inline-flex h-10 min-h-[44px] items-center justify-center rounded-pill bg-ink px-4 font-mono text-xs uppercase tracking-wider text-paper"

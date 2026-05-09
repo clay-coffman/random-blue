@@ -7,15 +7,18 @@ import { RequestIntroDialog } from "../../../investors/[slug]/_components/Reques
 export function RequestIntroButton({
   companyId,
   companyName,
+  pendingIntroId = null,
 }: {
   companyId: string;
   companyName: string;
+  pendingIntroId?: string | null;
 }) {
   return (
     <RequestIntroDialog
       targetType="company"
       targetId={companyId}
       targetName={companyName}
+      pendingIntroId={pendingIntroId}
     />
   );
 }
