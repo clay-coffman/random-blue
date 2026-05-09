@@ -71,9 +71,10 @@ export function buildBaseWhere(f: CompanyFilters): SQL | undefined {
   if (sectors.length === 1) {
     clauses.push(eq(companies.sector, sectors[0]));
   } else if (sectors.length > 1) {
-    clauses.push(
-      or(...sectors.map((s) => eq(companies.sector, s)))!,
-    );
+    // `or` returns SQL | undefined only when called with no args; we
+    // only land here with sectors.length > 1.
+    const sectorMatch = or(...sectors.map((s) => eq(companies.sector, s)));
+    if (sectorMatch) clauses.push(sectorMatch);
   }
 
   if (f.stage) {
@@ -89,14 +90,13 @@ export function buildBaseWhere(f: CompanyFilters): SQL | undefined {
 
   if (f.q) {
     const needle = `%${f.q}%`;
-    clauses.push(
-      or(
-        like(companies.name, needle),
-        like(companies.slug, needle),
-        like(companies.website, needle),
-        like(companies.description, needle),
-      )!,
+    const textSearch = or(
+      like(companies.name, needle),
+      like(companies.slug, needle),
+      like(companies.website, needle),
+      like(companies.description, needle),
     );
+    if (textSearch) clauses.push(textSearch);
   }
 
   if (clauses.length === 0) return undefined;

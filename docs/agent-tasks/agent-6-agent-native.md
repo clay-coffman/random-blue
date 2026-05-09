@@ -31,7 +31,7 @@ this layer. Aim for ~120 minutes.
    what motivates the CLI/API/MCP surfaces.
 8. The **`cloudflare:build-mcp`** loaded skill — required reading
    if you go remote MCP.
-9. `docs/agent-tasks/openapi-additions.md` (Agent 2 writes this) —
+9. `docs/archive/agent-tasks/openapi-additions.md` (Agent 2 writes this) —
    the recommend endpoint shape.
 10. The MCP spec: <https://modelcontextprotocol.io/specification/>
     (use the version compatible with `@modelcontextprotocol/sdk`).
@@ -42,7 +42,7 @@ this layer. Aim for ~120 minutes.
 - **Agent 1 mostly done** so you can document real schemas in the
   `startupstate://schemas/...` MCP resources.
 - **Agent 2's endpoint shapes** drive the OpenAPI spec — coordinate
-  via `docs/agent-tasks/openapi-additions.md`.
+  via `docs/archive/agent-tasks/openapi-additions.md`.
 - **Agent 4's `/api/v1/companies` shapes** also feed the OpenAPI
   spec — same coordination file.
 
@@ -326,4 +326,4 @@ so external agents know how to call write endpoints.
   serves `public/`.
 - **Coordinate with Agent 2.** If they finalize the recommend
   shape after you write the OpenAPI, sync it. Use
-  `docs/agent-tasks/openapi-additions.md` as the watching file.
+  `docs/archive/agent-tasks/openapi-additions.md` as the watching file.

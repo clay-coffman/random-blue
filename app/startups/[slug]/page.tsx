@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Tile, Chip, ScribbleDivider } from "@/components/brand";
 import { sectorChipClass, sectorDisplayName } from "@/lib/sectors";
+import { parseBucket } from "@/lib/employee-bucket";
 import { companyCard, type CompanyCard } from "@/lib/company-card";
 import { cn } from "@/lib/utils";
 import { ProfileTabs } from "./_components/ProfileTabs";
@@ -68,10 +69,27 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
 
 function VariantAProfile({ card }: { card: CompanyCard }) {
   const jobsCount = card.jobs.length;
-  const sectionLabels = ["Overview", "Open roles", "Gallery", "Facts", "Agent Card"];
+  // Tab labels track render order in the main column. The Agent Card
+  // teaser lives in the right rail, not the main column — so it's
+  // omitted from the tab strip (clicking it on desktop would scroll
+  // past the sidebar). Same with the right-rail Claim/Related tiles.
+  const sectionLabels = ["Overview", "Facts", "Open roles", "Gallery", "Map"];
   const verification = card.verification.status;
 
   // JSON-LD Organization schema for SEO + agent consumption.
+  // schema.org `numberOfEmployees` expects an integer or
+  // QuantitativeValue with min/max. Our bucket strings ("11-50")
+  // can't be plain integers; emit a QuantitativeValue when the bucket
+  // parses cleanly, otherwise omit so consumers don't get garbage.
+  const empRange = parseBucket(card.employee_count);
+  const empJsonLd = empRange
+    ? {
+        "@type": "QuantitativeValue" as const,
+        ...(Number.isFinite(empRange.min) && { minValue: empRange.min }),
+        ...(Number.isFinite(empRange.max) && { maxValue: empRange.max }),
+        unitText: "employees",
+      }
+    : undefined;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -90,7 +108,7 @@ function VariantAProfile({ card }: { card: CompanyCard }) {
           }
         : undefined,
     foundingDate: card.founding_year ? String(card.founding_year) : undefined,
-    numberOfEmployees: card.employee_count ?? undefined,
+    numberOfEmployees: empJsonLd,
   };
 
   return (
@@ -356,13 +374,18 @@ function VariantAProfile({ card }: { card: CompanyCard }) {
 
         {/* RIGHT RAIL */}
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          {/* AGENT CARD TEASER (dark Tile + ember shadow) */}
+          {/* AGENT CARD TEASER (dark Tile + ember shadow). Lives in the
+              right rail intentionally — it's the differentiator beat,
+              not a body section. The tab strip skips this. */}
           <section
-            id="agent-card"
-            className="scroll-mt-32 rounded-tile border-[1.5px] border-ink bg-ink p-4 text-paper"
+            aria-labelledby="agent-card-label"
+            className="rounded-tile border-[1.5px] border-ink bg-ink p-4 text-paper"
             style={{ boxShadow: "5px 5px 0 var(--color-ember)" }}
           >
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ember-tint">
+            <p
+              id="agent-card-label"
+              className="font-mono text-[11px] uppercase tracking-[0.18em] text-ember-tint"
+            >
               ↓ Agent Card
             </p>
             <p className="mt-2 font-serif text-xl leading-snug text-paper">

@@ -11,6 +11,56 @@ import type { CompanyListItem } from "./companies-list";
 const HARD_TIMEOUT_MS = 30_000;
 const MAX_OUTPUT_TOKENS = 1200;
 
+/**
+ * Try to extract a JSON object from an LLM response. Prefer parsing
+ * the whole string (the system prompt asks for bare JSON); fall back
+ * to scanning for a balanced top-level `{ … }` block if the model
+ * surrounds it with code fences or commentary.
+ */
+function extractJsonObject(text: string): unknown | null {
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Continue to the bracket-scan fallback.
+  }
+  let depth = 0;
+  let start = -1;
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{") {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (ch === "}") {
+      depth--;
+      if (depth === 0 && start >= 0) {
+        const candidate = text.slice(start, i + 1);
+        try {
+          return JSON.parse(candidate);
+        } catch {
+          // Try the next balanced block (rare).
+          start = -1;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 const ThemeSchema = z.object({
   title: z.string().min(1),
   slugs: z.array(z.string()).default([]),
@@ -133,9 +183,12 @@ export async function generateInvestorBrief(
       .join("\n")
       .trim();
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return empty;
-    const parsed = InvestorBriefSchema.safeParse(JSON.parse(jsonMatch[0]));
+    // Happy path: model returned bare JSON, exactly as the system
+    // prompt asks. Greedy regex is a fallback for the case where the
+    // model wraps in code fences or leading/trailing prose.
+    const raw = extractJsonObject(text);
+    if (raw == null) return empty;
+    const parsed = InvestorBriefSchema.safeParse(raw);
     if (!parsed.success) return empty;
     const data = parsed.data;
 

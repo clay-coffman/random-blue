@@ -1,8 +1,5 @@
 "use client";
 
-// Stub for task 5 — full panel + endpoint wiring lands in task 8.
-// Renders enough to verify the open/close + keyboard shortcut work.
-
 import { useEffect, useState } from "react";
 import { Tile } from "@/components/brand";
 import type { CompanyListItem } from "@/lib/companies-list";
@@ -249,14 +246,7 @@ export function InvestorBrief({ companies, filters, open, onClose }: Props) {
           disabled={!data || data.degraded}
           className="inline-flex h-9 min-h-[40px] items-center gap-1 rounded-pill border-[1.5px] border-paper/30 bg-paper/5 px-3 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:bg-paper/15 disabled:opacity-40"
         >
-          📋 Copy summary
-        </button>
-        <button
-          type="button"
-          onClick={() => alert("PDF export coming soon. Use Copy summary for now.")}
-          className="inline-flex h-9 min-h-[40px] items-center gap-1 rounded-pill border-[1.5px] border-paper/30 bg-paper/5 px-3 font-mono text-[11px] uppercase tracking-wider text-paper transition hover:bg-paper/15"
-        >
-          📄 Export PDF
+          ↗ Copy summary
         </button>
       </footer>
     </aside>

@@ -88,15 +88,15 @@ export async function listCompanies(
   if (rows.length === 0) return { companies: [], total: 0 };
 
   const ids = rows.map((r) => r.id);
-  // D1 / SQLite limits compound `IN (?, ?, …)` to 100 placeholders. Chunk
-  // the lookup so larger result sets don't blow up the query.
+  // D1 / SQLite caps compound `IN (?, ?, …)` at ~100 placeholders.
+  // Chunk the lookup so larger result sets don't blow up the query;
+  // 90 leaves a small headroom for any other constants in the WHERE.
   const CHUNK = 90;
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += CHUNK) chunks.push(ids.slice(i, i + CHUNK));
-  const locs: { companyId: string; county: string | null; city: string | null }[] = [];
-  const pendings: { companyId: string }[] = [];
-  await Promise.all(
-    chunks.flatMap((c) => [
+
+  const locResults = await Promise.all(
+    chunks.map((c) =>
       db()
         .select({
           companyId: companyLocations.companyId,
@@ -104,8 +104,11 @@ export async function listCompanies(
           city: companyLocations.city,
         })
         .from(companyLocations)
-        .where(inArray(companyLocations.companyId, c))
-        .then((rs) => locs.push(...rs)),
+        .where(inArray(companyLocations.companyId, c)),
+    ),
+  );
+  const pendingResults = await Promise.all(
+    chunks.map((c) =>
       db()
         .select({ companyId: businessOwnershipSubmissions.companyId })
         .from(businessOwnershipSubmissions)
@@ -114,11 +117,17 @@ export async function listCompanies(
             inArray(businessOwnershipSubmissions.companyId, c),
             eq(businessOwnershipSubmissions.status, "pending"),
           ),
-        )
-        .then((rs) => pendings.push(...rs)),
-    ]),
+        ),
+    ),
   );
+  const locs = locResults.flat();
+  const pendings = pendingResults.flat();
 
+  // Schema permits multiple location rows per company, but the wire
+  // shape exposes one city/county pair (the company's primary
+  // location). We pick the first row encountered as the representative
+  // until the schema grows an HQ flag — keep this explicit so it's
+  // clear we're discarding rows by design, not by accident.
   const locByCompany = new Map<
     string,
     { city: string | null; county: string | null }

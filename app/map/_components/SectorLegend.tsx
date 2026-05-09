@@ -3,20 +3,24 @@
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import { Tile } from "@/components/brand";
-import { SECTOR_REGISTRY } from "@/lib/sectors";
+import { SECTOR_REGISTRY, sectorKey } from "@/lib/sectors";
+import { cn } from "@/lib/utils";
 
 // Bottom-left legend tile. Highlights any sectors that match the
 // active filter; greys others out.
 export function SectorLegend() {
   const params = useSearchParams();
-  const filtered = useMemo(() => {
+  // Compare on sector key (not raw CSV) so "Life Sciences" filters
+  // light up the deduplicated "Bio / Medical Tech" row — both map to
+  // the `bio` brand token.
+  const filteredKeys = useMemo(() => {
     const set = new Set<string>();
     const sector = params.get("sector");
-    if (sector) set.add(sector);
+    if (sector) set.add(sectorKey(sector));
     const sectors = params.get("sectors");
     if (sectors)
       for (const s of sectors.split(",").map((x) => x.trim()).filter(Boolean))
-        set.add(s);
+        set.add(sectorKey(s));
     return set;
   }, [params]);
 
@@ -42,11 +46,11 @@ export function SectorLegend() {
         </p>
         <ul className="mt-1.5 space-y-1">
           {distinct.map((s) => {
-            const dim = filtered.size > 0 && !filtered.has(s.csv);
+            const dim = filteredKeys.size > 0 && !filteredKeys.has(s.key);
             return (
               <li
                 key={s.key}
-                className={cn("flex items-center gap-2 text-[11px]", dim ? "opacity-30" : "")}
+                className={cn("flex items-center gap-2 text-[11px]", dim && "opacity-30")}
               >
                 <span
                   aria-hidden
@@ -63,8 +67,4 @@ export function SectorLegend() {
       </Tile>
     </div>
   );
-}
-
-function cn(...classes: (string | false | undefined)[]): string {
-  return classes.filter(Boolean).join(" ");
 }

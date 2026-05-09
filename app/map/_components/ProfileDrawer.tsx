@@ -16,8 +16,12 @@ export function ProfileDrawer({ slug, onClose }: Props) {
   const [card, setCard] = useState<CompanyCard | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bumping `retryNonce` re-runs the fetch effect for the same slug —
+  // gives the Retry button a way to re-trigger without changing the
+  // slug or unmounting the drawer.
+  const [retryNonce, setRetryNonce] = useState(0);
 
-  // Fetch on slug change.
+  // Fetch on slug change or retry.
   useEffect(() => {
     if (!slug) return;
     let cancelled = false;
@@ -40,7 +44,7 @@ export function ProfileDrawer({ slug, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, retryNonce]);
 
   // Esc to close.
   useEffect(() => {
@@ -98,15 +102,13 @@ export function ProfileDrawer({ slug, onClose }: Props) {
                 Couldn&apos;t load this company.{" "}
                 <button
                   className="underline decoration-ember/40 underline-offset-2 hover:text-ink"
-                  onClick={() => slug && setError(null)}
+                  onClick={() => setRetryNonce((n) => n + 1)}
                 >
                   Retry
                 </button>
               </p>
             </Tile>
-          ) : null}
-
-          {loading || !card ? (
+          ) : loading || !card ? (
             <DrawerSkeleton />
           ) : (
             <DrawerContent card={card} />

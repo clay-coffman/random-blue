@@ -66,21 +66,36 @@ export async function POST(req: Request) {
   }
 
   const id = newId("co");
-  await db()
-    .insert(companies)
-    .values({
-      id,
-      slug: body.slug,
-      name: body.name,
-      website: body.website ?? null,
-      description: body.description ?? null,
-      sector: body.sector ?? null,
-      stage: body.stage ?? null,
-      employeeCount: body.employee_count ?? null,
-      addressText: body.address_text ?? null,
-      linkedin: body.linkedin ?? null,
-      hiringStatus: false,
-    });
+  try {
+    await db()
+      .insert(companies)
+      .values({
+        id,
+        slug: body.slug,
+        name: body.name,
+        website: body.website ?? null,
+        description: body.description ?? null,
+        sector: body.sector ?? null,
+        stage: body.stage ?? null,
+        employeeCount: body.employee_count ?? null,
+        addressText: body.address_text ?? null,
+        linkedin: body.linkedin ?? null,
+        hiringStatus: false,
+      });
+  } catch (err) {
+    // companies.slug has a UNIQUE index. D1 surfaces violations as a
+    // SQLite UNIQUE constraint error — return a precise 409 instead of
+    // letting the framework throw a generic 500.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/UNIQUE constraint failed.*companies\.slug/i.test(msg)) {
+      return errorResponse(
+        "conflict",
+        `A company already exists with slug "${body.slug}".`,
+        409,
+      );
+    }
+    throw err;
+  }
 
   return NextResponse.json({ id, slug: body.slug }, { status: 201 });
 }

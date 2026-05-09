@@ -31,7 +31,7 @@ export function UpdateWithClaude({ card }: { card: CompanyCard }) {
         ? "✓ Copied to clipboard"
         : state === "error"
           ? "Couldn't copy — try again"
-          : "📋 Update with Claude / ChatGPT"}
+          : "↗ Update with Claude / ChatGPT"}
     </button>
   );
 }

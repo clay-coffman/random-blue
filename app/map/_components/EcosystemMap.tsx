@@ -111,6 +111,25 @@ function buildClusterColorExpression(): unknown[] {
   return expr;
 }
 
+// "match nothing" filter for the pin-selected layer's initial state.
+// The effect below replaces this with a slug-equality predicate as
+// soon as the user picks a pin. Cast to `never` keeps the type
+// gymnastics out of the layer-init call site (mirroring the
+// `circle-color` paint expression cast above).
+const SELECTED_FILTER_NONE = [
+  "all",
+  ["!", ["has", "point_count"]],
+  ["==", ["get", "slug"], "__none__"],
+] as never;
+
+function selectedFilter(slug: string | null) {
+  return [
+    "all",
+    ["!", ["has", "point_count"]],
+    ["==", ["get", "slug"], slug ?? "__none__"],
+  ] as never;
+}
+
 export function EcosystemMap({
   companies,
   view,
@@ -212,20 +231,17 @@ export function EcosystemMap({
           ] as never,
           "circle-stroke-width": 1.5,
           "circle-stroke-color": "#0f1b2d",
-          "circle-radius": [
-            "case",
-            ["==", ["get", "slug"], ["literal", ""]], // unused
-            10,
-            8,
-          ],
+          "circle-radius": 8,
         },
       });
-      // Selected pin highlight (rendered above pin layer).
+      // Selected pin highlight (rendered above pin layer). The filter is
+      // owned by the effect below — it's set to "match nothing" until the
+      // first selection lands.
       map.addLayer({
         id: "pin-selected",
         type: "circle",
         source: "companies",
-        filter: ["all", ["!", ["has", "point_count"]], ["==", ["get", "slug"], ""]],
+        filter: SELECTED_FILTER_NONE,
         paint: {
           "circle-color": [
             "match",
@@ -410,11 +426,7 @@ export function EcosystemMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready.current) return;
-    map.setFilter("pin-selected", [
-      "all",
-      ["!", ["has", "point_count"]],
-      ["==", ["get", "slug"], selectedSlug ?? ""],
-    ]);
+    map.setFilter("pin-selected", selectedFilter(selectedSlug));
   }, [selectedSlug]);
 
   // View mode → toggle layer visibility.

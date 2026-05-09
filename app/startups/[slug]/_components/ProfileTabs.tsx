@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils";
 
 const SECTION_ID_BY_LABEL: Record<string, string> = {
   Overview: "overview",
+  Facts: "facts",
   "Open roles": "open-roles",
   Gallery: "gallery",
-  Facts: "facts",
-  "Agent Card": "agent-card",
+  Map: "map",
 };
 
 type ProfileTabsProps = {

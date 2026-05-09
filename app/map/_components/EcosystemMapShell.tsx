@@ -41,7 +41,10 @@ export function EcosystemMapShell({
   initialCompanies,
   initialTotal,
   initialFilters,
-  initialView,
+  // initialView is propagated through the URL via the server
+  // component's searchParams reading; the client just observes the
+  // current `?view=` from useSearchParams() without a separate prop.
+  initialView: _initialView,
   initialCamera,
 }: Props) {
   const router = useRouter();
@@ -62,34 +65,42 @@ export function EcosystemMapShell({
     return v === "clusters" || v === "heat" ? v : "companies";
   }, [searchParams]);
 
-  const filtersKey = searchParams.toString();
-  const isFirstFetch = useMemo(() => {
-    // True when the URL matches the initial server-rendered state.
-    return matchesInitial(searchParams, initialFilters, initialView);
-  }, [searchParams, initialFilters, initialView]);
+  // Build the API-relevant query string. View mode + camera position +
+  // brief-open flag are client-only state and shouldn't trigger a
+  // network round-trip — strip them before keying the effect.
+  const apiQuery = useMemo(() => {
+    const p = new URLSearchParams(searchParams);
+    p.delete("view");
+    p.delete("lat");
+    p.delete("lng");
+    p.delete("zoom");
+    p.delete("brief");
+    p.sort();
+    return p.toString();
+  }, [searchParams]);
 
-  // Re-fetch on filter change. Skip the very first render — the server
-  // already gave us initialCompanies for the initial URL.
+  // Was the SSR'd payload built from these same filters? If yes, skip
+  // the duplicate first fetch — useEffect will short-circuit and use
+  // initialCompanies as-is.
+  const initialApiQuery = useMemo(
+    () => filtersToApiQuery(initialFilters),
+    [initialFilters],
+  );
+
+  // Re-fetch when the API-relevant filter set changes. Skip the very
+  // first render when the URL still matches the SSR'd state.
   useEffect(() => {
-    if (isFirstFetch) {
+    if (apiQuery === initialApiQuery) {
       setCompanies(initialCompanies);
       setTotal(initialTotal);
       return;
     }
     let cancelled = false;
-    const params = new URLSearchParams(searchParams);
-    // Drop view + camera-related keys from the API call — they're
-    // client-only.
-    params.delete("view");
-    params.delete("lat");
-    params.delete("lng");
-    params.delete("zoom");
-    params.delete("brief");
     setLoading(true);
     setLoadError(null);
     (async () => {
       try {
-        const res = await fetch(`/api/v1/companies?${params.toString()}`);
+        const res = await fetch(`/api/v1/companies?${apiQuery}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as {
           companies: CompanyListItem[];
@@ -109,7 +120,7 @@ export function EcosystemMapShell({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtersKey]);
+  }, [apiQuery, initialApiQuery]);
 
   // Keyboard shortcut "B" toggles the InvestorBrief panel.
   useEffect(() => {
@@ -268,40 +279,22 @@ export function EcosystemMapShell({
   );
 }
 
-function matchesInitial(
-  current: URLSearchParams,
-  initialFilters: CompanyFilters,
-  initialView: ViewMode,
-): boolean {
-  // Server seeded with these — if the URL still reflects them, skip
-  // the duplicate fetch on first hydrate.
-  const map: Record<string, string | undefined> = {
-    sector: initialFilters.sector,
-    sectors: initialFilters.sectors,
-    stage: initialFilters.stage,
-    county: initialFilters.county,
-    city: initialFilters.city,
-    q: initialFilters.q,
-    employee_bucket: initialFilters.employee_bucket,
-    min_employees:
-      initialFilters.min_employees != null
-        ? String(initialFilters.min_employees)
-        : undefined,
-    max_employees:
-      initialFilters.max_employees != null
-        ? String(initialFilters.max_employees)
-        : undefined,
-    hiring_status:
-      initialFilters.hiring_status != null
-        ? String(initialFilters.hiring_status)
-        : undefined,
-  };
-  for (const [k, v] of Object.entries(map)) {
-    const cur = current.get(k);
-    if ((cur ?? undefined) !== v) return false;
-  }
-  // Ignore camera + view; URL drift on those should NOT trigger a re-fetch.
-  // We do still want to skip the duplicate fetch if the view matches.
-  const curView = current.get("view") ?? "companies";
-  return curView === initialView || curView === "" || curView === "companies";
+// Project a CompanyFilters into the same URLSearchParams shape the
+// API-key effect builds — sorted, with camera/view/brief stripped, so
+// the equality check is byte-for-byte deterministic.
+function filtersToApiQuery(f: CompanyFilters): string {
+  const p = new URLSearchParams();
+  if (f.sector) p.set("sector", f.sector);
+  if (f.sectors) p.set("sectors", f.sectors);
+  if (f.stage) p.set("stage", f.stage);
+  if (f.county) p.set("county", f.county);
+  if (f.city) p.set("city", f.city);
+  if (f.q) p.set("q", f.q);
+  if (f.employee_bucket) p.set("employee_bucket", f.employee_bucket);
+  if (f.min_employees != null) p.set("min_employees", String(f.min_employees));
+  if (f.max_employees != null) p.set("max_employees", String(f.max_employees));
+  if (f.hiring_status != null) p.set("hiring_status", String(f.hiring_status));
+  if (f.limit != null) p.set("limit", String(f.limit));
+  p.sort();
+  return p.toString();
 }

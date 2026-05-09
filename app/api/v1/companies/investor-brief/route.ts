@@ -7,8 +7,14 @@ import { generateInvestorBrief } from "@/lib/investor-brief";
 
 export const dynamic = "force-dynamic";
 
+// Filter values are projected into URLSearchParams server-side, so the
+// schema rejects shapes the projection can't handle (objects, arrays).
+// If a future caller wants multi-sector, they should send a comma-
+// joined string under `sectors` (matching the GET endpoint contract).
 const BodySchema = z.object({
-  filter: z.record(z.string(), z.unknown()).default({}),
+  filter: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .default({}),
   slugs: z.array(z.string()).max(120).optional(),
 });
 
@@ -35,13 +41,11 @@ export async function POST(req: Request) {
 
   // Derive the company set: prefer explicit slugs (the client knows
   // what's actually rendered on the map). Fall back to filter-driven
-  // lookup when the client didn't pass any.
+  // lookup when the client didn't pass any. Schema guarantees each
+  // value is string|number|boolean — String() is total over that.
   const filterParams = new URLSearchParams();
   for (const [k, v] of Object.entries(parsed.data.filter)) {
-    if (v == null) continue;
-    if (typeof v === "string") filterParams.set(k, v);
-    else if (typeof v === "number" || typeof v === "boolean")
-      filterParams.set(k, String(v));
+    filterParams.set(k, String(v));
   }
   const { filters } = parseFilters(filterParams);
 
