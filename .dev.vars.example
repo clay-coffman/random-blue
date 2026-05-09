@@ -41,10 +41,6 @@ R2_SECRET_ACCESS_KEY=
 # Full guidance: CLAUDE.md § Local authentication testing.
 # ---------------------------------------------------------------------
 #
-# Skip OTP entirely. Signups auto-verify and land on the authenticated
-# page with no second prompt. Best for inner-loop work.
-# AUTH_SKIP_OTP=true
-#
 # Mailpit transport. Routes outgoing email to mailpit's HTTP send API;
 # the same port serves the inbox UI in your browser.
 #

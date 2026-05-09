@@ -23,12 +23,10 @@ replaced.
 
 ## Test accounts (FOR DEV ONLY)
 
-> ⚠️ **Replace before production.** These credentials are committed to
-> the repo so the dev team can sign in across environments. Rotate
-> before any real user data lands.
-
-All test users share the same password: `passport12345` (12 chars to
-satisfy `auth.ts` `minPasswordLength: 12`).
+Atlas is OTP-only — there's no password to share. Sign in by visiting
+`/sign-in`, entering one of the test emails below, and grabbing the
+6-digit code from this worktree's mailpit inbox (`MAILPIT_URL` in
+`.dev.vars`; defaults like `http://localhost:8027` for `wt2`).
 
 | Role | Email | User ID | Display name | Linked passport |
 |------|-------|---------|--------------|-----------------|

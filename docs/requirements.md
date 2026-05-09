@@ -156,16 +156,17 @@ before submitting.
     **Invite-only** via the `bootstrap-superadmin` script.
 - **Sign-up flow**: 3 steps on one URL with a stepper.
   1. Pick role (founder / owner / investor).
-  2. Enter name, email, password (12+ chars).
+  2. Enter name + email + accept terms.
   3. Verify with a 6-digit OTP emailed to that address (10-minute
      expiry, 30-second resend cooldown). Better Auth's `emailOTP`
-     plugin handles storage/expiry.
-- **Sign-in flow**: email + password on `/sign-in`.
-  "Magic link" and "Continue with Google" appear as Phase-5
-  Coming Soon stubs in Phase 4.
-- **Reset flow**: `/forgot-password` (generic confirmation —
-  don't leak whether the email is on file) → 6-digit code (same
-  OTP plugin) → `/reset-password`.
+     plugin handles storage/expiry; `signIn.emailOtp` starts the
+     session.
+- **Sign-in flow**: email-only on `/sign-in`. Submitting sends a
+  6-digit OTP and routes to `/sign-in/verify`. "Magic link" and
+  "Continue with Google" appear as Phase-5 Coming Soon stubs in
+  Phase 4.
+- **No password reset**: there is no password to reset. A user who
+  loses access to their inbox loses access to the account.
 - **Onboarding** (post-verify, role-specific):
   - **Founder** → `/founder?onboard=1` (the existing Navigator
     intake form, framed with a stepper).
@@ -176,8 +177,9 @@ before submitting.
   - All three end on `/onboarding/done` — single template with
     role-aware copy + CTA.
 - **Settings**: single sectioned page at `/settings`. Sections:
-  Profile (display name, email, time zone), Security (password,
-  sessions, 2FA stub, connected accounts stub), role-specific
+  Profile (display name, email, time zone), Security (sign-in
+  method = email OTP, sessions, 2FA stub, connected accounts stub),
+  role-specific
   (Founder Passport summary OR Investor preferences OR Claimed
   companies), Notifications (saved-search email alerts —
   user-managed list of saved map filters with daily/weekly/off
@@ -372,9 +374,9 @@ Do not invest in:
 - Real OAuth with ChatGPT/Claude (Better Auth covers our user /
   admin login; agents use `X-Atlas-Admin-Token`).
 - Third-party social login providers (Google, GitHub, etc.) for
-  Phase 4 — email + password is enough. The "Continue with
-  Google" button on `/sign-up` and `/sign-in` renders as a
-  Phase-5 stub (matches the wireframe; doesn't ship).
+  Phase 4 — email + OTP is enough. The "Continue with Google"
+  button on `/sign-up` and `/sign-in` renders as a Phase-5 stub
+  (matches the wireframe; doesn't ship).
 - Magic-link login for Phase 4 — same pattern: the `/sign-in`
   "Email me a magic link" button is a Phase-5 stub.
 - 2FA, connected accounts, per-user agent tokens UI — `/settings`
@@ -400,9 +402,9 @@ Do not invest in:
 - Calendar integration.
 - Payment/funding application workflows.
 
-In scope but kept simple: Better Auth email + password, file-upload
-ownership verification (admin manually reviews), email verification
-+ password reset via the `send-email` skill (Resend).
+In scope but kept simple: Better Auth email + OTP via the
+`emailOTP` plugin, file-upload ownership verification (admin
+manually reviews), OTP delivery via the `send-email` skill (Resend).
 
 ## Canonical user flows (five test scenarios)
 

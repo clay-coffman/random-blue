@@ -108,15 +108,12 @@ If the feature under test requires authentication:
    feature's expected tier/role. If your project does not seed test users,
    create them via the seed script before testing.
 4. Submit the login form using refs from the snapshot.
-5. If the project uses an OTP flow, you have two options for this repo:
-   - **Skip it.** Set `AUTH_SKIP_OTP=true` in `.dev.vars` and restart the
-     dev server. Sign-up auto-verifies; no OTP screen renders. Best for
-     non-auth feature testing. Full details: `CLAUDE.md` § Local
-     authentication testing.
-   - **Test the real flow.** Set `MAILPIT_URL=http://localhost:8025` in
-     `.dev.vars` (mailpit must be running on the host), then read the
-     6-digit code from `http://localhost:8025` in a normal browser tab
-     and type it into the verify screen.
+5. The project is OTP-only — every sign-in shows the verify screen.
+   Set `MAILPIT_URL=http://localhost:$((8025+N))` in `.dev.vars`
+   (mailpit must be running on the host for that worktree), then read
+   the 6-digit code from the mailpit inbox at the same URL in a normal
+   browser tab and type it into the verify screen. Full details:
+   `CLAUDE.md` § Local authentication testing.
 6. On the verify page, fill the code field with the OTP.
 7. Submit and verify redirect to the post-login destination.
 

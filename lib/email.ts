@@ -85,20 +85,10 @@ async function send(to: string, subject: string, html: string) {
 export async function sendVerificationEmail(email: string, otp: string) {
   await send(
     email,
-    "Verify your Startup State Atlas account",
-    `<h2>Welcome to Atlas</h2>
-     <p>Your verification code is: <strong style="font-size:24px;letter-spacing:4px">${otp}</strong></p>
-     <p>It expires in 10 minutes.</p>`,
-  );
-}
-
-export async function sendPasswordResetEmail(email: string, otp: string) {
-  await send(
-    email,
-    "Reset your Startup State Atlas password",
-    `<h2>Password reset</h2>
-     <p>Your reset code is: <strong style="font-size:24px;letter-spacing:4px">${otp}</strong></p>
-     <p>It expires in 10 minutes. If you didn't request a reset, ignore this email.</p>`,
+    "Your Startup State Atlas sign-in code",
+    `<h2>Sign in to Atlas</h2>
+     <p>Your 6-digit code is: <strong style="font-size:24px;letter-spacing:4px">${otp}</strong></p>
+     <p>It expires in 10 minutes. If you didn't request this code, ignore this email.</p>`,
   );
 }
 

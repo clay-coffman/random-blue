@@ -11,8 +11,8 @@ disagrees with this file, this file wins.
 | Runtime          | **Cloudflare Workers** (with Static Assets for the Next.js build)                        |
 | DB               | **Cloudflare D1** (SQLite at edge) + **Drizzle ORM**                                     |
 | Object store     | **Cloudflare R2** — `atlas-ownership-docs` (verification docs, required) + optional `atlas-photos` (Agent 4) |
-| Auth             | **Better Auth** (email + password, self-hosted in D1 via Drizzle adapter; Web Crypto password hashing; CLI migrations) |
-| Email            | **Resend** (via the `send-email` skill) — used for Better Auth verification + password-reset mail |
+| Auth             | **Better Auth** (email + 6-digit OTP via `emailOTP` plugin, self-hosted in D1 via Drizzle adapter; CLI migrations) |
+| Email            | **Resend** (via the `send-email` skill) — used to deliver Better Auth sign-in OTPs |
 | LLM              | **Anthropic Claude `claude-opus-4-7`** (use prompt caching where possible)               |
 | Map              | **MapLibre GL** (open tiles via OpenStreetMap or CARTO basemap; no API token)            |
 | Errors / logs    | **Cloudflare Workers Observability** (built-in, free) — `wrangler tail` + Workers Logs UI |
@@ -83,13 +83,12 @@ startup-state-atlas/
 │   │   ├── page.tsx
 │   │   ├── route.md/route.ts     # markdown profile endpoint
 │   │   └── route.json/route.ts   # JSON profile endpoint
-│   ├── sign-in/page.tsx          # Better Auth sign-in (Agent 5)
+│   ├── sign-in/page.tsx          # email-only — sends sign-in OTP (Agent 5)
+│   ├── sign-in/verify/page.tsx   # 6-digit OTP for sign-in (Agent 5)
 │   ├── sign-up/page.tsx          # role select — step 1 of 3 (Agent 5)
-│   ├── sign-up/account/page.tsx  # email + password — step 2 (Agent 5)
+│   ├── sign-up/account/page.tsx  # name + email + terms — step 2 (Agent 5)
 │   ├── sign-up/verify/page.tsx   # 6-digit OTP — step 3 (Agent 5)
-│   ├── login/sent/page.tsx       # "code/link sent" confirmation (Agent 5)
-│   ├── forgot-password/page.tsx  # password reset request (Agent 5)
-│   ├── reset-password/page.tsx   # password reset (Agent 5)
+│   ├── api/auth/start-signup/route.ts # custom POST: pre-creates user + sends OTP
 │   ├── onboarding/founder/page.tsx     # redirects /founder?onboard=1 (Agent 5)
 │   ├── onboarding/owner/page.tsx       # search-and-claim shortcut (Agent 5)
 │   ├── onboarding/investor/page.tsx    # investor preferences form (Agent 5)
@@ -308,8 +307,9 @@ Wrap that in `lib/cf.ts` so handlers don't import OpenNext directly.
 - **Casing:** snake_case API ↔ camelCase TS. Convert at the
   Drizzle/zod boundary.
 - **Auth (dual model):**
-  - **Web users (humans):** Better Auth (email + password,
-    self-hosted in D1). `auth.ts` configures the Drizzle adapter
+  - **Web users (humans):** Better Auth (email + 6-digit OTP via
+    the `emailOTP` plugin, self-hosted in D1). `auth.ts` configures
+    the Drizzle adapter
     and an `additionalFields.role` column on `user` with values
     `founder` / `owner` / `investor` / `goeo_admin` / `superadmin`.
     Default for self-serve sign-up is `founder`; founders, business

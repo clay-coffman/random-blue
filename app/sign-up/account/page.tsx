@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AuthFooterLink, AuthShell } from "@/components/auth/AuthShell";
-import { authClient } from "@/lib/auth-client";
 import { safeNext } from "@/lib/url";
 import {
   Form,
@@ -24,26 +23,12 @@ const Role = z.enum(["founder", "owner", "investor"]);
 const Schema = z.object({
   name: z.string().min(2, "Enter your full name"),
   email: z.string().email("Enter a valid email"),
-  password: z
-    .string()
-    .min(12, "Use at least 12 characters")
-    .max(128, "Password is too long"),
   terms: z.literal(true, {
     errorMap: () => ({ message: "You must accept the terms to continue" }),
   }),
 });
 
 type FormValues = z.infer<typeof Schema>;
-
-function passwordStrength(pw: string): { score: 0 | 1 | 2 | 3; label: string } {
-  if (!pw) return { score: 0, label: "" };
-  let score = 0;
-  if (pw.length >= 12) score++;
-  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
-  if (/\d/.test(pw) && /[^A-Za-z0-9]/.test(pw)) score++;
-  const label = ["weak", "fair", "good", "strong"][score];
-  return { score: score as 0 | 1 | 2 | 3, label };
-}
 
 export default function SignUpAccountPage() {
   return (
@@ -63,38 +48,30 @@ function AccountForm() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(Schema),
-    defaultValues: { name: "", email: "", password: "", terms: false as never },
+    defaultValues: { name: "", email: "", terms: false as never },
   });
-
-  const password = form.watch("password");
-  const strength = passwordStrength(password);
 
   async function onSubmit(values: FormValues) {
     setServerError(null);
     setSubmitting(true);
     try {
-      const result = await authClient.signUp.email({
-        name: values.name,
-        email: values.email,
-        password: values.password,
-        role,
+      const res = await fetch("/api/auth/start-signup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: values.name,
+          email: values.email,
+          role,
+        }),
       });
-      if (result.error) {
-        setServerError(result.error.message ?? "Something went wrong.");
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as
+          | { error?: { code?: string; message?: string } }
+          | null;
+        setServerError(
+          body?.error?.message ?? "Couldn't start signup. Try again.",
+        );
         setSubmitting(false);
-        return;
-      }
-      // Better Auth returns a session token only when the server's
-      // `requireEmailVerification` is false (i.e. AUTH_SKIP_OTP=true in
-      // dev). In that case the user is already signed in — the verify
-      // page would dead-end them. Otherwise the OTP plugin's
-      // sendVerificationOnSignUp: true has already dispatched a code,
-      // and we route to the verify screen as usual.
-      if (result.data?.token) {
-        router.push(next || `/onboarding/${role}`);
-        // The header is rendered server-side from the session cookie;
-        // refresh so the new session is picked up without a full reload.
-        router.refresh();
         return;
       }
       const sp = new URLSearchParams();
@@ -159,47 +136,6 @@ function AccountForm() {
                 <p className="text-xs text-ink-3">
                   We&rsquo;ll send a 6-digit code here.
                 </p>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <Input
-                    type="password"
-                    autoComplete="new-password"
-                    {...field}
-                  />
-                </FormControl>
-                {password ? (
-                  <div className="mt-1 flex items-center gap-2">
-                    <div className="h-1 flex-1 overflow-hidden rounded-pill bg-stone">
-                      <div
-                        className={`h-full transition-all ${
-                          strength.score >= 3
-                            ? "w-full bg-sage"
-                            : strength.score === 2
-                              ? "w-2/3 bg-ember"
-                              : strength.score === 1
-                                ? "w-1/3 bg-ember"
-                                : "w-1/6 bg-danger"
-                        }`}
-                      />
-                    </div>
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-ink-3">
-                      {strength.label}
-                    </span>
-                  </div>
-                ) : (
-                  <p className="text-xs text-ink-3">
-                    12+ characters. Mix letters, numbers, and a symbol.
-                  </p>
-                )}
                 <FormMessage />
               </FormItem>
             )}
