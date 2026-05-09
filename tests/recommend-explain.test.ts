@@ -385,7 +385,8 @@ describe("synthesizeNarrative", () => {
   it("returns empty for an empty retrieval set without calling the LLM", async () => {
     const { client, calls } = fakeAnthropic({ text: "" });
     const out = await synthesizeNarrative(priyaPassport, [], client);
-    expect(out).toBe("");
+    expect(out.narrative).toBe("");
+    expect(out.degraded).toBe(false);
     expect(calls).toHaveLength(0);
   });
 
@@ -410,40 +411,44 @@ describe("synthesizeNarrative", () => {
       text: '```json\n{"narrative":"Pretend strategic paragraph."}\n```',
     });
     const out = await synthesizeNarrative(priyaPassport, priyaScored, client);
-    expect(out).toBe("Pretend strategic paragraph.");
+    expect(out.narrative).toBe("Pretend strategic paragraph.");
+    expect(out.degraded).toBe(false);
   });
 
   it("falls back to deterministic prose on Anthropic error and logs", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
     const { client } = fakeAnthropic({ throwError: new Error("boom") });
     const out = await synthesizeNarrative(priyaPassport, priyaScored, client);
-    expect(out).not.toBe("");
-    expect(out).toContain("Small Business Administration (SBA)");
-    expect(warn).toHaveBeenCalledWith(
+    expect(out.narrative).not.toBe("");
+    expect(out.narrative).toContain("Small Business Administration (SBA)");
+    expect(out.degraded).toBe(true);
+    expect(err).toHaveBeenCalledWith(
       "[recommend-explain] generation failed",
       expect.any(Error),
     );
-    warn.mockRestore();
+    err.mockRestore();
   });
 
   it("falls back to deterministic prose when the LLM JSON fails the schema", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
     const { client } = fakeAnthropic({
       text: '{"narrative":""}', // empty narrative — fails min(1)
     });
     const out = await synthesizeNarrative(priyaPassport, priyaScored, client);
-    expect(out).not.toBe("");
-    expect(out).toContain("Small Business Administration (SBA)");
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
+    expect(out.narrative).not.toBe("");
+    expect(out.narrative).toContain("Small Business Administration (SBA)");
+    expect(out.degraded).toBe(true);
+    expect(err).toHaveBeenCalled();
+    err.mockRestore();
   });
 
   it("falls back when the LLM returns no JSON object at all", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
     const { client } = fakeAnthropic({ text: "no JSON here, sorry" });
     const out = await synthesizeNarrative(priyaPassport, priyaScored, client);
-    expect(out).not.toBe("");
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
+    expect(out.narrative).not.toBe("");
+    expect(out.degraded).toBe(true);
+    expect(err).toHaveBeenCalled();
+    err.mockRestore();
   });
 });

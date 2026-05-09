@@ -50,6 +50,7 @@ export type RecommendResult = {
   narrative: string;
   recommendations: RecommendedResource[];
   generatedAt: string;
+  degraded?: boolean;
 };
 
 export type EnrichField = {

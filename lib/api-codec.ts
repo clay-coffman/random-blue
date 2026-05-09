@@ -156,6 +156,7 @@ export function fromWireRecommendResponse(
     narrative: w.narrative,
     recommendations: w.recommendations.map(fromWireRecommendedResource),
     generatedAt: w.generated_at,
+    degraded: w.degraded,
   };
 }
 
@@ -167,6 +168,7 @@ export function toWireRecommendResponse(
     narrative: r.narrative,
     recommendations: r.recommendations.map(toWireRecommendedResource),
     generated_at: r.generatedAt,
+    degraded: r.degraded,
   };
 }
 

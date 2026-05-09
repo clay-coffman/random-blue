@@ -55,6 +55,10 @@ export const RecommendResponse = z.object({
   recommendations: z.array(RecommendedResource),
   // ISO 8601 — used by the front-end for cache-staleness display.
   generated_at: z.string(),
+  // True when synthesizeNarrative fell back to the deterministic
+  // template (Anthropic call failed, timed out, or returned bad JSON).
+  // The front-end surfaces this as a small badge.
+  degraded: z.boolean().optional(),
 });
 export type RecommendResponse = z.infer<typeof RecommendResponse>;
 

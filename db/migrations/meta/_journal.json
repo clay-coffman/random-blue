@@ -57,6 +57,13 @@
       "when": 1778343556595,
       "tag": "0007_sloppy_paper_doll",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1778350398601,
+      "tag": "0008_same_typhoid_mary",
+      "breakpoints": true
     }
   ]
 }

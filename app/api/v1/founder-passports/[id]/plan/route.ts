@@ -31,6 +31,7 @@ export async function GET(
       });
     }
     const narrative = passport[0].narrativeText ?? "";
+    const degraded = passport[0].narrativeDegraded === true;
 
     const rows = await d
       .select({
@@ -70,6 +71,7 @@ export async function GET(
       narrative,
       recommendations: recs,
       generated_at: new Date().toISOString(),
+      degraded,
     };
     return Response.json(payload);
   } catch (err) {
