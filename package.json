@@ -7,10 +7,12 @@
     "node": ">=24"
   },
   "scripts": {
+    "predev": "tsx scripts/dev-preflight.ts dev",
     "dev": "next dev --port ${PORT:-3000}",
     "build": "next build",
     "prebuild": "tsx scripts/openapi-build.ts",
     "start": "next start",
+    "prepreview": "tsx scripts/dev-preflight.ts preview",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview --port ${WRANGLER_PORT:-8787}",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
