@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { getAuth } from "@/auth";
 import { db } from "@/lib/db";
 import { founderPassports } from "@/db/schema";
@@ -44,9 +44,24 @@ export default async function PlanPage({ params, searchParams }: PageProps) {
   // call the loader directly here (not via fetch) — same Worker, no
   // network round-trip. Until then, we synthesise from fixtures.
 
-  // Resolve the current viewer so we can (a) handle a `?claim={id}` from
-  // the post-signup redirect and (b) decide whether to render the
-  // "Save your plan" CTA. Cookie failures fall through to "anonymous".
+  // Persona fixture branch — no auth, no DB. Render and return.
+  const personaId = personaIdFromPassport(id);
+  if (personaId) {
+    const input = personaFixtures[personaId];
+    const result = recommendMock(input, id);
+    return <ResultsView passportId={id} input={input} result={result} />;
+  }
+
+  // Anything that doesn't start with `fp_` isn't a passport id at all —
+  // 404 before we touch session, DB, or build CTA props.
+  if (!id.startsWith("fp_")) {
+    notFound();
+  }
+
+  // Real passport path. Resolve the current viewer so we can
+  // (a) handle a `?claim={id}` from the post-signup redirect and
+  // (b) decide whether to render the "Save your plan" CTA. Cookie
+  // failures fall through to "anonymous".
   const session = await (await getAuth())
     .api.getSession({ headers: await headers() })
     .catch(() => null);
@@ -54,56 +69,35 @@ export default async function PlanPage({ params, searchParams }: PageProps) {
 
   // Server-side claim. Only when the URL came from sign-up
   // (?claim={id} matches the route id) AND the passport is unowned.
-  // Idempotent on repeat — but we redirect to the clean URL afterwards
-  // so the claim param doesn't linger in the address bar.
+  // The `isNull(userId)` predicate in the WHERE makes the update
+  // atomic — a concurrent claim that already set `user_id` won't be
+  // silently overwritten here.
   if (claim === id && userId) {
+    await db()
+      .update(founderPassports)
+      .set({ userId })
+      .where(
+        and(eq(founderPassports.id, id), isNull(founderPassports.userId)),
+      );
+    redirect(`/plan/${id}`);
+  }
+
+  // CTA visibility: hide when the viewer already owns this passport.
+  let cta: React.ReactNode = null;
+  let viewerOwnsPlan = false;
+  if (userId) {
     const rows = await db()
       .select({ userId: founderPassports.userId })
       .from(founderPassports)
       .where(eq(founderPassports.id, id))
       .limit(1);
-    const row = rows[0];
-    if (row && !row.userId) {
-      await db()
-        .update(founderPassports)
-        .set({ userId })
-        .where(eq(founderPassports.id, id));
-    }
-    redirect(`/plan/${id}`);
+    viewerOwnsPlan = rows[0]?.userId === userId;
   }
-
-  // CTA visibility: hide when the viewer already owns this passport.
-  // Persona fixture ids (`fp_jordan` …) aren't real DB rows for any
-  // user, so the CTA on those is misleading — skip it there too.
-  const personaId = personaIdFromPassport(id);
-  let cta: React.ReactNode = null;
-  if (!personaId) {
-    let viewerOwnsPlan = false;
-    if (userId) {
-      const rows = await db()
-        .select({ userId: founderPassports.userId })
-        .from(founderPassports)
-        .where(eq(founderPassports.id, id))
-        .limit(1);
-      viewerOwnsPlan = rows[0]?.userId === userId;
-    }
-    if (!viewerOwnsPlan) {
-      cta = <SaveYourPlanCta passportId={id} />;
-    }
-  }
-
-  // Persona fixture? (`fp_jordan`, `fp_priya`, …)
-  if (personaId) {
-    const input = personaFixtures[personaId];
-    const result = recommendMock(input, id);
-    return <ResultsView passportId={id} input={input} result={result} />;
+  if (!viewerOwnsPlan) {
+    cta = <SaveYourPlanCta passportId={id} />;
   }
 
   // Synthetic local id from the form fallback. Hydrate from
   // sessionStorage on the client.
-  if (id.startsWith("fp_")) {
-    return <LocalPlanLoader passportId={id} cta={cta} />;
-  }
-
-  notFound();
+  return <LocalPlanLoader passportId={id} cta={cta} />;
 }

@@ -39,10 +39,11 @@ export function ResultsView({ passportId, input, result, cta }: Props) {
   // Friendly label for the kicker / "plan id" footer. Persona fixture
   // pages show e.g. "priya_founder_plan" instead of the raw fp_priya
   // route token; real plans drop the random hash entirely (not useful
-  // to humans, the share button has the full URL anyway).
-  const planLabel = firstName
-    ? `${firstName.toLowerCase()}_founder_plan`
-    : null;
+  // to humans, the share button has the full URL anyway). Derive from
+  // `personaId` rather than the display name so labels stay
+  // identifier-shaped (no spaces or punctuation) and match the
+  // tab title built by generateMetadata.
+  const planLabel = personaId ? `${personaId}_founder_plan` : null;
 
   return (
     <div className="mx-auto max-w-[1480px] px-4 pb-16 pt-8 sm:px-7">

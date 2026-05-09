@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getAuth } from "@/auth";
 import { db } from "@/lib/db";
@@ -112,13 +112,19 @@ export async function POST(req: Request) {
 
       // First-touch claim: an authed founder revisiting their own
       // passport (or one they intaked anonymously and just signed up for)
-      // attaches it to their account. Only when no one owns it yet — we
-      // never overwrite an existing user_id.
+      // attaches it to their account. The `isNull(userId)` predicate in
+      // the WHERE makes this atomic — a concurrent claim that already
+      // set `user_id` won't be silently overwritten here.
       if (sessionUserId && !row.userId) {
         await d
           .update(founderPassports)
           .set({ userId: sessionUserId })
-          .where(eq(founderPassports.id, row.id));
+          .where(
+            and(
+              eq(founderPassports.id, row.id),
+              isNull(founderPassports.userId),
+            ),
+          );
       }
 
       // Validate enum-typed columns at the boundary. The DB stores text
