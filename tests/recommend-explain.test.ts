@@ -80,8 +80,7 @@ describe("explainSkip", () => {
   });
 
   it("flags stage mismatch when other signals are clean", () => {
-    // Pass stages the founder isn't in — STAGES options include "idea" and
-    // "early"; the basePassport stage is "paying_customers".
+    // Pass stages the founder isn't in — basePassport.stage is "growth".
     const facets: SkipFacets = {
       stages: ["idea", "early"],
     };
