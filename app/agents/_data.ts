@@ -217,7 +217,7 @@ export const claudeDesktopConfig = `{
       "command": "npx",
       "args": ["-y", "tsx", "<absolute-path>/mcp/server.ts"],
       "env": {
-        "STARTUP_STATE_API_URL": "https://startup.utah.gov",
+        "STARTUP_STATE_API_URL": "https://startupstateatlas.dev",
         "ATLAS_ADMIN_TOKEN": "<optional-token>"
       }
     }
@@ -225,13 +225,13 @@ export const claudeDesktopConfig = `{
 }`;
 
 export const remoteMcpExample = `# Streamable HTTP transport (no install required)
-curl -N https://startup.utah.gov/api/mcp \\
+curl -N https://startupstateatlas.dev/api/mcp \\
   -X POST \\
   -H 'Accept: application/json' \\
   -H 'Content-Type: application/json' \\
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'`;
 
-export const curlExample = `curl https://startup.utah.gov/api/v1/resources/recommend \\
+export const curlExample = `curl https://startupstateatlas.dev/api/v1/resources/recommend \\
   -X POST -H 'Content-Type: application/json' \\
   -d '{
     "passport_id": "fp_priya"
@@ -239,7 +239,7 @@ export const curlExample = `curl https://startup.utah.gov/api/v1/resources/recom
 
 export const cliInstallExample = `git clone https://github.com/utah-goed/startup-state-atlas
 cd startup-state-atlas && npm install
-export STARTUP_STATE_API_URL=https://startup.utah.gov
+export STARTUP_STATE_API_URL=https://startupstateatlas.dev
 # ATLAS_ADMIN_TOKEN is only needed for write subcommands.
 npm run cli -- recommend --persona priya --compact`;
 

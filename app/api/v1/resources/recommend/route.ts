@@ -78,23 +78,12 @@ export async function POST(req: Request) {
     let passportId: string;
     let passport: FounderPassportInput;
 
-    if (input.passport_id) {
-      // When `passport_id` is provided, the saved passport wins. Sending a
-      // full body alongside is a client mistake — reject so callers don't
-      // silently lose fields. (Documented in openapi-additions.md.)
-      const sentExtraFields =
-        input.stage !== undefined ||
-        input.industry !== undefined ||
-        input.goal !== undefined;
-      if (sentExtraFields) {
-        throw new ApiError({
-          code: "BAD_REQUEST",
-          message:
-            "Send either `passport_id` (use saved passport) OR a full passport body, not both.",
-          status: 400,
-        });
-      }
-
+    // RecommendRequest is a Zod union: id-only (`.strict()` so no extra
+    // fields) or a full FounderPassportInput body. The "both" payload
+    // (passport_id + body fields) fails both branches and is rejected
+    // upstream by `RecommendRequest.safeParse` with the standard 400
+    // envelope — see schemas/recommend.ts.
+    if ("passport_id" in input) {
       const rows = await d
         .select()
         .from(founderPassports)
@@ -162,18 +151,9 @@ export async function POST(req: Request) {
         website_url: row.websiteUrl ?? undefined,
       };
     } else {
-      // Validate the body as a full passport input.
-      const fullParsed = FounderPassportInput.safeParse(input);
-      if (!fullParsed.success) {
-        throw new ApiError({
-          code: "BAD_REQUEST",
-          message:
-            "Either passport_id or a full passport body is required",
-          status: 400,
-          details: fullParsed.error.format(),
-        });
-      }
-      passport = fullParsed.data;
+      // Body branch — Zod already validated it as FounderPassportInput
+      // when parsing RecommendRequest above.
+      passport = input;
       passportId = newId("fp");
       const createdAt = new Date();
       await d.insert(founderPassports).values({

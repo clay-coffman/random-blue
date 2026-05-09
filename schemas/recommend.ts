@@ -8,15 +8,24 @@ import { FounderPassportInput } from "./founder-passport";
 
 // ─── Recommend ─────────────────────────────────────────────────────
 
-export const RecommendRequest = FounderPassportInput.extend({
-  passport_id: z.string().startsWith("fp_").optional(),
-}).partial({
-  // Allow callers to pass just `{ passport_id }` and skip the full body
-  // (we'll load the passport from D1).
-  stage: true,
-  industry: true,
-  goal: true,
-});
+// Discriminated by the presence of `passport_id`. Both branches are
+// `.strict()` so a payload that mixes `passport_id` with body fields
+// fails the id-only branch (extra fields) AND the body branch
+// (`passport_id` is unknown). Net effect:
+// `RecommendRequest.safeParse({ passport_id, stage, ... })` returns
+// `success: false`, which the route's existing safeParse path turns
+// into a 400 with the standard `{ error: { code: "bad_request", ... } }`
+// envelope. Route logic narrows on `"passport_id" in input`.
+const RecommendRequestById = z
+  .object({
+    passport_id: z.string().startsWith("fp_"),
+  })
+  .strict();
+
+export const RecommendRequest = z.union([
+  RecommendRequestById,
+  FounderPassportInput.strict(),
+]);
 export type RecommendRequest = z.infer<typeof RecommendRequest>;
 
 export const Bucket = z.enum(["now", "next", "ignore"]);

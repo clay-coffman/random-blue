@@ -14,7 +14,9 @@ Development (GOED). Two products in one platform: the **Founder's
 Navigator** and the **Utah Startup Map**. Polished founder/investor
 product on top, agent-native API/CLI/MCP layer underneath. The engagement
 originated at Utah GOED's AI Builder Day; everything past the initial
-scaffold is shipping for real users on <https://startup.utah.gov/>.
+scaffold is shipping for real users at <https://startupstateatlas.dev>
+(<https://startup.utah.gov/> is the planned canonical home, not yet
+live).
 
 The canonical brief from GOED (delivered at AI Builder Day) is in
 `../source_data/page-2026-05-08-19-38-24.md`. Read it for verbatim

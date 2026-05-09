@@ -89,7 +89,7 @@ async function run(req: Request): Promise<NextResponse> {
     );
 
   const result: CronResult = { ran: 0, emailed: 0, skipped_empty: 0, errors: [] };
-  const baseUrl = (env().BETTER_AUTH_URL ?? "https://startup.utah.gov").replace(
+  const baseUrl = (env().BETTER_AUTH_URL ?? "https://startupstateatlas.dev").replace(
     /\/$/,
     "",
   );

@@ -160,7 +160,7 @@ function SiteFooter() {
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-4 px-4 py-6 font-mono text-[11px] uppercase tracking-wider text-ink-3 sm:px-7">
         <span className="flex items-center gap-2">
           <AtlasMark className="h-5 w-5" />
-          Atlas · startup.utah.gov
+          Atlas · startupstateatlas.dev
         </span>
         <nav aria-label="Resources" className="flex flex-wrap gap-4">
           {footerLinks.map((l) => (

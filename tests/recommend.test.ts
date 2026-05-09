@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bucketize, scoreResource } from "@/lib/recommend";
 import type { ResourceRow } from "@/lib/recommend";
 import type { FounderPassportInput } from "@/schemas/founder-passport";
+import { RecommendRequest } from "@/schemas/recommend";
 
 // ─── Resource fixtures ─────────────────────────────────────────────
 
@@ -332,5 +333,46 @@ describe("Edge cases", () => {
     // Remainder (after 6) might or might not show in ignore depending on
     // their scores. Just assert it's an array.
     expect(Array.isArray(buckets.ignore)).toBe(true);
+  });
+});
+
+// ─── RecommendRequest schema (XOR contract) ────────────────────────
+
+describe("RecommendRequest schema", () => {
+  const fullBody = {
+    stage: "mvp",
+    industry: "B2B SaaS",
+    goal: "raise_seed_round",
+    communities: [],
+    needs: [],
+    constraints: [],
+  };
+
+  it("accepts a passport_id only", () => {
+    const r = RecommendRequest.safeParse({ passport_id: "fp_priya" });
+    expect(r.success).toBe(true);
+  });
+
+  it("accepts a full body without passport_id", () => {
+    const r = RecommendRequest.safeParse(fullBody);
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects passport_id together with body fields", () => {
+    const r = RecommendRequest.safeParse({
+      passport_id: "fp_priya",
+      ...fullBody,
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects an empty payload", () => {
+    expect(RecommendRequest.safeParse({}).success).toBe(false);
+  });
+
+  it("rejects a passport_id without the fp_ prefix", () => {
+    expect(
+      RecommendRequest.safeParse({ passport_id: "priya" }).success,
+    ).toBe(false);
   });
 });

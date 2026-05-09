@@ -8,8 +8,12 @@
   },
   "servers": [
     {
-      "url": "https://startup.utah.gov",
+      "url": "https://startupstateatlas.dev",
       "description": "Production"
+    },
+    {
+      "url": "https://startup.utah.gov",
+      "description": "Planned canonical (not yet live)"
     },
     {
       "url": "http://localhost:3000",
@@ -1475,20 +1479,33 @@
           }
         }
       },
-      "RecommendRequest": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/FounderPassportInput"
-          }
-        ],
+      "RecommendRequestById": {
         "type": "object",
+        "required": [
+          "passport_id"
+        ],
+        "additionalProperties": false,
         "properties": {
           "passport_id": {
             "type": "string",
             "pattern": "^fp_[a-zA-Z0-9_-]+$"
           }
         },
-        "description": "Either pass `passport_id` and skip the body (we'll load the\npassport from D1), or pass a full `FounderPassportInput`. Sending\nboth with conflicting `stage`/`industry`/`goal` is a 400.\n"
+        "description": "Re-use a saved passport row by id. No other fields permitted.\n"
+      },
+      "RecommendRequestByBody": {
+        "$ref": "#/components/schemas/FounderPassportInput"
+      },
+      "RecommendRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RecommendRequestById"
+          },
+          {
+            "$ref": "#/components/schemas/RecommendRequestByBody"
+          }
+        ],
+        "description": "Either pass `passport_id` (re-uses an existing passport row)\nOR a full `FounderPassportInput` (creates one) — never both.\nSending both is a 400 with `code: bad_request`.\n"
       },
       "Bucket": {
         "type": "string",
