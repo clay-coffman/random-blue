@@ -9,21 +9,13 @@ import {
 } from "@/components/ui/dialog";
 import { ScribbleDivider } from "@/components/brand";
 import { SECTOR_REGISTRY } from "@/lib/sectors";
+import { STAGE_VALUES, stageDisplayName } from "@/lib/stages";
 import { BUCKET_PRESETS } from "@/lib/employee-bucket";
 import type { CompanyListItem } from "@/lib/companies-list";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
 import { SaveSearchModal } from "./SaveSearchModal";
 
-const STAGES = [
-  "bootstrapped",
-  "pre-seed",
-  "seed",
-  "series a",
-  "series b",
-  "series c",
-  "series d+",
-];
 
 const COUNTIES = [
   "Beaver",
@@ -300,9 +292,9 @@ function FilterControls({
           className="h-11 min-h-[44px] w-full rounded-md border-[1.5px] border-ink/30 bg-paper px-3 text-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ember/30"
         >
           <option value="">Any stage</option>
-          {STAGES.map((s) => (
+          {STAGE_VALUES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {stageDisplayName(s)}
             </option>
           ))}
         </select>
