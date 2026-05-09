@@ -6,7 +6,7 @@ description:
   writing or modifying UI code.
 ---
 
-# PA Apply Accessibility Reviewer
+# Accessibility Reviewer
 
 Accessibility reviewer ensuring UI code is usable by everyone, including users
 with disabilities.

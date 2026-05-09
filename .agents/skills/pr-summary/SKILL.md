@@ -13,13 +13,13 @@ Generate a pull request description for the current branch.
 
    ```bash
    git branch --show-current
-   git log dev..HEAD --oneline
+   git log main..HEAD --oneline
    ```
 
 2. Get the diff summary:
 
    ```bash
-   git diff dev...HEAD --stat
+   git diff main...HEAD --stat
    ```
 
 3. Generate PR description using this format:
@@ -44,4 +44,4 @@ Generate a pull request description for the current branch.
 
 - Focus on why the change matters, not only what files changed.
 - Include breaking changes prominently.
-- PRs must target `dev`.
+- PRs must target `main`.

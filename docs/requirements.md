@@ -1,7 +1,12 @@
 # Requirements — Startup State Atlas
 
-Distilled from `docs/product-plan.md` (the full 870-line product spec
-remains the source of truth for any ambiguity).
+The canonical product spec. If something is ambiguous, this file is the
+source of truth — escalate to the user, don't fall back to the archived
+original.
+
+Architecture, frozen contracts, and conventions live in
+`docs/architecture.md` and `docs/agent-tasks/00-shared-context.md`. Build
+status (what's shipped vs. left) lives in `docs/implementation-plan.md`.
 
 ## Product summary
 
@@ -353,7 +358,7 @@ context obvious.
 
 ## Out of scope for the initial production ship (explicit cuts)
 
-Per `docs/product-plan.md`, do not invest in:
+Do not invest in:
 
 - Real OAuth with ChatGPT/Claude (Better Auth covers our user /
   admin login; agents use `X-Atlas-Admin-Token`).
@@ -388,7 +393,7 @@ ownership verification (admin manually reviews), email verification
 
 These are the load-bearing paths real users hit on the live site;
 they double as regression scenarios exercised by the seeded persona
-fixtures. Full narrative in `docs/product-plan.md`.
+fixtures.
 
 1. **Jordan (pre-seed)** — Click "Try Jordan". System produces a
    start-business checklist + student/community resources + "not
@@ -450,11 +455,47 @@ The brief explicitly says: *"You don't need to research or compile
 anything — focus every hour on the build."* Don't scrape startup.utah.gov,
 LinkedIn, or pampam.city. Use what's in `docs/source_data/`.
 
+## Open work before launch
+
+Tracked here so they don't fall through the cracks. The agent-native
+layer (CLI / MCP / OpenAPI / `/llms.txt` / `/AGENTS.md` / `/agents`
+page) is in flight on `feat/agent-layer`; the ecosystem-map polish
+and Investor Brief fallback handling are in flight on `feat/agent-4`.
+The items below are what's still outstanding once those land.
+
+### Photo gallery upload
+
+The customer brief lists "Photo gallery" as a required company-profile
+field. The `companyPhotos` table exists in `db/schema.ts`, but no
+upload UI is wired into the claim flow
+(`app/companies/[slug]/claim/_form.tsx`) or editor
+(`app/companies/[slug]/_components/EditorForm.tsx`). The profile page
+renders a placeholder.
+
+**Open product call:** is upload self-service for verified owners (via
+the editor after claim), or admin-curated only? The upload UI, R2
+bucket policy, and moderation flow follow from that decision.
+
+### GOEO admin role audit + operator runbook
+
+The admin UI spec above describes role gates, but verify end-to-end
+before handover:
+
+- Every `/admin/*` route is gated to `goeo_admin` or `superadmin`
+  (no founder/owner/investor leak through middleware).
+- `npm run bootstrap-superadmin <email>` works against production D1.
+- `/admin/admins` invites send a real one-time link via Resend, and
+  consuming it flips the recipient's role.
+
+Pair the audit with a short operator runbook for GOEO staff covering
+bootstrap, admin invites, and the day-1 review queues (claim
+submissions, pending edits).
+
 ## Source-of-truth pointers
 
 - Implementation map: `docs/implementation-plan.md`.
 - Screens / sitemap: `docs/screens.md`.
-- Full product plan: `docs/product-plan.md`.
+- Original product plan (archived): `docs/archive/product-plan-original.md`.
 - Architecture: `docs/architecture.md`.
 - Customer brief (canonical): `docs/source_data/page-2026-05-08-19-38-24.md`.
 - Per-agent execution: `docs/agent-tasks/agent-<N>-<slice>.md`.

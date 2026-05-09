@@ -19,7 +19,7 @@ this layer. Aim for ~120 minutes.
 2. `docs/agent-tasks/00-shared-context.md`.
 3. `docs/architecture.md` — repo layout (`cli/`, `mcp/`, `public/`).
 4. `docs/requirements.md` — Agent-native layer.
-5. `docs/product-plan.md` lines 196–397 (API + CLI + MCP +
+5. `docs/archive/product-plan-original.md` lines 196–397 (API + CLI + MCP +
    llms.txt + AGENTS.md spec).
 6. `design/startup-state-atlas-wireframes/project/wireframes/v2/agents.js`
    (chosen direction: C install hero + B tabs + A reference). The
@@ -154,7 +154,7 @@ Add the bin entry to `package.json`:
 Use `@modelcontextprotocol/sdk` (install it). Stdio transport for
 local Claude Desktop configuration.
 
-Tools (per `docs/product-plan.md` lines 290–301):
+Tools (per `docs/archive/product-plan-original.md` lines 290–301):
 
 - `recommend_resources(profile)`
 - `search_resources(query, filters)`
@@ -175,7 +175,7 @@ already established ownership via the web flow).
 
 Each tool wraps an HTTP call to the deployed Worker.
 
-Resources (per `docs/product-plan.md` lines 304–313):
+Resources (per `docs/archive/product-plan-original.md` lines 304–313):
 
 - `startupstate://resources/{id}`
 - `startupstate://companies/{slug}`
@@ -184,7 +184,7 @@ Resources (per `docs/product-plan.md` lines 304–313):
 - `startupstate://datasets/resources` — paginated list
 - `startupstate://datasets/companies` — paginated list
 
-Prompts (per `docs/product-plan.md` lines 316–321):
+Prompts (per `docs/archive/product-plan-original.md` lines 316–321):
 
 - `founder_intake`
 - `investor_tour`
@@ -197,7 +197,7 @@ version is sufficient for production.
 
 ### 5. `public/llms.txt`
 
-Per `docs/product-plan.md` lines 345–368. Links to:
+Per `docs/archive/product-plan-original.md` lines 345–368. Links to:
 
 - `/api/v1/openapi.json`
 - `/AGENTS.md`
@@ -214,14 +214,14 @@ lists.
 
 ### 6. `public/AGENTS.md`
 
-Per `docs/product-plan.md` lines 370–397. The end-user-facing
+Per `docs/archive/product-plan-original.md` lines 370–397. The end-user-facing
 agent rules. **Distinct from the repo-root `AGENTS.md`**, which is
 for coding agents. This file is served at the public URL
 `https://<host>/AGENTS.md`.
 
 ### 7. `app/agents/page.tsx` — `/agents` docs page
 
-Per `docs/product-plan.md` lines 800–815. Human-readable. Sections:
+Per `docs/archive/product-plan-original.md` lines 800–815. Human-readable. Sections:
 
 - "Startup State for Agents" headline.
 - API: `curl https://...../api/v1/resources/recommend ...`

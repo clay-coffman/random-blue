@@ -19,7 +19,7 @@ via agent-browser.
 
 ### 1. Determine what to test
 
-- Run `git log --oneline dev..HEAD` and `git diff --stat dev..HEAD` to
+- Run `git log --oneline main..HEAD` and `git diff --stat main..HEAD` to
   understand what the current branch changes.
 - Identify the affected routes, components, and user flows.
 - Build a mental test plan covering: happy path, edge cases, responsive
@@ -27,13 +27,12 @@ via agent-browser.
 
 ### 2. Identify this worktree's ports
 
-This project uses multiple worktrees, each with its own server port and Docker
-DB port. **Never hardcode local ports** - always read ports from `.env.local`.
+This project uses multiple worktrees, each with its own server port. **Never
+hardcode local ports** - always read ports from `.env.local`.
 
 ```bash
 APP_PORT=$(grep '^PORT=' .env.local | cut -d= -f2)
-DB_PORT=$(grep '^DB_PORT=' .env.local | cut -d= -f2)
-echo "App: localhost:${APP_PORT:-3000}  DB: localhost:${DB_PORT:-5434}"
+echo "App: localhost:${APP_PORT:-3000}"
 ```
 
 Use `$APP_PORT` (falling back to 3000 if unset) for all URLs throughout testing.
@@ -49,20 +48,7 @@ echo "agent-browser session: $WORKTREE_NAME"
 
 Use `$AB` in place of `agent-browser` for all commands throughout testing.
 
-### 3. Verify the database is running
-
-If your project uses Docker for the local DB, check it's up on the correct
-`DB_PORT`:
-
-```bash
-docker ps --format '{{.Names}}\t{{.Ports}}' | grep "$DB_PORT" || echo "DB NOT RUNNING on port $DB_PORT"
-```
-
-If the DB is not running, start it. Most projects expose this as a single
-command — the exact wrapper varies (e.g. `docker compose up -d`,
-`doppler run -- docker compose up -d`, or an npm script like `npm run db:up`).
-
-### 4. Ensure the dev server is running
+### 3. Ensure the dev server is running
 
 **CRITICAL: Do NOT kill processes on other ports.** Other worktrees run their
 own servers on different ports; never interfere with them.
@@ -101,13 +87,13 @@ done
 
 If the server fails to start, report the error and stop.
 
-### 5. Open the app in agent-browser
+### 4. Open the app in agent-browser
 
 ```bash
 $AB open http://localhost:$APP_PORT && $AB wait --load networkidle && $AB snapshot -i
 ```
 
-### 6. Authenticate if needed
+### 5. Authenticate if needed
 
 If the feature under test requires authentication:
 
@@ -137,7 +123,7 @@ If the feature under test requires authentication:
 Default to the highest-privilege account that still represents a normal user
 unless the feature specifically requires another role.
 
-### 7. Execute the test plan
+### 6. Execute the test plan
 
 For each test scenario:
 
@@ -183,7 +169,7 @@ Test at minimum two viewports:
 - Navigation works as expected
 - Data displays correctly
 
-### 8. Clean up
+### 7. Clean up
 
 Always close this worktree's browser session when done. This only affects the
 `$WORKTREE_NAME` session; other worktrees are not impacted.
@@ -192,7 +178,7 @@ Always close this worktree's browser session when done. This only affects the
 $AB close
 ```
 
-### 9. Report results
+### 8. Report results
 
 Summarize findings in this format:
 

@@ -281,7 +281,7 @@ Loaded Claude Code skills (already active in your session):
 ## What to do when you hit a blocker
 
 1. **Check the docs first.** `docs/architecture.md`, `requirements.md`,
-   `product-plan.md`, your brief. 80% of "blockers" are answered there.
+   `docs/requirements.md`, your brief. 80% of "blockers" are answered there.
 2. **Check loaded skills.** Especially `cloudflare:wrangler` and
    `claude-api`.
 3. **Check `.agents/skills/<name>/SKILL.md`** for the
