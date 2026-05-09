@@ -93,7 +93,7 @@ const profileShape = {
 };
 
 export function registerReadTools(server: McpServer, client: AtlasClient) {
-  // 1) recommend_resources
+  // recommend_resources
   server.registerTool(
     "recommend_resources",
     {
@@ -119,7 +119,7 @@ export function registerReadTools(server: McpServer, client: AtlasClient) {
     },
   );
 
-  // 2) search_resources
+  // search_resources
   server.registerTool(
     "search_resources",
     {
@@ -140,7 +140,7 @@ export function registerReadTools(server: McpServer, client: AtlasClient) {
     },
   );
 
-  // 3) get_resource
+  // get_resource
   server.registerTool(
     "get_resource",
     {
@@ -160,7 +160,7 @@ export function registerReadTools(server: McpServer, client: AtlasClient) {
     },
   );
 
-  // 4) search_companies
+  // search_companies
   server.registerTool(
     "search_companies",
     {
@@ -191,7 +191,7 @@ export function registerReadTools(server: McpServer, client: AtlasClient) {
     },
   );
 
-  // 5) get_company
+  // get_company
   server.registerTool(
     "get_company",
     {
@@ -211,7 +211,7 @@ export function registerReadTools(server: McpServer, client: AtlasClient) {
     },
   );
 
-  // 7) generate_founder_plan
+  // generate_founder_plan
   server.registerTool(
     "generate_founder_plan",
     {
@@ -268,7 +268,7 @@ export function registerReadTools(server: McpServer, client: AtlasClient) {
     },
   );
 
-  // 8) generate_investor_tour
+  // generate_investor_tour
   server.registerTool(
     "generate_investor_tour",
     {

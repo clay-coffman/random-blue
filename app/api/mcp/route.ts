@@ -40,8 +40,13 @@ async function handleMcpRequest(req: Request): Promise<Response> {
 
   // No admin token — defense-in-depth so a future refactor that
   // accidentally registers a write tool on this surface still can't
-  // make a privileged call.
-  const client = createAtlasClient({ baseUrl });
+  // make a privileged call. The explicit `adminToken: ""` matters:
+  // the `??` fallback in createAtlasClient (cli/lib/atlas-client.ts)
+  // only fires on null/undefined, so passing "" defeats the
+  // process.env.ATLAS_ADMIN_TOKEN lookup. Today that env var is
+  // unset on the Worker (secrets come through env()), but we don't
+  // want a future build/runtime change to silently re-arm writes.
+  const client = createAtlasClient({ baseUrl, adminToken: "" });
 
   const server = new McpServer(
     {

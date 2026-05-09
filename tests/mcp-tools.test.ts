@@ -57,3 +57,34 @@ describe("MCP tool registration split", () => {
     expect(overlap).toEqual([]);
   });
 });
+
+// Integration regression: drive the actual route handler that ships
+// to production, not just the registration helpers. Catches the
+// more-likely future regression — someone adds
+// `registerWriteTools(server, client)` to app/api/mcp/route.ts to
+// "support a single privileged client" — which the function-level
+// tests above wouldn't see.
+describe("POST /api/mcp tools/list", () => {
+  it("excludes update_company_profile (and any other write tool)", async () => {
+    const { POST } = await import("@/app/api/mcp/route");
+    const req = new Request("http://localhost/api/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/list",
+      }),
+    });
+    const res = await POST(req);
+    const json = (await res.json()) as {
+      result: { tools: { name: string }[] };
+    };
+    const names = json.result.tools.map((t) => t.name);
+    expect(names).not.toContain("update_company_profile");
+    expect(names.sort()).toEqual([...READ_TOOLS].sort());
+  });
+});
