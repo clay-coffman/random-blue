@@ -39,8 +39,10 @@ Reading order for an agent picking up work:
 Governor's Office of Economic Development (GOED). Two products in
 one platform: the **Founder's Navigator** (intake → personalized
 plan) and the **Utah Startup Map**. Polished founder/investor product
-on top, agent-native API/CLI/MCP underneath. Target deploy:
-<https://startup.utah.gov/>. The engagement originated at Utah GOED's
+on top, agent-native API/CLI/MCP underneath. Live at
+<https://startupstateatlas.dev>; <https://startup.utah.gov/> is the
+planned canonical home (not yet serving traffic). The engagement
+originated at Utah GOED's
 AI Builder Day; everything past the initial scaffold is shipping for
 real users.
 

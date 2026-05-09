@@ -22,7 +22,7 @@ const OWNER_EDITABLE_FIELDS = [
 ] as const;
 
 export function buildUpdatePrompt(card: CompanyCard, baseUrl?: string): string {
-  const root = baseUrl ?? "https://startup.utah.gov";
+  const root = baseUrl ?? "https://startupstateatlas.dev";
   const url = `${root}/api/v1/companies/${card.slug}`;
   const current = JSON.stringify(
     {

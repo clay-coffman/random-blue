@@ -160,7 +160,7 @@ async function fetchPageText(url: string): Promise<string | null> {
       res = await fetch(current, {
         headers: {
           "User-Agent":
-            "Mozilla/5.0 (compatible; StartupStateAtlasBot/1.0; +https://startup.utah.gov)",
+            "Mozilla/5.0 (compatible; StartupStateAtlasBot/1.0; +https://startupstateatlas.dev)",
           Accept: "text/html,application/xhtml+xml",
         },
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),

@@ -22,7 +22,7 @@ const program = new Command();
 program
   .name("startup-state")
   .description(
-    "CLI for the Startup State Atlas API. https://startup.utah.gov/agents",
+    "CLI for the Startup State Atlas API. https://startupstateatlas.dev/agents",
   )
   .version("1.0.0");
 

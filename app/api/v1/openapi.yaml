@@ -40,8 +40,10 @@ info:
     converts at the boundary via `lib/api-codec.ts`.
 
 servers:
-  - url: https://startup.utah.gov
+  - url: https://startupstateatlas.dev
     description: Production
+  - url: https://startup.utah.gov
+    description: Planned canonical (not yet live)
   - url: http://localhost:3000
     description: Local dev (Next.js)
   - url: http://localhost:8787
@@ -892,18 +894,28 @@ components:
             `anthropic-fetch`) when the enrich path ran before
             submission. Server stamps `enriched_at = now`.
 
-    RecommendRequest:
-      allOf:
-        - $ref: "#/components/schemas/FounderPassportInput"
+    RecommendRequestById:
       type: object
+      required: [passport_id]
+      additionalProperties: false
       properties:
         passport_id:
           type: string
           pattern: "^fp_[a-zA-Z0-9_-]+$"
       description: |
-        Either pass `passport_id` and skip the body (we'll load the
-        passport from D1), or pass a full `FounderPassportInput`. Sending
-        both with conflicting `stage`/`industry`/`goal` is a 400.
+        Re-use a saved passport row by id. No other fields permitted.
+
+    RecommendRequestByBody:
+      $ref: "#/components/schemas/FounderPassportInput"
+
+    RecommendRequest:
+      oneOf:
+        - $ref: "#/components/schemas/RecommendRequestById"
+        - $ref: "#/components/schemas/RecommendRequestByBody"
+      description: |
+        Either pass `passport_id` (re-uses an existing passport row)
+        OR a full `FounderPassportInput` (creates one) — never both.
+        Sending both is a 400 with `code: bad_request`.
 
     Bucket:
       type: string

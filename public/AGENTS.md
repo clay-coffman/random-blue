@@ -56,7 +56,7 @@ Two authentication modes:
 
 ```bash
 curl -H "X-Atlas-Admin-Token: $ATLAS_ADMIN_TOKEN" \
-  -X PATCH https://startup.utah.gov/api/v1/companies/crew \
+  -X PATCH https://startupstateatlas.dev/api/v1/companies/crew \
   -H 'Content-Type: application/json' \
   -d '{"description":"Updated bio."}'
 ```
@@ -64,7 +64,7 @@ curl -H "X-Atlas-Admin-Token: $ATLAS_ADMIN_TOKEN" \
 ## Sample request — recommend
 
 ```bash
-curl -X POST https://startup.utah.gov/api/v1/resources/recommend \
+curl -X POST https://startupstateatlas.dev/api/v1/resources/recommend \
   -H 'Content-Type: application/json' \
   -d '{
     "county": "Salt Lake",
@@ -104,6 +104,38 @@ Response:
 `narrative` is plan-scoped synthesis (60–100 words). `because` is a
 humanized one-liner per rec — the strongest scoring reason translated
 to natural language, never snake_case.
+
+## MCP — Streamable HTTP endpoint
+
+`/api/mcp` exposes the read-only tool surface to MCP clients without
+an install or local checkout. It speaks the [MCP Streamable HTTP
+transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http)
+in **stateless** mode — every request is independent, no session id,
+no resume.
+
+- **URL**: `https://startupstateatlas.dev/api/mcp`
+- **Methods**: `GET`, `POST`, `DELETE`
+- **Auth**: none — public, read-only.
+- **Content-Type**: `application/json`. Set
+  `Accept: application/json, text/event-stream` if your client wants
+  SSE; otherwise plain JSON responses are returned.
+- **Payload**: standard JSON-RPC 2.0 envelope.
+
+```bash
+curl -N https://startupstateatlas.dev/api/mcp \
+  -X POST \
+  -H 'Accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+Read tools (`recommend_resources`, `search_resources`, `get_resource`,
+`search_companies`, `get_company`, `generate_founder_plan`,
+`generate_investor_tour`) and `startupstate://…` resources are
+exposed. **Write tools are not.** `update_company_profile` is local-
+stdio only — run `npm run mcp` from a checkout with
+`ATLAS_ADMIN_TOKEN` in env. See [`/agents`](/agents) for the full
+tool / resource / prompt listing.
 
 ## Error envelope
 

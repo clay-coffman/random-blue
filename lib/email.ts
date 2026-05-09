@@ -42,10 +42,10 @@ function paragraphs(s: string): string {
 function publicOrigin(): string {
   // Used to render absolute links in outbound mail. Override via the
   // PUBLIC_BASE_URL Worker secret when a non-prod deploy needs it;
-  // otherwise we ship absolute startup.utah.gov links by default since
-  // this is the agreed deploy target.
+  // otherwise we ship absolute startupstateatlas.dev links by default
+  // since that is the live deploy target.
   const e = env() as unknown as { PUBLIC_BASE_URL?: string };
-  return e.PUBLIC_BASE_URL ?? "https://startup.utah.gov";
+  return e.PUBLIC_BASE_URL ?? "https://startupstateatlas.dev";
 }
 
 async function send(to: string, subject: string, html: string) {
@@ -116,7 +116,7 @@ export async function sendSavedSearchAlertEmail(opts: {
   }[];
 }) {
   const { to, searchName, manageUrl, unsubscribeUrl, newCompanies } = opts;
-  const baseUrl = (env().BETTER_AUTH_URL ?? "https://startup.utah.gov").replace(
+  const baseUrl = (env().BETTER_AUTH_URL ?? "https://startupstateatlas.dev").replace(
     /\/$/,
     "",
   );
