@@ -187,8 +187,8 @@ param and either prefills the form or routes directly to
 
 The persona list lives in `lib/personas.ts` as the typed source of
 truth. **Use the GOED brief's exact descriptions** from
-`docs/source_data/page-2026-05-08-19-38-24.md` § Test Cases — judges
-will recognize them.
+`docs/source_data/page-2026-05-08-19-38-24.md` § Test Cases — these are
+the test fixtures that seed the product database.
 
 ```ts
 // lib/personas.ts
@@ -294,13 +294,6 @@ gh pr create --base main --title "Brand & shell — theme tokens, layout, hero"
    matching what Agent 1 seeds (`fp_jordan`, `fp_maria`, …).
 7. PR open.
 
-## Demo path
-
-You enable the **front door** of the demo. Every scene starts on `/`:
-the headline, the persona tiles, then the click into the founder flow.
-Without you, Agent 3's pages exist but the user can't get there
-gracefully and the brand looks like default Tailwind.
-
 ## Cuts allowed if time-pressed
 
 - **Skip the activity ticker entirely.** Delete it from the hero.
@@ -308,10 +301,10 @@ gracefully and the brand looks like default Tailwind.
   JetBrains Mono is the minimum that still feels intentional.
 - **Skip the brand primitives folder.** Inline the styles where they're
   used. Agents 3/4/5 will reinvent locally — accept the duplication.
-- **Skip the footer.** Nav-only is fine for the demo.
+- **Skip the footer.** Nav-only is fine for initial launch.
 - **Skip secondary nav links** ("For agents") if the agent docs page
-  isn't ready yet — link to `#` and the user won't notice for a 5-min
-  demo.
+  isn't ready yet — link to `#` and the integration will be straightforward
+  after launch.
 
 Never skip:
 

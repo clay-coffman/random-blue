@@ -290,11 +290,11 @@ Verify each in order:
 7. `.env.example` exists; `.env.local` is gitignored.
 8. PR is open against `main`.
 
-## Demo path
+## Production enables
 
-You don't enable any demo scene directly — but every other agent
+You don't enable any production flow directly — but every other agent
 depends on you. The "live deployed URL" you produce becomes the
-hackathon's demo URL.
+foundation for all downstream features.
 
 ## Cuts allowed if time-pressed
 
@@ -305,10 +305,10 @@ hackathon's demo URL.
 - **Skip `RESEND_API_KEY`** if you're under time pressure: Agent 5
   can stub `lib/email.ts` to log the verification / password-reset
   link to `console.log` and the API response. Email verification
-  UX is degraded but the demo still works.
+  UX is degraded but the product still ships.
 - **Skip Playwright setup** — agents do manual smoke tests.
 - **Skip a `deploy.yml` GitHub Action** — manual `npm run deploy`
-  works for the hackathon.
+  works for launch.
 - **Don't fight type-perfection** — `as any` casts in `lib/cf.ts` /
   `lib/db.ts` are acceptable as long as the pattern is established.
 

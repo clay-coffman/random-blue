@@ -275,10 +275,10 @@ export function scoreResource(
   const community = scoreCommunity(resource, passport);
 
   // Round to integer for display + persistence. The weighted sum can land
-  // on .5 when neutral fallbacks (0.5) hit non-divisible weights, but at
-  // hackathon-grade resolution a 1-point ranking gap from rounding is
-  // immaterial; downstream code (`bucketize`, the cached plan response)
-  // expects an integer score.
+  // on .5 when neutral fallbacks (0.5) hit non-divisible weights, but a
+  // 1-point ranking gap is below the meaningful-difference threshold for
+  // this scoring system; downstream code (`bucketize`, the cached plan
+  // response) expects an integer score.
   const score = Math.round(
     25 * stage.score +
       20 * location.score +

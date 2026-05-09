@@ -25,10 +25,10 @@ migration-number collisions; see `00-shared-context.md`). Aim for
 2. `docs/agent-tasks/00-shared-context.md`.
 3. `docs/architecture.md` — repo layout + bindings.
 4. `docs/requirements.md` — personas + entities.
-5. `docs/hackathon-plan.md` lines 540–560 (table list) for the full
+5. `docs/product-plan.md` lines 540–560 (table list) for the full
    table inventory.
 6. **`docs/source_data/page-2026-05-08-19-38-24.md`** — the canonical
-   GOED hackathon brief; verbatim persona descriptions (§ Test Cases)
+   GOED brief; verbatim persona descriptions (§ Test Cases)
    and the required company-profile fields (§ The Utah Startup Map).
 7. **`docs/source_data/Resources List - Builder Day - Sheet1.csv`** —
    the actual resources dataset (226 rows). Open it with `head -3 -- "<path>"`
@@ -484,10 +484,11 @@ EOF
 9. `db/migrations/0000_*.sql` exists and is committed.
 10. PR open.
 
-## Demo path
+## Production enables
 
-You don't directly enable a demo scene — you unblock **all five**.
-Without your data, every other agent is producing UI-against-fakes.
+You don't directly enable a single production flow — you unblock all
+downstream agents. Without your data, every other agent is producing
+UI against incomplete fixtures.
 
 ## Cuts allowed if time-pressed
 
@@ -577,7 +578,7 @@ backfill three personas as `founder`, two as `owner`, one as
 counts on first run.
 
 `investor_profiles` seed: Agent 5 ships
-`db/seed/investor-profiles.ts` with three demo rows tied to one
+`db/seed/investor-profiles.ts` with three seed rows tied to one
 new investor user (`d@pelion.io` per the wireframe) — so the
-admin user table has a real investor entry on day one.
+admin user table has a real investor entry on launch.
 

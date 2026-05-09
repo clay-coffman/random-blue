@@ -3,9 +3,7 @@
 You build the highest-scoring user-facing surface: the founder
 intake → personalized plan flow. Polish matters here. Aim for ~120
 minutes — this is the live product's primary entry point. Real
-founders will land here on https://startup.utah.gov/ and the demo
-rides on top of the same flow; "demo-visible" and "production-
-critical" mean the same thing for this brief.
+founders will land here on https://startup.utah.gov/.
 
 ## Branch + worktree
 
@@ -20,10 +18,9 @@ critical" mean the same thing for this brief.
    for real recommendations).
 2. `docs/agent-tasks/00-shared-context.md`.
 3. `docs/architecture.md` — repo layout.
-4. `docs/requirements.md` — Founder Passport intake + the
-   judging-rubric notes (usability + design = 55%).
-5. `docs/hackathon-plan.md` lines 39–82 (intake fields), lines
-   449–470 (Jordan + Priya scenes).
+4. `docs/requirements.md` — Founder Passport intake.
+5. `docs/product-plan.md` lines 39–82 (intake fields), lines
+   449–470 (Jordan + Priya flows).
 6. **`docs/source_data/page-2026-05-08-19-38-24.md`** — the canonical
    GOED brief; verbatim persona descriptions (§ Test Cases).
 7. `design/startup-state-atlas-wireframes/project/wireframes/v2/intake.js`
@@ -67,7 +64,7 @@ critical" mean the same thing for this brief.
   source).
 - `app/plan/[id]/page.tsx` — saved plan / results page (server
   component, fetches via `GET /api/v1/founder-passports/[id]/plan`).
-  **Shareable URL** — clean and demo-friendly.
+  **Shareable URL** — clean and production-ready.
 - `app/plan/_components/ResultsView.tsx` — Do Now / Do Next /
   Ignore display + "Why this matched" detail.
 - `app/plan/_components/ShareLink.tsx` — copy-to-clipboard share.
@@ -106,7 +103,7 @@ break the existing redirect-to-plan path.
 ### 1. `/founder` — intake page
 
 Server component for layout, client component for the form. Fields
-per `docs/hackathon-plan.md` lines 41–53 + the `FounderPassportInput`
+per `docs/product-plan.md` lines 41–53 + the `FounderPassportInput`
 zod schema:
 
 - **Optional website URL** at the top of the form ("Got a
@@ -167,14 +164,13 @@ loads the canonical fixture from the persona seed and posts it to
 `/recommend`. Either path is fine — pick the one that gives the
 fastest feedback loop.
 
-Place these *prominently* — they're the demo's main entry point.
+Place these *prominently* — they're the primary entry point for testing and user onboarding.
 
 ### 3. `/plan/[id]` — results page
 
 Sections (in order):
 
-- **Saved plan URL** at top with copy button (so you can demo
-  sharing).
+- **Saved plan URL** at top with copy button for sharing.
 - **"Do this now"** (top 3) — large cards with the resource
   title, why-it-matched bullets, and an "Action" line.
 - **"Do this next"** (next 3) — slightly smaller cards.
@@ -200,10 +196,9 @@ The plan URL `/plan/<passport_id>` should be:
 - Empty state on `/founder` is welcoming, not blank.
 - Loading state during the POST → redirect uses a skeleton, not a
   spinner.
-- Mobile layout works (judges may demo on a phone).
+- Mobile layout works (users will open this on phones).
 - Use semantic colors (Tailwind tokens), not raw hex.
-- Add a top nav with Home / Founder / Map / Agents links so the
-  demo can pivot smoothly.
+- Add a top nav with Home / Founder / Map / Agents links for smooth navigation.
 
 ### 6. PR
 
@@ -233,22 +228,17 @@ gh pr create --base main --title "Founder Navigator UI"
    mode.
 7. PR open.
 
-## Demo path
-
-**Scenes 1, 2, and 4** of the demo script (Jordan, Priya, business
-owner). This is the headline of the hackathon presentation.
-
 ## Cuts allowed if time-pressed
 
 - **Skip the URL-prefill UX** (the URL field can stay; it just
-  submits alongside the intake without triggering enrich). Manual
-  fill is the always-works path. Coordinate with Agent 2.
+  submits alongside the intake without triggering enrich). When behind on launch readiness,
+  drop this first — manual fill is the always-works path. Coordinate with Agent 2.
 - **Skip the "Ignore for now" bucket** — only show top-6.
 - **Skip the field-level "Why we recommended these" modal** — show
   reasons inline only.
 - ~~Skip mobile polish~~ — **NOT a valid cut.** Mobile is a hard
   requirement (see `00-shared-context.md` and `CLAUDE.md`).
-  Judges, founders, and GOEO staff will all open this on phones.
+  Founders and GOEO staff will all open this on phones.
 - **Skip the share URL** — just keep the deep-link working.
 - **Skip skeleton loaders** — simple "Loading…" text is fine.
 

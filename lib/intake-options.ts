@@ -1,6 +1,6 @@
 // Option lists for the Founder Navigator intake form.
 // Values intentionally match `db/seed/personas.ts` and the canonical
-// hackathon brief in `docs/source_data/page-2026-05-08-19-38-24.md`.
+// GOED brief in `docs/source_data/page-2026-05-08-19-38-24.md`.
 // Add a value here only if the persona seed or the brief uses it.
 
 export type Option = { value: string; label: string };

@@ -1,4 +1,4 @@
-// Three demo investor_profiles rows, one per investor test user.
+// Three test-fixture investor_profiles rows, one per investor test user.
 // Phase 4 seed — gives the admin user table + future map filter chips
 // representative investor preferences on day one.
 

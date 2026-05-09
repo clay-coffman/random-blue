@@ -131,7 +131,7 @@ export default function Home() {
               <li className="rounded-tile border border-topo bg-paper p-3">
                 <p className="font-medium">Pitch: Silicon Slopes Series</p>
                 <p className="text-xs text-ink-3">
-                  Next demo night in 18 days
+                  Five new resources added this week
                 </p>
               </li>
             </ul>

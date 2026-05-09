@@ -8,9 +8,9 @@ briefs live in `docs/agent-tasks/`.
 > real files under `.agents/skills/`, `.claude/hooks/`,
 > `.claude/agents/`, and `.github/workflows/`. They were vendored
 > from [`clay-coffman/agent-kit`](https://github.com/clay-coffman/agent-kit)
-> at hackathon kickoff but are now repo-local — edit them in place.
-> The corresponding `.claude/skills/<name>` entries are relative
-> symlinks into `.agents/skills/<name>`.
+> at the start of the engagement but are now repo-local — edit them
+> in place. The corresponding `.claude/skills/<name>` entries are
+> relative symlinks into `.agents/skills/<name>`.
 
 ## Where to start
 
@@ -30,12 +30,14 @@ If you're forking into a worktree:
 
 ## Project at a glance
 
-**Startup State Atlas** — a 24-hour hackathon build for Utah's
+**Startup State Atlas** — a production application for Utah's
 Governor's Office of Economic Development (GOED). Two products in
 one platform: the **Founder's Navigator** (intake → personalized
 plan) and the **Utah Startup Map**. Polished founder/investor product
-on top, agent-native API/CLI/MCP underneath. Winning builds may go
-live on <https://startup.utah.gov/>.
+on top, agent-native API/CLI/MCP underneath. Target deploy:
+<https://startup.utah.gov/>. The engagement originated at Utah GOED's
+AI Builder Day; everything past the initial scaffold is shipping for
+real users.
 
 Stack (full table in `docs/architecture.md` § Stack): Next.js 15
 App Router on Cloudflare Workers via `@opennextjs/cloudflare`,
@@ -48,9 +50,9 @@ human users, `X-Atlas-Admin-Token` for machine clients.
 The GOED-provided datasets live in `docs/source_data/`. Use them
 as-is:
 
-- `page-2026-05-08-19-38-24.md` — the canonical hackathon brief.
-  Verbatim persona descriptions, required profile fields, judging
-  breakdown (30% usability / 25% tech / 25% design / 20% innovation).
+- `page-2026-05-08-19-38-24.md` — the canonical brief from Utah GOED.
+  Verbatim persona descriptions, required profile fields, customer
+  priorities (30% usability / 25% tech / 25% design / 20% innovation).
 - `Map Data for Builder Day  - Sheet1.csv` — 254 companies (note
   the **double space** in the filename).
 - `Resources List - Builder Day - Sheet1.csv` — 226 resources
@@ -241,8 +243,8 @@ PRs each add a migration), see
 - **Responsive design (REQUIRED).** Every shipped page — Founder
   Navigator, map, company profiles, claim flow, GOEO admin UI,
   `/agents` — must work on **both desktop and mobile**. Mobile is
-  not a "nice-to-have" or a v2; the demo audience and real founders
-  will open this on phones. Concretely:
+  not a "nice-to-have" or a v2; real founders, investors, and
+  business owners will open this on phones. Concretely:
   - Design mobile-first (Tailwind `base` styles target ≤ 375px),
     then layer `sm:` / `md:` / `lg:` breakpoints up.
   - Test every shipped page at three widths: **375px** (iPhone
@@ -271,7 +273,7 @@ PRs each add a migration), see
 - **Observability:** Cloudflare Workers built-in (free) — set
   `observability.enabled = true` in `wrangler.jsonc`. Live tail
   with `wrangler tail`. Search/retention via the Workers dashboard.
-  No Sentry/PostHog this hackathon.
+  No Sentry/PostHog at launch.
 - **Production read-only DB access:**
   `wrangler d1 execute startup-state-atlas-db --command "SELECT ..."`
   from the CLI. Read queries only.

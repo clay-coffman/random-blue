@@ -132,9 +132,9 @@ Read endpoints are unauthenticated. Writes branch inside the route
 handler — see the Agent 5 brief for the dual-auth precedence on
 `PATCH /api/v1/companies/:slug`.
 
-## Phase 6 / post-MVP — investor public surface + intros
+## Phase 6 / post-launch — investor public surface + intros
 
-Not part of the 24-hour hackathon ship. Documented here so the URL
+Not part of the initial production ship. Documented here so the URL
 matrix stays the source of truth when Agent 8 picks up the work.
 See `agent-tasks/agent-8-investor.md` for the brief and
 `requirements.md` § Investor public surface for the feature spec.

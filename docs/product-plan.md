@@ -1,13 +1,21 @@
-Your premise is directionally right, but the strongest version is this: **do not
-build an “agent-native website” as the primary demo. Build a polished
-founder/investor product, then make agent-native access the hidden superpower.**
-Judges score usability and design heavily, and the brief explicitly warns that
-one exceptional product beats two half-baked ones. So the CLI/MCP/API layer
-should be visible in the demo, but the human-facing product has to carry the
-room. Confidence: **high**. The hackathon wants a personalized Founder’s
-Navigator, a Utah Startup Map, self-service company profiles, non-technical
-updates, and production-quality polish; usability and design together are 55% of
-the judging rubric. ([Startup State][1])
+> **Note on framing:** this document was drafted at the start of the
+> engagement (Utah GOED's AI Builder Day) when the work was scoped as
+> a 24-hour build. It is now the product spec for a real production
+> ship to <https://startup.utah.gov/>. References below to "demo" /
+> "judges" / "hour 24" / "scenes" have been rewritten as "live
+> product" / "users" / "launch" / "user flows"; persona buttons that
+> were once a demo crutch are now test fixtures that exercise the
+> live product.
+
+The product premise: **do not build an "agent-native website" as the
+primary surface. Build a polished founder/investor product, then make
+agent-native access the hidden superpower.** Usability and design
+matter most for the human-facing product; the CLI/MCP/API layer makes
+the same data legible to external agents and integrators. The
+customer brief asks for a personalized Founder's Navigator, a Utah
+Startup Map, self-service company profiles, non-technical updates,
+and production-quality polish. Usability and design together are 55%
+of the customer's stated priorities. ([Startup State][1])
 
 ## The idea I would build: **Startup State Atlas**
 
@@ -108,11 +116,11 @@ Do not invent eligibility.
 Do not recommend anything outside the retrieved set.
 ```
 
-That gives you a credible, low-hallucination demo. For Priya, the SaaS founder
-raising her first venture round, the system can surface VC and angel resources
-from the spreadsheet, such as Pelion Ventures, Grix, Tandem Ventures, Peterson
-Ventures, Kickstart Fund, Red Rock Angels, Salt Lake Angels, and Park City
-Angels. ([Google Docs][2])
+That gives a credible, low-hallucination experience. For Priya, the
+SaaS founder raising her first venture round, the system can surface
+VC and angel resources from the spreadsheet, such as Pelion Ventures,
+Grix, Tandem Ventures, Peterson Ventures, Kickstart Fund, Red Rock
+Angels, Salt Lake Angels, and Park City Angels. ([Google Docs][2])
 
 ## 3. Utah Startup Map as the visual layer
 
@@ -193,7 +201,7 @@ agent-first CLIs and MCP servers, with local SQLite, offline search, compound
 commands, compact output, typed exit codes, and dual CLI/MCP interfaces.
 ([GitHub][5])
 
-For this hackathon, I would ship the following.
+For this product, I would ship the following.
 
 ## Public API
 
@@ -284,9 +292,10 @@ startup-state profile build \
   --emit md,json,llms
 ```
 
-The CLI should be a judge-visible flourish, not the main product. Show it for 20
-seconds: “This is not just a website; it is an agent-accessible public data
-layer for Utah’s startup ecosystem.”
+The CLI is a deliberate secondary surface, not the main product. Its
+job: prove that "this is not just a website; it is an agent-accessible
+public data layer for Utah's startup ecosystem," and make that data
+layer reachable from any terminal or LLM client.
 
 ## MCP server
 
@@ -455,8 +464,8 @@ machine with `wrangler` + production D1 access). After that,
 
 The old "domain-email magic-link" mock is replaced by a real
 verification queue. A founder can't unilaterally claim a company by
-having an email at the right domain — domains lie, and the demo can't
-ship as a public product if anyone can grab any profile.
+having an email at the right domain — domains lie, and the live site
+can't ship as a public product if anyone can grab any profile.
 
 ## Human flow
 
@@ -500,9 +509,16 @@ URLs that expire quickly. No file is ever served as a public URL.
 
 ---
 
-# The strongest demo script
+# The five canonical user flows
 
-## Scene 1: Jordan, pre-seed founder
+These are the load-bearing paths real founders, investors, and
+business owners will hit on the live site. They double as the test
+scenarios we exercise with seeded persona fixtures during regression
+checks. The persona names below (Jordan, Priya, etc.) are the test
+fixtures the customer specified in the brief; arbitrary first-time
+users hit the same flows without persona prefilling.
+
+## Flow 1: Jordan, pre-seed founder
 
 Jordan is 20 in Salt Lake City with an idea but no business yet. The system asks
 5 questions and returns:
@@ -513,10 +529,10 @@ Jordan is 20 in Salt Lake City with an idea but no business yet. The system asks
 - “not yet” items: late-stage grants, export programs, large employer workforce
   programs
 
-The brief includes Jordan as a required test persona, so showing him validates
-against the organizers’ own scenarios. ([Startup State][1])
+The brief includes Jordan as a required test persona, so this flow
+validates against the customer's own scenarios. ([Startup State][1])
 
-## Scene 2: Priya, SaaS founder raising
+## Flow 2: Priya, SaaS founder raising
 
 Priya is 18 months in, has paying customers, and wants angels/VCs. The system
 returns a capital-focused plan with relevant venture and angel groups, then
@@ -524,7 +540,7 @@ shows those investors/resources on the map. Use the actual spreadsheet examples
 here: Pelion, Grix, Tandem, Peterson, Kickstart, Red Rock Angels, Salt Lake
 Angels, Park City Angels. ([Google Docs][2])
 
-## Scene 3: Investor view
+## Flow 3: Investor view
 
 Switch to map:
 
@@ -549,7 +565,7 @@ Utah early-stage fintech cluster:
 
 This turns the map from directory into narrative.
 
-## Scene 4: Business owner as website
+## Flow 4: Business owner as website
 
 Claim a company profile. Update hiring status and add a job posting. The visible
 profile updates. Then show:
@@ -565,9 +581,10 @@ The punchline:
 > the website, map, API, CLI, and agent docs all changed from the same source of
 > truth.”
 
-## Scene 5: Terminal / MCP proof
+## Flow 5: Terminal / MCP proof
 
-Run:
+External agents and integrators reach the live data through the
+agent-native surface. The smoke test:
 
 ```bash
 startup-state recommend --persona priya --compact
@@ -579,7 +596,8 @@ Then:
 startup-state company get crew --json
 ```
 
-Then show the MCP tools list or agent docs. Keep this short.
+Then show the MCP tools list or agent docs. Same data, different
+client; the canonical source is the same as the web product.
 
 ---
 
@@ -641,9 +659,10 @@ Build:
 - 90-day plan
 - “why this matched”
 - save/share plan
-- persona demo buttons: Jordan, Maria, Marcus, Priya, David, Dr. Amir
+- persona test-fixture buttons: Jordan, Maria, Marcus, Priya, David, Dr. Amir
 
-This should be polished. It is your highest-scoring surface.
+This is the highest-traffic surface for real founders hitting the
+live site, so it gets the most polish.
 
 ## Agent 4 — Map and company profiles
 
@@ -690,7 +709,7 @@ Build:
 - `/llms.txt`
 - `/AGENTS.md`
 - `/agents` documentation page
-- demo commands
+- example commands for the docs
 
 This is where you can reuse the logic/patterns from `cli-printing-press`.
 
@@ -784,16 +803,18 @@ A backend tool for state staff:
 - approve/reject company updates
 - show “coverage gaps” by county/industry/stage
 
-This is operationally valuable but less demo-sexy. Build a thin version as an
-admin tab, not the main product.
+This is operationally valuable but less user-facing. Build a thin
+version as an admin tab, not the main product.
 
 ## 5. **Startup State CLI/MCP only**
 
 Confidence: **low as standalone, high as layer**
 
-A pure CLI/MCP project is too invisible for this hackathon. Judges want a live,
-clickable prototype and investor-ready visual experience. But as a layer under
-the Founder Navigator and Map, it becomes a strong technical differentiator.
+A pure CLI/MCP project is too invisible to ship as the main product —
+real founders, investors, and business owners want a live, clickable
+web product. But as a layer under the Founder Navigator and Map, it
+becomes a strong technical differentiator and the surface external
+agents talk to.
 
 ---
 
@@ -804,7 +825,7 @@ Cut these unless everything else is done:
 - real OAuth with ChatGPT/Claude (Better Auth covers our owner/
   admin login; agents call the API with `X-Atlas-Admin-Token`)
 - third-party social login providers (Google, GitHub, etc.) —
-  email + password is enough for the hackathon
+  email + password is enough for the initial launch
 - complex CRM workflows
 - scraped LinkedIn enrichment
 - perfect geocoding
@@ -823,9 +844,10 @@ manually), email verification + password reset (via the
 
 # What I would overinvest in
 
-## 1. Persona test buttons
+## 1. Persona test fixtures
 
-The organizers gave six test cases. Put six buttons in the demo:
+The customer specified six test cases. Surface them as six quick-test
+buttons on the homepage:
 
 ```txt
 Try Jordan
@@ -836,8 +858,11 @@ Try David
 Try Dr. Amir
 ```
 
-Each should produce meaningfully different results. The brief explicitly says
-these scenarios should validate the navigator. ([Startup State][1])
+Each should produce meaningfully different results — that's how we
+regression-check the recommendation engine. The brief explicitly says
+these scenarios should validate the navigator. They are test fixtures
+that exercise the same flow real first-time visitors take with their
+own input. ([Startup State][1])
 
 ## 2. “Why this matched”
 
@@ -886,7 +911,9 @@ Read llms.txt:
 ...
 ```
 
-This makes the hidden infrastructure legible to nontechnical judges.
+This makes the hidden infrastructure legible to nontechnical visitors
+(GOEO staff, journalists, ecosystem partners) without requiring them
+to read OpenAPI YAML.
 
 ---
 
@@ -918,12 +945,12 @@ Build **Startup State Atlas** as a single coherent platform:
 - **Admin import/update path** so GOEO can maintain the data without a
   developer.
 
-The demo line should be:
+The product positioning:
 
-> “Startup State is no longer a website founders have to search. It is a live,
-> verified, agent-readable ecosystem graph. Humans get a polished navigator and
-> map. Agents get an API, CLI, MCP server, and canonical company/resource
-> profiles.”
+> "Startup State is no longer a website founders have to search. It
+> is a live, verified, agent-readable ecosystem graph. Humans get a
+> polished navigator and map. Agents get an API, CLI, MCP server,
+> and canonical company/resource profiles."
 
 That is ambitious, feasible, and aligned with the rubric.
 

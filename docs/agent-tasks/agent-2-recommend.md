@@ -18,7 +18,7 @@ page. Deterministic scoring first, LLM explanations second. Aim for
 3. `docs/architecture.md` — error shape, lib/ helpers,
    `lib/anthropic.ts`.
 4. `docs/requirements.md` — Recommendation engine section.
-5. `docs/hackathon-plan.md` lines 84–115 (the scoring formula and
+5. `docs/product-plan.md` lines 84–115 (the scoring formula and
    the source-bound LLM prompt).
 6. **`docs/source_data/Resources List - Builder Day - Sheet1.csv`**
    — the actual resource taxonomy you'll be scoring against. Real
@@ -108,7 +108,7 @@ export type FounderPassportInput = z.infer<typeof FounderPassportInput>;
 ### 2. `lib/recommend.ts` — deterministic scoring
 
 Pure function. Easy to unit-test. Implements the formula from
-`docs/hackathon-plan.md` lines 91–99:
+`docs/product-plan.md` lines 91–99:
 
 ```
 resource_score =
@@ -210,7 +210,7 @@ POST endpoint that:
 
 ### 4. The Anthropic call (source-bound)
 
-Per `docs/hackathon-plan.md` lines 100–109. Prompt skeleton:
+Per `docs/product-plan.md` lines 100–109. Prompt skeleton:
 
 ```
 You are explaining why retrieved resources match a Utah founder's
@@ -326,11 +326,10 @@ Agent 6 can fold them into `app/api/v1/openapi.yaml`.
    recommendations.
 7. PR open.
 
-## Demo path
+## Production enables
 
-Enables **Scene 1 (Jordan)** and **Scene 2 (Priya)** of the demo
-script. The "Try Priya" button on the Founder Navigator UI calls
-your endpoint.
+Powers the Founder Navigator's results page. The "Try Priya" quick-test
+button and the live intake form both call your endpoint.
 
 ## Cuts allowed if time-pressed
 
