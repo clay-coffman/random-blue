@@ -211,12 +211,14 @@ function buildNarrativeUserContent(
   ].join("\n");
 }
 
+export type NarrativeResult = { narrative: string; degraded: boolean };
+
 export async function synthesizeNarrative(
   passport: FounderPassportInput,
   retrieved: Scored[],
   client?: Anthropic,
-): Promise<string> {
-  if (retrieved.length === 0) return "";
+): Promise<NarrativeResult> {
+  if (retrieved.length === 0) return { narrative: "", degraded: false };
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HARD_TIMEOUT_MS);
@@ -246,21 +248,21 @@ export async function synthesizeNarrative(
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.warn("[recommend-explain] LLM returned no JSON object");
-      return deterministicNarrative(passport, retrieved);
+      console.error("[recommend-explain] LLM returned no JSON object", { text });
+      return { narrative: deterministicNarrative(passport, retrieved), degraded: true };
     }
     const parsed = NarrativeSchema.safeParse(JSON.parse(jsonMatch[0]));
     if (!parsed.success) {
-      console.warn(
+      console.error(
         "[recommend-explain] LLM JSON failed schema",
         parsed.error.format(),
       );
-      return deterministicNarrative(passport, retrieved);
+      return { narrative: deterministicNarrative(passport, retrieved), degraded: true };
     }
-    return parsed.data.narrative.trim();
+    return { narrative: parsed.data.narrative.trim(), degraded: false };
   } catch (err) {
-    console.warn("[recommend-explain] generation failed", err);
-    return deterministicNarrative(passport, retrieved);
+    console.error("[recommend-explain] generation failed", err);
+    return { narrative: deterministicNarrative(passport, retrieved), degraded: true };
   } finally {
     clearTimeout(timer);
   }

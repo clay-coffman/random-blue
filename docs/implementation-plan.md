@@ -106,8 +106,10 @@ Latest applied D1 migration: **`0007_sloppy_paper_doll`**
 | 0005 | `even_medusa` | PR #38 — `saved_searches` + `search_alert_deliveries` |
 | 0006 | `military_scarlet_spider` | PR #52 — public investor columns + `saved_companies` + `intro_requests` |
 | 0007 | `sloppy_paper_doll` | PR #56 — `founder_passports.narrative_text` |
+| 0008 | `same_typhoid_mary` | fix/plan-generator — `founder_passports.narrative_degraded` |
 
-Next free index: **0008**. All seven applied to prod D1.
+Next free index: **0009**. 0000–0007 applied to prod D1; 0008 pending
+remote apply (run `npm run db:migrate:remote` after this PR merges).
 
 ---
 

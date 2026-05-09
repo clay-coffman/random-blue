@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { env } from './cf';
 
-export const ANTHROPIC_MODEL = 'claude-opus-4-7' as const;
+export const ANTHROPIC_MODEL = 'claude-sonnet-4-6' as const;
 
 export function anthropic(): Anthropic {
   // Pass globalThis.fetch explicitly so the SDK uses the Workers-

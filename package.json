@@ -24,6 +24,7 @@
     "auth:generate": "better-auth generate",
     "seed": "tsx db/seed/index.ts",
     "bootstrap-superadmin": "tsx scripts/bootstrap-superadmin.ts",
+    "warm-personas": "tsx scripts/warm-personas.ts",
     "cli": "tsx cli/index.ts",
     "mcp": "tsx mcp/server.ts",
     "openapi:build": "tsx scripts/openapi-build.ts",

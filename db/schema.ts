@@ -214,6 +214,10 @@ export const founderPassports = sqliteTable(
     // `/plan/[id]` doesn't have to re-call Anthropic just to repaint.
     // Overwritten on each /recommend call for this passport.
     narrativeText: text("narrative_text"),
+    // 1 when narrativeText came from the deterministic template
+    // fallback (Anthropic call failed). 0/null when Claude succeeded.
+    // Surfaced in the UI as a small "(template fallback)" badge.
+    narrativeDegraded: integer("narrative_degraded", { mode: "boolean" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(now),
   },
   (t) => [index("founder_passports_user_idx").on(t.userId)],

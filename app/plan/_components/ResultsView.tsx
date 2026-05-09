@@ -95,9 +95,19 @@ export function ResultsView({ passportId, input, result, cta }: Props) {
          narrative in sessionStorage) just skip this block. */}
       {result.narrative && (
         <Tile variant="subtle" className="mt-8">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-ember">
-            ↓ WHERE TO FOCUS
-          </p>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="font-mono text-[11px] uppercase tracking-wider text-ember">
+              ↓ WHERE TO FOCUS
+            </p>
+            {result.degraded && (
+              <p
+                className="font-mono text-[10px] uppercase tracking-wider text-ink-3"
+                title="Anthropic call failed — narrative came from the deterministic template fallback."
+              >
+                template fallback
+              </p>
+            )}
+          </div>
           <p className="mt-3 font-serif text-lg leading-relaxed text-ink-1 sm:text-xl">
             {result.narrative}
           </p>

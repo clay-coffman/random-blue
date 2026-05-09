@@ -4,11 +4,11 @@ import { and, eq, isNull } from "drizzle-orm";
 import { getAuth } from "@/auth";
 import { db } from "@/lib/db";
 import { founderPassports } from "@/db/schema";
+import { personaIdFromPassport } from "@/lib/intake-fixtures";
 import {
-  personaFixtures,
-  personaIdFromPassport,
-} from "@/lib/intake-fixtures";
-import { recommendMock } from "@/lib/recommend-mock";
+  generatePlanForPassport,
+  loadCachedPlan,
+} from "@/lib/plan-loader";
 import { ResultsView } from "../_components/ResultsView";
 import { LocalPlanLoader } from "../_components/LocalPlanLoader";
 import { SaveYourPlanCta } from "../_components/SaveYourPlanCta";
@@ -40,16 +40,39 @@ export default async function PlanPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { claim } = await searchParams;
 
-  // TODO(agent-2): when `/api/v1/founder-passports/[id]/plan` ships,
-  // call the loader directly here (not via fetch) — same Worker, no
-  // network round-trip. Until then, we synthesise from fixtures.
-
-  // Persona fixture branch — no auth, no DB. Render and return.
+  // ── Persona branch ─────────────────────────────────────────────
+  // Personas go through the same scoring + Claude synthesis as a real
+  // intake. First hit ~5-7s; refresh is cache-hot from D1 (~100ms).
+  // No auth, no claim, no "save your plan" CTA — they aren't claimable.
+  // Run `npm run warm-personas` against prod before a demo to avoid
+  // paying that latency in front of an audience.
   const personaId = personaIdFromPassport(id);
   if (personaId) {
-    const input = personaFixtures[personaId];
-    const result = recommendMock(input, id);
-    return <ResultsView passportId={id} input={input} result={result} />;
+    const cached = await loadCachedPlan(id);
+    if (cached && cached.result.recommendations.length > 0) {
+      return (
+        <ResultsView
+          passportId={id}
+          input={cached.passport}
+          result={cached.result}
+        />
+      );
+    }
+    try {
+      const generated = await generatePlanForPassport(id);
+      return (
+        <ResultsView
+          passportId={id}
+          input={generated.passport}
+          result={generated.result}
+        />
+      );
+    } catch (err) {
+      console.error("[plan/[id]] persona lazy-gen failed", err);
+      // Demo safety net: hand off to the client-side sessionStorage path
+      // so the page never hard-fails in front of a user.
+      return <LocalPlanLoader passportId={id} />;
+    }
   }
 
   // Anything that doesn't start with `fp_` isn't a passport id at all —
@@ -58,10 +81,11 @@ export default async function PlanPage({ params, searchParams }: PageProps) {
     notFound();
   }
 
-  // Real passport path. Resolve the current viewer so we can
-  // (a) handle a `?claim={id}` from the post-signup redirect and
-  // (b) decide whether to render the "Save your plan" CTA. Cookie
-  // failures fall through to "anonymous".
+  // ── Real passport path ─────────────────────────────────────────
+  // Resolve the current viewer so we can (a) handle a `?claim={id}`
+  // from the post-signup redirect and (b) decide whether to render
+  // the "Save your plan" CTA. Cookie failures fall through to
+  // "anonymous".
   const session = await (await getAuth())
     .api.getSession({ headers: await headers() })
     .catch(() => null);
@@ -97,7 +121,22 @@ export default async function PlanPage({ params, searchParams }: PageProps) {
     cta = <SaveYourPlanCta passportId={id} />;
   }
 
-  // Synthetic local id from the form fallback. Hydrate from
-  // sessionStorage on the client.
+  // Cached plan? Render server-side from D1 — survives refresh and
+  // works for shared links. Falls through to LocalPlanLoader on a
+  // sessionStorage hydration if the passport hasn't been recommended
+  // yet (e.g. the API call failed and the form-fallback path stashed
+  // a mock locally).
+  const cached = await loadCachedPlan(id);
+  if (cached && cached.result.recommendations.length > 0) {
+    return (
+      <ResultsView
+        passportId={id}
+        input={cached.passport}
+        result={cached.result}
+        cta={cta}
+      />
+    );
+  }
+
   return <LocalPlanLoader passportId={id} cta={cta} />;
 }

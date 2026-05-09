@@ -1,0 +1,1 @@
+ALTER TABLE `founder_passports` ADD `narrative_degraded` integer;

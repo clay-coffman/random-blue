@@ -215,9 +215,13 @@ export async function POST(req: Request) {
 
     // 3. Plan-scoped LLM synthesis paragraph over the top 6 (now + next).
     //    Falls back to a deterministic templated paragraph on any
-    //    Anthropic failure so the response is always populated.
+    //    Anthropic failure so the response is always populated. The
+    //    `degraded` flag tells the UI when the fallback fired.
     const topForLLM = labelled.filter((s) => s.bucket !== "ignore");
-    const narrative = await synthesizeNarrative(passport, topForLLM);
+    const { narrative, degraded } = await synthesizeNarrative(
+      passport,
+      topForLLM,
+    );
 
     // 4. Compute per-rec humanized because:
     //    - now/next → humanized top scoring reason via bestPositiveBecause
@@ -252,7 +256,7 @@ export async function POST(req: Request) {
     }
     await d
       .update(founderPassports)
-      .set({ narrativeText: narrative })
+      .set({ narrativeText: narrative, narrativeDegraded: degraded })
       .where(eq(founderPassports.id, passportId));
 
     const recs: RecommendedResourceWire[] = labelled.map((s) => ({
@@ -273,6 +277,7 @@ export async function POST(req: Request) {
       narrative,
       recommendations: recs,
       generated_at: new Date().toISOString(),
+      degraded,
     };
     return Response.json(payload);
   } catch (err) {
