@@ -101,6 +101,41 @@ describe("toWirePassportInput — vocabulary translation", () => {
     expect(out.communities).toEqual(["women"]);
     expect(out.needs).toEqual(["capital"]);
   });
+
+  it("coerces empty strings to undefined for optional fields", () => {
+    // The form's emptyPassport() seeds optional text fields with `""`;
+    // the API zod schema rejects `""` on `z.string().url().optional()`
+    // (website_url) and on `z.string().optional()` (city, urgency,
+    // business_size, business_type, enrichment_source). Without this,
+    // every form submit without a website 400s with "Invalid url".
+    const out = toWirePassportInput({
+      ...base,
+      websiteUrl: "",
+      city: "",
+      urgency: "",
+      businessSize: "",
+      businessType: "",
+      enrichmentSource: "",
+    });
+    expect(out.website_url).toBeUndefined();
+    expect(out.city).toBeUndefined();
+    expect(out.urgency).toBeUndefined();
+    expect(out.business_size).toBeUndefined();
+    expect(out.business_type).toBeUndefined();
+    expect(out.enrichment_source).toBeUndefined();
+  });
+
+  it("preserves non-empty values for optional fields", () => {
+    const out = toWirePassportInput({
+      ...base,
+      websiteUrl: "https://example.com",
+      urgency: "this_month",
+      businessSize: "small",
+    });
+    expect(out.website_url).toBe("https://example.com");
+    expect(out.urgency).toBe("this_month");
+    expect(out.business_size).toBe("small");
+  });
 });
 
 // Drift guards — every form-facing dropdown value must translate to a
