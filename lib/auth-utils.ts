@@ -12,7 +12,7 @@ export type SessionUser = {
 export async function getApiSession(
   req: Request,
 ): Promise<{ user: SessionUser } | null> {
-  const session = await getAuth().api.getSession({ headers: req.headers });
+  const session = await (await getAuth()).api.getSession({ headers: req.headers });
   if (!session?.user) return null;
   // Better Auth's session.user is typed without our additional fields;
   // role lives on the row but isn't in the default User type.

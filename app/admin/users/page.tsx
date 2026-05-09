@@ -32,7 +32,7 @@ export default async function AdminUsersPage({
 }) {
   const params = await searchParams;
   const filter = params.role ?? "all";
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const isSuper = isSuperadmin(
     (session?.user as { role?: string } | undefined)?.role,
   );

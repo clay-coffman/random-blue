@@ -11,7 +11,7 @@ import { InviteAdminForm } from "./_form";
 export const dynamic = "force-dynamic";
 
 export default async function AdminAdminsPage() {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   const role = (session?.user as { role?: string } | undefined)?.role;
   if (!isSuperadmin(role)) {
     return (

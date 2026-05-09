@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { founderPassports } from "@/db/schema";
 
 export async function GET(): Promise<never> {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
   if (!session?.user) redirect("/sign-in?next=/me/plan");
   const role = (session.user as { role?: string }).role ?? "founder";
   if (role !== "founder") redirect("/settings");

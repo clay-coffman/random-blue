@@ -20,7 +20,7 @@ export default async function ConsumeInvitePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  const session = await (await getAuth()).api.getSession({ headers: await headers() });
 
   // Look up the invite for display purposes (we still re-validate inside
   // the POST handler, so this is just informational).
