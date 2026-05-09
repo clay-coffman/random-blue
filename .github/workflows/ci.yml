@@ -1,0 +1,60 @@
+name: CI
+
+# Lint, typecheck, and tests on every PR. Catches schema/type/test
+# drift before it lands on main. `npm run --if-present test` so this
+# passes on commits that don't include a test script (e.g. before
+# PR #16 brings vitest); it runs the suite once present.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'app/**'
+      - 'lib/**'
+      - 'db/**'
+      - 'components/**'
+      - 'schemas/**'
+      - 'tests/**'
+      - 'cli/**'
+      - 'mcp/**'
+      - 'scripts/**'
+      - 'auth.ts'
+      - 'middleware.ts'
+      - 'next.config.ts'
+      - 'tailwind.config.ts'
+      - 'drizzle.config.ts'
+      - 'vitest.config.ts'
+      - 'tsconfig.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci.yml'
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run --if-present test
