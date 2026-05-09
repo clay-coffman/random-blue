@@ -17,8 +17,8 @@ function build(
 }
 
 describe("middleware session cookie detection", () => {
-  it("passes through when the dev-prefixed cookie is present (http)", () => {
-    const res = middleware(
+  it("passes through when the dev-prefixed cookie is present (http)", async () => {
+    const res = await middleware(
       build("/settings", {
         cookie: "atlas.session_token=abc",
         proto: "http",
@@ -29,8 +29,8 @@ describe("middleware session cookie detection", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
-  it("passes through when the prod-prefixed cookie is present (https)", () => {
-    const res = middleware(
+  it("passes through when the prod-prefixed cookie is present (https)", async () => {
+    const res = await middleware(
       build("/settings", {
         cookie: "__Host-atlas.session_token=abc",
         proto: "https",
@@ -40,8 +40,8 @@ describe("middleware session cookie detection", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
-  it("redirects to /sign-in when no cookie is present", () => {
-    const res = middleware(build("/settings", { proto: "http" }));
+  it("redirects to /sign-in when no cookie is present", async () => {
+    const res = await middleware(build("/settings", { proto: "http" }));
     expect(res.status).toBe(307);
     const location = res.headers.get("location");
     expect(location).toBeTruthy();
@@ -50,8 +50,8 @@ describe("middleware session cookie detection", () => {
     expect(target.searchParams.get("next")).toBe("/settings");
   });
 
-  it("redirects when only the better-auth default cookie name is set — locks in the prefix fix from #49", () => {
-    const res = middleware(
+  it("redirects when only the better-auth default cookie name is set — locks in the prefix fix from #49", async () => {
+    const res = await middleware(
       build("/settings", {
         cookie: "better-auth.session_token=abc",
         proto: "http",

@@ -6,8 +6,9 @@
 
 import { z } from "zod";
 import { ANTHROPIC_MODEL, anthropic, cachedSystem } from "./anthropic";
-import type { Scored } from "./recommend";
+import type { ResourceRow, Scored } from "./recommend";
 import type { FounderPassportInput } from "@/schemas/founder-passport";
+import { COMMUNITY_TAGS, INDUSTRIES, STAGES, labelFor } from "./intake-options";
 
 const HARD_TIMEOUT_MS = 12_000;
 const MAX_OUTPUT_TOKENS = 800;
@@ -104,4 +105,123 @@ export async function explainRecommendations(
   } finally {
     clearTimeout(timer);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Deterministic skip-bucket explainer.
+//
+// The "things you don't need" disclosure on /plan/[id] needs reasons that
+// read as *negative* — why this resource was filtered out — not the
+// scorer's positive match strings ("Covers what you need: capital").
+// Picks the strongest negative signal (community → industry → geo → stage),
+// falls back to "already covered" when a higher-ranked option claimed the
+// same capability, otherwise a generic "low fit" line.
+
+export type SkipFacets = {
+  industries?: string[];
+  communities?: string[];
+  counties?: string[];
+  statewide?: boolean;
+  stages?: string[];
+  needs?: string[];
+};
+
+// Minimal passport shape — `FounderPassportInput` from `schemas/` (snake_case)
+// and from `types/passport.ts` (camelCase) both satisfy this, since the four
+// fields we need have identical names in both.
+export type SkipPassport = {
+  county?: string;
+  stage?: string;
+  industry?: string;
+  communities: string[];
+};
+
+export function explainSkip(
+  facets: SkipFacets,
+  passport: SkipPassport,
+  opts?: { alreadyCoveredNeeds?: Set<string> },
+): string {
+  // 1. Community mismatch — strongest negative. The mock scorer applies a
+  //    -100 here for a reason: a women-only fund is a hard "no" for a
+  //    veteran founder regardless of any other match.
+  if (facets.communities && facets.communities.length > 0) {
+    const founderCommunities = new Set(passport.communities);
+    const overlap = facets.communities.some((c) => founderCommunities.has(c));
+    if (!overlap) {
+      const labels = facets.communities
+        .map((c) => labelFor(COMMUNITY_TAGS, c) ?? c)
+        .join(" / ");
+      return `Built for ${labels} founders — that's not your profile.`;
+    }
+  }
+
+  // 2. Industry mismatch — only when the resource is narrowly scoped
+  //    (≤ 2 industries). Wide industry lists ("general", many sectors)
+  //    aren't a real constraint.
+  if (
+    facets.industries &&
+    facets.industries.length > 0 &&
+    facets.industries.length <= 2 &&
+    passport.industry &&
+    !facets.industries.includes(passport.industry)
+  ) {
+    const labels = facets.industries
+      .map((i) => labelFor(INDUSTRIES, i) ?? i)
+      .join(" / ");
+    return `Industry-specific to ${labels}.`;
+  }
+
+  // 3. Geo mismatch — county-restricted resource, founder is elsewhere.
+  if (
+    !facets.statewide &&
+    facets.counties &&
+    facets.counties.length > 0 &&
+    passport.county &&
+    !facets.counties.includes(passport.county)
+  ) {
+    return `Limited to ${facets.counties.join(", ")} (you're in ${passport.county}).`;
+  }
+
+  // 4. Stage mismatch.
+  if (
+    facets.stages &&
+    facets.stages.length > 0 &&
+    passport.stage &&
+    !facets.stages.includes(passport.stage)
+  ) {
+    const labels = facets.stages
+      .map((s) => labelFor(STAGES, s)?.toLowerCase() ?? s)
+      .join(" / ");
+    return `Built for ${labels} stage founders.`;
+  }
+
+  // 5. Capability already covered by a higher-ranked option.
+  if (opts?.alreadyCoveredNeeds && facets.needs && facets.needs.length > 0) {
+    const overlap = facets.needs.some((n) => opts.alreadyCoveredNeeds!.has(n));
+    if (overlap) return "Already covered by higher-ranked options.";
+  }
+
+  // 6. Final fallback — partial match, nothing strongly disqualifying.
+  return "Low fit on your passport — only a partial match.";
+}
+
+// ResourceRow → SkipFacets adapter for the production recommend route.
+// Three of explainSkip's signals are wired up: community, industry, and
+// geo. `stages` is intentionally omitted — stage info on a `ResourceRow`
+// lives in `topics` (CSV `Topics` lifecycle markers, not a structured
+// enum), and decoding it for negative matching is more nuance than the
+// other three signals warrant. `needs` is mock-only for now (Catalogue
+// has `matches.needs`; ResourceRow does not), so the "already covered"
+// branch of explainSkip never fires from production traffic.
+export function resourceRowToSkipFacets(r: ResourceRow): SkipFacets {
+  const counties = r.locations
+    .map((l) => l.county)
+    .filter((c): c is string => c !== null);
+  const statewide = r.locations.some((l) => l.statewide);
+  return {
+    industries: r.industries,
+    communities: r.communities,
+    counties: counties.length > 0 ? counties : undefined,
+    statewide,
+  };
 }

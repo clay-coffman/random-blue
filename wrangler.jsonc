@@ -8,6 +8,23 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Custom domain. `custom_domain: true` makes Cloudflare manage the
+  // DNS record and the SSL cert automatically — no separate route or
+  // CNAME-setup dance. Apex + www both point at the Worker so either
+  // form serves the app.
+  //
+  // TODO: pin `"workers_dev": false` here once the CF API token is
+  // granted Zone:Workers Routes:Edit on startupstateatlas.dev.
+  // Wrangler needs that permission to verify the workers_dev flag
+  // against the zone's existing routes; without it the deploy fails
+  // with code 10000. Workers_dev IS already off (verified: GET
+  // https://startup-state-atlas.claymcoffman.workers.dev/ returns
+  // 404), so this is just belt-and-suspenders. The real defense is
+  // the gate, not the URL surface.
+  "routes": [
+    { "pattern": "startupstateatlas.dev", "custom_domain": true },
+    { "pattern": "www.startupstateatlas.dev", "custom_domain": true }
+  ],
   "observability": {
     "enabled": true
   },
@@ -30,12 +47,23 @@
   // call time (see app/api/v1/ownership-submissions/route.ts).
   // Better Auth's auth-route limits are separate and live in D1 — see
   // the `rateLimit` block in auth.ts.
+  //
+  // GATE_LIMIT throttles the preview-password gate POST so an attacker
+  // with the URL can't hammer the (relatively low-entropy, shared-
+  // with-reviewers) password. 10 attempts per IP per minute matches
+  // the upload limit's tolerance.
   "unsafe": {
     "bindings": [
       {
         "name": "UPLOAD_LIMIT",
         "type": "ratelimit",
         "namespace_id": "1101",
+        "simple": { "limit": 10, "period": 60 }
+      },
+      {
+        "name": "GATE_LIMIT",
+        "type": "ratelimit",
+        "namespace_id": "1102",
         "simple": { "limit": 10, "period": 60 }
       }
     ]
