@@ -232,13 +232,13 @@ function AgentTabs({ card }: { card: CompanyCard }) {
         {tabs.map((t) => (
           <TabsPanel key={t} value={t}>
             <div className="overflow-hidden rounded-md border border-paper/15 bg-[#0A1320]">
-              <div className="flex items-center justify-between border-b border-paper/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-paper/60">
+              <div className="flex items-center justify-between border-b border-paper/10 pl-3 pr-1 font-mono text-[10px] uppercase tracking-wider text-paper/60">
                 <span>{urlFor(card.slug, t)}</span>
                 <a
                   href={urlFor(card.slug, t)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-ember-tint underline-offset-2 hover:underline"
+                  className="inline-flex min-h-[44px] items-center px-3 text-ember-tint underline-offset-2 hover:underline"
                 >
                   Open ↗
                 </a>

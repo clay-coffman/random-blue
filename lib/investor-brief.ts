@@ -184,8 +184,9 @@ export async function generateInvestorBrief(
       .trim();
 
     // Happy path: model returned bare JSON, exactly as the system
-    // prompt asks. Greedy regex is a fallback for the case where the
-    // model wraps in code fences or leading/trailing prose.
+    // prompt asks. Falls back to a balanced-bracket scan (with
+    // string/escape tracking) if the model wraps the JSON in code
+    // fences or leading/trailing prose.
     const raw = extractJsonObject(text);
     if (raw == null) return empty;
     const parsed = InvestorBriefSchema.safeParse(raw);
