@@ -1,4 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { headers } from "next/headers";
+import { getAuth } from "@/auth";
 import { db } from "@/lib/db";
 import { founderPassports, recommendations } from "@/db/schema";
 import { newId } from "@/lib/ids";
@@ -63,6 +65,15 @@ export async function POST(req: Request) {
     const input = parsed.data;
     const d = db();
 
+    // Attach the passport to the current user when one is signed in. The
+    // browser forwards Better Auth cookies automatically; CLI/MCP calls
+    // arrive without a session and stay anonymous (userId null). Failures
+    // here must not block the recommend call — just log and proceed.
+    const sessionUserId = await (await getAuth())
+      .api.getSession({ headers: await headers() })
+      .then((s) => s?.user?.id ?? null)
+      .catch(() => null);
+
     // 1. Resolve or create passport.
     let passportId: string;
     let passport: FounderPassportInput;
@@ -98,6 +109,23 @@ export async function POST(req: Request) {
         });
       }
       passportId = row.id;
+
+      // First-touch claim: an authed founder revisiting their own
+      // passport (or one they intaked anonymously and just signed up for)
+      // attaches it to their account. The `isNull(userId)` predicate in
+      // the WHERE makes this atomic — a concurrent claim that already
+      // set `user_id` won't be silently overwritten here.
+      if (sessionUserId && !row.userId) {
+        await d
+          .update(founderPassports)
+          .set({ userId: sessionUserId })
+          .where(
+            and(
+              eq(founderPassports.id, row.id),
+              isNull(founderPassports.userId),
+            ),
+          );
+      }
 
       // Validate enum-typed columns at the boundary. The DB stores text
       // without CHECK constraints, so a corrupt or out-of-vocab value is
@@ -150,6 +178,7 @@ export async function POST(req: Request) {
       const createdAt = new Date();
       await d.insert(founderPassports).values({
         id: passportId,
+        userId: sessionUserId,
         county: passport.county ?? null,
         city: passport.city ?? null,
         stage: passport.stage,

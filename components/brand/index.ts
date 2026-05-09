@@ -3,4 +3,3 @@ export { Chip } from "./Chip";
 export { SectionHeader } from "./SectionHeader";
 export { ScribbleDivider } from "./ScribbleDivider";
 export { PersonaTile } from "./PersonaTile";
-export { ActivityTicker } from "./ActivityTicker";

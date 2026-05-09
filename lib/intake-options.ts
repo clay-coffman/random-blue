@@ -206,3 +206,46 @@ export const industryLabel = (v: string | undefined): string =>
 export const communityLabel = (v: string): string =>
   labelFor(COMMUNITY_TAGS, v) ?? v;
 export const needLabel = (v: string): string => labelFor(NEEDS, v) ?? v;
+
+// ─── Form → schema vocabulary translation ─────────────────────────────
+//
+// The form uses a 4-stage / 10-goal founder-friendly vocabulary
+// (Idea / Early / Raising / Growth, Raise capital / Hire talent / …);
+// the API zod schema enums use 6 finer-grained stages and slightly
+// different goal verbs (paying_customers, raise_seed_round, hire,
+// export, …). Without translation, every IntakeForm submit 400s on
+// the recommend endpoint and silently falls back to recommendMock.
+// Applied at the wire boundary in `lib/api-codec.ts`.
+//
+// Schema values + unknown values pass through unchanged. Direct API
+// consumers using the documented OpenAPI vocabulary still work; an
+// unmapped form value would surface as a clear zod error on the
+// server (better than silent acceptance of garbage).
+export const FORM_TO_SCHEMA_STAGE: Record<string, FounderStage> = {
+  idea: "idea",
+  early: "mvp", // form copy: "Early — building"
+  raising: "paying_customers", // form copy: "Raising — paying customers, ready for capital"
+  growth: "growth",
+};
+
+export const FORM_TO_SCHEMA_GOAL: Record<string, FounderGoal> = {
+  start_business: "start_business",
+  // No perfect schema match for "Build / launch what I'm working on";
+  // start_business is closest (the early phase of starting).
+  build_business: "start_business",
+  scale_business: "scale_business",
+  // Defaults to seed; growth-stage callers can edit later. Branching
+  // by stage adds complexity for ~zero scoring impact.
+  raise_capital: "raise_seed_round",
+  find_customers: "find_customers",
+  hire_talent: "hire",
+  expand_internationally: "export",
+  commercialize_research: "commercialize_research",
+  find_workspace: "find_workspace",
+  find_mentors: "find_mentors",
+};
+
+export const toSchemaStage = (v: string | undefined): string | undefined =>
+  v ? (FORM_TO_SCHEMA_STAGE[v] ?? v) : v;
+export const toSchemaGoal = (v: string | undefined): string | undefined =>
+  v ? (FORM_TO_SCHEMA_GOAL[v] ?? v) : v;

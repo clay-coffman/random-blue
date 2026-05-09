@@ -33,7 +33,7 @@ Latest applied D1 migration: **`0007_sloppy_paper_doll`**
 | #6  | Phase 1 — Next.js scaffold + Cloudflare Workers + D1 binding + lib stubs + shadcn |
 | #10 / #13 | Phase 2 — schema + migrations + seed (companies, resources, personas) |
 | #11 | Phase 2 — brand & shell (Tailwind tokens, layout, homepage, persona tiles) |
-| #16 | Phase 3a — recommendation engine, founder-passport API, Parallel.ai enrich endpoint |
+| #16 | Phase 3a — recommendation engine, founder-passport API, founder-website enrich endpoint |
 | #17 | Phase 3b — Founder Navigator UI (`/founder` intake, `/plan/:id`, share link) |
 | #20 | Phase 4b — Better Auth + OTP + onboarding + claim flow + GOEO admin |
 | #24 / #28 | Phase 4a — ecosystem map (MapLibre), company profiles, view modes / cluster colors / scroll-spy / mobile drawer |
@@ -61,7 +61,7 @@ Latest applied D1 migration: **`0007_sloppy_paper_doll`**
 | #45 | Plan page fixes — B7 skip-bucket explainer wording, B8 mailto CTAs prepopulated from passport | — |
 | #46 | Header rewrite — B2 mobile sign-in CTA, B6 auth-state branching, B10 sign-out + UserMenu | — |
 | #53 | Middleware cookie-prefix fix — pass `cookiePrefix` to `getSessionCookie` | #49 |
-| #54 | Rate-limit unauthenticated LLM-backed endpoints (Anthropic / Parallel.ai cost protection) | #34 |
+| #54 | Rate-limit unauthenticated LLM-backed endpoints (Anthropic cost protection) | #34 |
 | #55 | Top-bar nav typography — Hanken Grotesk small-caps | — |
 | #56 | Plan page — LLM-synthesized "Where to focus" narrative + humanized per-rec `because` | — |
 | #57 | Async `getAuth()` to unblock prerender; first successful re-deploy since #46 | — |

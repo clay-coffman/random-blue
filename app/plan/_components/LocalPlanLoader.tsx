@@ -1,19 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Tile } from "@/components/brand";
 import type { FounderPassportInput, RecommendResult } from "@/types/passport";
 import { ResultsView } from "./ResultsView";
 
-type Props = { passportId: string };
+type Props = { passportId: string; cta?: ReactNode };
 
 type Stash = {
   input: FounderPassportInput;
   result: RecommendResult;
 };
 
-export function LocalPlanLoader({ passportId }: Props) {
+export function LocalPlanLoader({ passportId, cta }: Props) {
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "found"; data: Stash }
@@ -83,6 +83,7 @@ export function LocalPlanLoader({ passportId }: Props) {
       passportId={passportId}
       input={state.data.input}
       result={state.data.result}
+      cta={cta}
     />
   );
 }

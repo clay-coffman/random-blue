@@ -71,9 +71,13 @@ likely identity tags and needs), and the founder reviews + edits
 before submitting.
 
 - The lookup hits `POST /api/v1/founder-passports/enrich` (Agent 2),
-  which calls **Parallel.ai** against the supplied URL and returns a
-  partial `FounderPassportInput`. No persistence happens on the
-  enrich call — persistence is still on the existing intake POST.
+  which fetches the supplied URL directly, strips HTML to text, and
+  asks Anthropic for a structured partial `FounderPassportInput`.
+  Round-trip is ~5–10s; the call never throws — fetch errors,
+  timeouts, parse failures, and denylist matches all return
+  `{ degraded: true, fields: [] }` so the form falls back to a
+  manual fill. No persistence happens on the enrich call —
+  persistence is still on the existing intake POST.
 - `founder_passports` carries a `website_url` (the founder's input)
   plus `enriched_at` / `enrichment_source` audit fields so we know
   which rows were touched by enrichment.
@@ -386,11 +390,11 @@ Do not invest in:
   from `investor_profiles` — Phase 5+.
 - Complex CRM workflows.
 - LinkedIn enrichment. Deferred. The GOED brief explicitly puts
-  scraped LinkedIn enrichment out of scope; using Parallel.ai
-  (which abstracts the scraping) on a LinkedIn URL doesn't change
-  the spirit of that cut. Founder-supplied **business website**
-  URLs *are* in scope and get enrichment via Parallel.ai (see
-  § Founder Passport → Smart prefill).
+  scraped LinkedIn enrichment out of scope, and any third-party
+  abstraction over LinkedIn scraping inherits the same constraint.
+  Founder-supplied **business website** URLs *are* in scope and
+  get enrichment via the fetch + Anthropic path described in
+  § Founder Passport → Smart prefill.
 - Perfect geocoding (use city/county centroids).
 - Complicated vector-only RAG (defer embeddings).
 - Calendar integration.
