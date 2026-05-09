@@ -9,7 +9,9 @@ only.
 
 Last refreshed **2026-05-09** (after PR #42 merge). Per-deploy state
 lives in `docs/deploy-log.md`. The e2e walkthrough that surfaced the
-`B1`–`B11` bug bucket lives in `docs/e2e-findings-2026-05-09.md`.
+`B1`–`B11` bug bucket lives in `docs/e2e-findings-2026-05-09.md`. The
+parallel admin-role walkthrough (A1–A4 + dev-DX + UX polish) lives in
+`docs/e2e-admin-2026-05-09.md`.
 
 ---
 
