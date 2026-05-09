@@ -129,7 +129,7 @@ function VariantAProfile({
   // teaser lives in the right rail, not the main column — so it's
   // omitted from the tab strip (clicking it on desktop would scroll
   // past the sidebar). Same with the right-rail Claim/Related tiles.
-  const sectionLabels = ["Overview", "Facts", "Open roles", "Gallery", "Map"];
+  const sectionLabels = ["Overview", "Facts", "Open roles", "Map"];
   const verification = card.verification.status;
 
   // JSON-LD Organization schema for SEO + agent consumption.
@@ -259,6 +259,16 @@ function VariantAProfile({
               ↗ Visit website
             </a>
           ) : null}
+          {card.linkedin ? (
+            <a
+              href={card.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 min-h-[44px] items-center justify-center gap-2 rounded-pill border-[1.5px] border-ink bg-paper px-4 font-mono text-xs uppercase tracking-wider transition hover:-translate-y-0.5"
+            >
+              ↗ LinkedIn
+            </a>
+          ) : null}
           {jobsCount > 0 ? (
             <Link
               href="#open-roles"
@@ -386,29 +396,8 @@ function VariantAProfile({
             )}
           </section>
 
-          {/* GALLERY */}
-          <section id="gallery" className="scroll-mt-32">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">
-              Gallery
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[0, 1, 2, 3].map((i) => (
-                <Tile
-                  key={i}
-                  variant="subtle"
-                  shadow="none"
-                  className="flex aspect-square items-center justify-center p-0"
-                >
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-ink-3">
-                    no photo yet
-                  </span>
-                </Tile>
-              ))}
-            </div>
-            <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-ink-3">
-              Photos appear once the owner uploads them via the claim flow.
-            </p>
-          </section>
+          {/* GALLERY — hidden until owner-supplied photo upload ships
+              (no rows in companyPhotos yet; placeholder over-promises). */}
 
           <ScribbleDivider width="med" />
 
