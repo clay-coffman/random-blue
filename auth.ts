@@ -4,6 +4,7 @@ import { emailOTP } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/d1";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { D1Database } from "@cloudflare/workers-types";
+import * as authSchema from "@/db/schema.auth";
 import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
 
 // Dual-mode Better Auth config. CLI codegen calls `betterAuth(...)` with
@@ -20,9 +21,18 @@ function buildAuth(env?: CloudflareEnv) {
     : drizzle({} as D1Database);
 
   return betterAuth({
-    baseURL: env?.BETTER_AUTH_URL,
-    secret: env?.BETTER_AUTH_SECRET,
-    database: drizzleAdapter(db, { provider: "sqlite" }),
+    baseURL:
+      env?.BETTER_AUTH_URL ??
+      process.env.BETTER_AUTH_URL ??
+      undefined,
+    secret:
+      env?.BETTER_AUTH_SECRET ??
+      process.env.BETTER_AUTH_SECRET ??
+      undefined,
+    database: drizzleAdapter(db, {
+      provider: "sqlite",
+      schema: authSchema,
+    }),
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
