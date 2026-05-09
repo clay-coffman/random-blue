@@ -1,0 +1,51 @@
+import { Resend } from "resend";
+import { env } from "./cf";
+
+const FROM = "Startup State Atlas <noreply@startup.utah.gov>";
+
+async function send(to: string, subject: string, html: string) {
+  const apiKey = env().RESEND_API_KEY;
+  if (!apiKey) {
+    // Dev fallback — keeps OTP flows usable without Resend wired up.
+    // The 6-digit code is the only thing operators actually need to
+    // grab in dev; the full HTML body is logged for completeness.
+    console.log(
+      `\n[email:dev] to=${to}\n  subject: ${subject}\n  body: ${html}\n`,
+    );
+    return;
+  }
+  const resend = new Resend(apiKey);
+  await resend.emails.send({ from: FROM, to, subject, html });
+}
+
+export async function sendVerificationEmail(email: string, otp: string) {
+  await send(
+    email,
+    "Verify your Startup State Atlas account",
+    `<h2>Welcome to Atlas</h2>
+     <p>Your verification code is: <strong style="font-size:24px;letter-spacing:4px">${otp}</strong></p>
+     <p>It expires in 10 minutes.</p>`,
+  );
+}
+
+export async function sendPasswordResetEmail(email: string, otp: string) {
+  await send(
+    email,
+    "Reset your Startup State Atlas password",
+    `<h2>Password reset</h2>
+     <p>Your reset code is: <strong style="font-size:24px;letter-spacing:4px">${otp}</strong></p>
+     <p>It expires in 10 minutes. If you didn't request a reset, ignore this email.</p>`,
+  );
+}
+
+export async function sendAdminInviteEmail(email: string, link: string) {
+  await send(
+    email,
+    "You've been invited as a GOEO admin on Startup State Atlas",
+    `<h2>GOEO admin invite</h2>
+     <p>You've been invited to administer Startup State Atlas.</p>
+     <p><a href="${link}" style="display:inline-block;padding:10px 16px;background:#c2410c;color:#fff;text-decoration:none;border-radius:6px">Accept your invite</a></p>
+     <p>Or open: ${link}</p>
+     <p>This link is single-use and expires in 7 days.</p>`,
+  );
+}

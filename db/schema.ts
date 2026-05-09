@@ -283,6 +283,57 @@ export const profileUpdates = sqliteTable(
     reviewedByUserId: text("reviewed_by_user_id").references(() => user.id, {
       onDelete: "set null",
     }),
+    sourceClient: text("source_client"),
   },
   (t) => [index("profile_updates_company_idx").on(t.companyId)],
+);
+
+// ─── Investor profiles ───────────────────────────────────────────────
+
+export const investorProfiles = sqliteTable(
+  "investor_profiles",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => newId("inv")),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    firmName: text("firm_name"),
+    investorType: text("investor_type"),
+    stagesJson: text("stages_json"),
+    sectorsJson: text("sectors_json"),
+    checkSizeMin: integer("check_size_min"),
+    checkSizeMax: integer("check_size_max"),
+    geoFocusJson: text("geo_focus_json"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(now),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .$defaultFn(now)
+      .$onUpdate(now),
+  },
+  (t) => [uniqueIndex("investor_profiles_user_idx").on(t.userId)],
+);
+
+// ─── Admin invites ───────────────────────────────────────────────────
+
+export const adminInvites = sqliteTable(
+  "admin_invites",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => newId("aiv")),
+    email: text("email").notNull(),
+    role: text("role").default("goeo_admin").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    invitedByUserId: text("invited_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(now),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    consumedAt: integer("consumed_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [
+    uniqueIndex("admin_invites_token_idx").on(t.tokenHash),
+    index("admin_invites_email_idx").on(t.email),
+  ],
 );

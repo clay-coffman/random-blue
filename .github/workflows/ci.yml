@@ -55,6 +55,12 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Generate Cloudflare bindings types
+        # `cloudflare-env.d.ts` is gitignored (per-machine generated
+        # from wrangler.jsonc). Without it, lib code that does
+        # `env().DB` etc. doesn't typecheck.
+        run: npm run cf-typegen
+
       - name: Lint
         run: npm run lint
 
