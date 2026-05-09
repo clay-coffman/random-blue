@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { desc, eq } from "drizzle-orm";
 import {
   Roboto_Serif,
   Hanken_Grotesk,
@@ -10,8 +9,6 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { getAuth } from "@/auth";
-import { db } from "@/lib/db";
-import { founderPassports } from "@/db/schema";
 import { UserMenu } from "@/components/site/UserMenu";
 
 const robotoSerif = Roboto_Serif({
@@ -64,47 +61,32 @@ const footerLinks = [
   { href: REPO_URL, label: "GitHub", external: true },
 ];
 
-type SessionUserShape = {
-  id: string;
+type HeaderUser = {
   email: string;
-  name?: string | null;
-  role?: string | null;
+  name: string;
+  role: string;
+  planHref?: string;
 };
 
-async function loadSessionContext(): Promise<{
-  user: SessionUserShape;
-  planHref?: string;
-} | null> {
-  let session: Awaited<
-    ReturnType<ReturnType<typeof getAuth>["api"]["getSession"]>
-  > | null = null;
-  try {
-    session = await getAuth().api.getSession({ headers: await headers() });
-  } catch {
-    return null;
-  }
+async function loadHeaderUser(): Promise<HeaderUser | null> {
+  const session = await getAuth()
+    .api.getSession({ headers: await headers() })
+    .catch(() => null);
   if (!session?.user) return null;
-  const user = session.user as SessionUserShape;
+  const user = session.user as { email: string; name?: string | null; role?: string | null };
   const role = user.role ?? "founder";
-  let planHref: string | undefined;
-  if (role === "founder") {
-    try {
-      const [latest] = await db()
-        .select({ id: founderPassports.id })
-        .from(founderPassports)
-        .where(eq(founderPassports.userId, user.id))
-        .orderBy(desc(founderPassports.createdAt))
-        .limit(1);
-      planHref = latest ? `/plan/${latest.id}` : "/founder";
-    } catch {
-      planHref = "/founder";
-    }
-  }
-  return { user: { ...user, role }, planHref };
+  // Defer the founder-passport lookup to /me/plan so the root layout
+  // does not issue a D1 query on every authenticated navigation.
+  return {
+    email: user.email,
+    name: user.name ?? "",
+    role,
+    planHref: role === "founder" ? "/me/plan" : undefined,
+  };
 }
 
 async function SiteNav() {
-  const ctx = await loadSessionContext();
+  const user = await loadHeaderUser();
   return (
     <header className="sticky top-0 z-50 border-b border-topo bg-paper/90 backdrop-blur-sm">
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-center gap-4 px-4 py-3 sm:px-7 md:gap-6">
@@ -143,12 +125,12 @@ async function SiteNav() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2 md:ml-0">
-          {ctx ? (
+          {user ? (
             <UserMenu
-              name={ctx.user.name ?? ""}
-              email={ctx.user.email}
-              role={ctx.user.role ?? "founder"}
-              planHref={ctx.planHref}
+              name={user.name}
+              email={user.email}
+              role={user.role}
+              planHref={user.planHref}
             />
           ) : (
             <>

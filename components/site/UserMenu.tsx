@@ -21,9 +21,22 @@ type Props = {
   planHref?: string;
 };
 
+const ROLE_LABELS: Record<string, string> = {
+  founder: "Founder",
+  owner: "Owner",
+  investor: "Investor",
+  goeo_admin: "GOEO admin",
+  superadmin: "Superadmin",
+};
+
+function formatRole(role: string): string {
+  return ROLE_LABELS[role] ?? role.replace(/_/g, " ");
+}
+
 export function UserMenu({ name, email, role, planHref }: Props) {
   const router = useRouter();
   const [signingOut, setSigningOut] = React.useState(false);
+  const [signOutError, setSignOutError] = React.useState<string | null>(null);
 
   const display = (name?.trim() || email.split("@")[0] || "Account").trim();
   const firstName = display.split(/\s+/)[0];
@@ -32,11 +45,15 @@ export function UserMenu({ name, email, role, planHref }: Props) {
   async function handleSignOut() {
     if (signingOut) return;
     setSigningOut(true);
+    setSignOutError(null);
     try {
       await authClient.signOut();
       router.push("/");
       router.refresh();
-    } finally {
+    } catch (err) {
+      setSignOutError(
+        err instanceof Error ? err.message : "Could not sign out. Try again.",
+      );
       setSigningOut(false);
     }
   }
@@ -73,8 +90,8 @@ export function UserMenu({ name, email, role, planHref }: Props) {
             <span className="block truncate font-mono text-[11px] text-ink-3">
               {email}
             </span>
-            <span className="mt-1 block font-mono text-[10px] uppercase tracking-wider text-ink-3">
-              {role}
+            <span className="mt-1 block font-mono text-[11px] uppercase tracking-wider text-ink-3">
+              {formatRole(role)}
             </span>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
@@ -105,14 +122,21 @@ export function UserMenu({ name, email, role, planHref }: Props) {
         <DropdownMenuItem
           variant="destructive"
           disabled={signingOut}
-          onClick={(event) => {
-            event.preventDefault();
+          onClick={() => {
             void handleSignOut();
           }}
           className="px-2 py-1.5 font-sans text-sm"
         >
           {signingOut ? "Signing out…" : "Sign out"}
         </DropdownMenuItem>
+        {signOutError ? (
+          <p
+            role="alert"
+            className="mt-1 px-2 py-1 font-mono text-[11px] text-danger"
+          >
+            {signOutError}
+          </p>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );
