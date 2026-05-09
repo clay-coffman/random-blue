@@ -3,7 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuth } from "@/auth";
 import { db } from "@/lib/db";
-import { founderPassports } from "@/db/schema";
+import {
+  businessOwnershipSubmissions,
+  companies,
+  founderPassports,
+} from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { ScribbleDivider } from "@/components/brand";
 
@@ -66,7 +70,7 @@ export default async function OnboardingDonePage() {
   if (!session?.user) redirect("/sign-in?next=/onboarding/done");
 
   const role = (session.user as { role?: string }).role ?? "founder";
-  const copy = COPY[role] ?? COPY.founder;
+  const copy = { ...(COPY[role] ?? COPY.founder) };
 
   // Founders: if they already have a passport, link to that plan.
   let primaryHref = copy.primary.href;
@@ -78,6 +82,60 @@ export default async function OnboardingDonePage() {
       .orderBy(desc(founderPassports.createdAt))
       .limit(1);
     if (latest) primaryHref = `/plan/${latest.id}`;
+  }
+
+  // Owners: the static "Find my company →" CTA loops back to
+  // /onboarding/owner that the user just left, which is dead-end UX
+  // once a claim is in flight. If the user has any submission, point
+  // them at the live state instead.
+  if (role === "owner") {
+    const [latest] = await db()
+      .select({
+        id: businessOwnershipSubmissions.id,
+        status: businessOwnershipSubmissions.status,
+        slug: companies.slug,
+      })
+      .from(businessOwnershipSubmissions)
+      .leftJoin(
+        companies,
+        eq(businessOwnershipSubmissions.companyId, companies.id),
+      )
+      .where(eq(businessOwnershipSubmissions.userId, session.user.id))
+      .orderBy(desc(businessOwnershipSubmissions.submittedAt))
+      .limit(1);
+    if (latest) {
+      if (latest.status === "approved" && latest.slug) {
+        copy.lede = "You're verified. Edit your profile any time.";
+        copy.primary = {
+          label: "Edit your company profile →",
+          href: `/companies/${latest.slug}/edit`,
+        };
+        primaryHref = copy.primary.href;
+      } else if (latest.status === "needs_more_info") {
+        copy.lede = "GOEO needs one more thing for your claim.";
+        copy.primary = {
+          label: "See what's needed →",
+          href: "/me/submissions",
+        };
+        primaryHref = copy.primary.href;
+      } else if (latest.status === "rejected") {
+        copy.lede =
+          "Your claim wasn't verified. See the reviewer's note and try again.";
+        copy.primary = {
+          label: "See claim status →",
+          href: "/me/submissions",
+        };
+        primaryHref = copy.primary.href;
+      } else {
+        // pending
+        copy.lede = "Your verification doc is in review.";
+        copy.primary = {
+          label: "See claim status →",
+          href: "/me/submissions",
+        };
+        primaryHref = copy.primary.href;
+      }
+    }
   }
 
   return (

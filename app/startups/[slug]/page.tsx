@@ -10,6 +10,7 @@ import { companyCard, type CompanyCard } from "@/lib/company-card";
 import { cn } from "@/lib/utils";
 import { db } from "@/lib/db";
 import {
+  businessOwnershipSubmissions,
   companies,
   introRequests,
   investorProfiles,
@@ -112,6 +113,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
   // the lookup when the viewer is the company claimer — the API
   // rejects self-targeted intros, so the row can't exist.
   let pendingIntroId: string | null = null;
+  let viewerHasPendingClaim = false;
   if (session?.user.id) {
     const [claim] = await db()
       .select({ claimedByUserId: companies.claimedByUserId })
@@ -133,6 +135,18 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
         .limit(1);
       pendingIntroId = existing?.id ?? null;
     }
+    const [pendingClaim] = await db()
+      .select({ id: businessOwnershipSubmissions.id })
+      .from(businessOwnershipSubmissions)
+      .where(
+        and(
+          eq(businessOwnershipSubmissions.userId, session.user.id),
+          eq(businessOwnershipSubmissions.companyId, result.card.id),
+          eq(businessOwnershipSubmissions.status, "pending"),
+        ),
+      )
+      .limit(1);
+    viewerHasPendingClaim = !!pendingClaim;
   }
 
   return (
@@ -142,6 +156,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
       isInvestor={isInvestor}
       isSaved={isSaved}
       pendingIntroId={pendingIntroId}
+      viewerHasPendingClaim={viewerHasPendingClaim}
     />
   );
 }
@@ -152,12 +167,14 @@ function VariantAProfile({
   isInvestor,
   isSaved,
   pendingIntroId,
+  viewerHasPendingClaim,
 }: {
   card: CompanyCard;
   signedIn: boolean;
   isInvestor: boolean;
   isSaved: boolean;
   pendingIntroId: string | null;
+  viewerHasPendingClaim: boolean;
 }) {
   const jobsCount = card.jobs.length;
   // Defensive normalization: seed runs through normalizeUrl, but admin
@@ -331,12 +348,21 @@ function VariantAProfile({
               pendingIntroId={pendingIntroId}
             />
           ) : null}
-          <Link
-            href={`/companies/${card.slug}/claim`}
-            className="inline-flex h-10 min-h-[44px] items-center justify-center gap-2 rounded-pill border-[1.5px] border-ink/40 bg-transparent px-4 font-mono text-[11px] uppercase tracking-wider text-ink-2 transition hover:bg-paper-2"
-          >
-            Claim this profile
-          </Link>
+          {viewerHasPendingClaim ? (
+            <Link
+              href="/me/submissions"
+              className="inline-flex h-10 min-h-[44px] items-center justify-center gap-2 rounded-pill border-[1.5px] border-ember bg-ember-tint px-4 font-mono text-[11px] uppercase tracking-wider text-ember transition hover:-translate-y-0.5"
+            >
+              Claim pending review →
+            </Link>
+          ) : (
+            <Link
+              href={`/companies/${card.slug}/claim`}
+              className="inline-flex h-10 min-h-[44px] items-center justify-center gap-2 rounded-pill border-[1.5px] border-ink/40 bg-transparent px-4 font-mono text-[11px] uppercase tracking-wider text-ink-2 transition hover:bg-paper-2"
+            >
+              Claim this profile
+            </Link>
+          )}
         </div>
       </header>
 
@@ -524,7 +550,26 @@ function VariantAProfile({
           </section>
 
           {/* CLAIM */}
-          {verification !== "verified" ? (
+          {viewerHasPendingClaim ? (
+            <Tile
+              variant="subtle"
+              shadow="none"
+              className="border-ember p-4"
+            >
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ember">
+                Your claim is pending review
+              </p>
+              <p className="mt-1 font-serif text-lg leading-snug">
+                GOEO usually answers within 1–2 business days.
+              </p>
+              <Link
+                href="/me/submissions"
+                className="mt-3 inline-flex h-10 min-h-[44px] items-center justify-center rounded-pill border-[1.5px] border-ember bg-ember-tint px-4 font-mono text-[11px] uppercase tracking-wider text-ember transition hover:-translate-y-0.5"
+              >
+                See claim status →
+              </Link>
+            </Tile>
+          ) : verification !== "verified" ? (
             <Tile
               variant="subtle"
               shadow="none"
