@@ -9,21 +9,14 @@ import {
 } from "@/components/ui/dialog";
 import { ScribbleDivider } from "@/components/brand";
 import { SECTOR_REGISTRY } from "@/lib/sectors";
+import { STAGE_VALUES } from "@/lib/stages";
 import { BUCKET_PRESETS } from "@/lib/employee-bucket";
 import type { CompanyListItem } from "@/lib/companies-list";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
 import { SaveSearchModal } from "./SaveSearchModal";
 
-const STAGES = [
-  "bootstrapped",
-  "pre-seed",
-  "seed",
-  "series a",
-  "series b",
-  "series c",
-  "series d+",
-];
+const STAGES = STAGE_VALUES;
 
 const COUNTIES = [
   "Beaver",

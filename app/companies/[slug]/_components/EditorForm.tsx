@@ -15,21 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-
-const SECTORS = [
-  "fintech",
-  "saas",
-  "ai",
-  "aerospace",
-  "bio",
-  "energy",
-  "consumer",
-  "security",
-  "manufacturing",
-  "other",
-];
-
-const STAGES = ["idea", "early", "seed", "growth", "scale", "mature"];
+import { KNOWN_SECTORS, sectorDisplayName } from "@/lib/sectors";
+import { STAGE_VALUES, stageDisplayName } from "@/lib/stages";
 
 const optionalUrl = z
   .string()
@@ -236,48 +223,65 @@ export function EditorForm({ slug, company, canEditLockedFields }: Props) {
             <FormField
               control={form.control}
               name="sector"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sector</FormLabel>
-                  <FormControl>
-                    <select
-                      className="w-full rounded-tile border-[1.5px] border-ink bg-paper-2 p-2 text-sm"
-                      {...field}
-                    >
-                      <option value="">—</option>
-                      {SECTORS.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const current = field.value ?? "";
+                const showLegacy =
+                  current !== "" && !KNOWN_SECTORS.includes(current);
+                return (
+                  <FormItem>
+                    <FormLabel>Sector</FormLabel>
+                    <FormControl>
+                      <select
+                        className="w-full rounded-tile border-[1.5px] border-ink bg-paper-2 p-2 text-sm"
+                        {...field}
+                      >
+                        <option value="">—</option>
+                        {showLegacy ? (
+                          <option value={current}>Current: {current}</option>
+                        ) : null}
+                        {KNOWN_SECTORS.map((s) => (
+                          <option key={s} value={s}>
+                            {sectorDisplayName(s)}
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
             <FormField
               control={form.control}
               name="stage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Stage</FormLabel>
-                  <FormControl>
-                    <select
-                      className="w-full rounded-tile border-[1.5px] border-ink bg-paper-2 p-2 text-sm"
-                      {...field}
-                    >
-                      <option value="">—</option>
-                      {STAGES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const current = field.value ?? "";
+                const showLegacy =
+                  current !== "" &&
+                  !(STAGE_VALUES as readonly string[]).includes(current);
+                return (
+                  <FormItem>
+                    <FormLabel>Stage</FormLabel>
+                    <FormControl>
+                      <select
+                        className="w-full rounded-tile border-[1.5px] border-ink bg-paper-2 p-2 text-sm"
+                        {...field}
+                      >
+                        <option value="">—</option>
+                        {showLegacy ? (
+                          <option value={current}>Current: {current}</option>
+                        ) : null}
+                        {STAGE_VALUES.map((s) => (
+                          <option key={s} value={s}>
+                            {stageDisplayName(s)}
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
             <FormField
               control={form.control}
