@@ -118,19 +118,17 @@ export default function OwnerOnboardingPage() {
         })}
       </ul>
       <div className="mt-6 rounded-tile border border-dashed border-topo bg-paper-2 p-4">
-        <p className="font-mono text-[10px] uppercase tracking-wider text-ink-3">
-          Don&rsquo;t see your company?
-        </p>
-        <p className="mt-2 text-sm text-ink-2">
-          Email{" "}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-ink-2">Don&rsquo;t see your company?</p>
           <a
             href="mailto:atlas@goed.utah.gov?subject=Request%20to%20add%20company"
-            className="text-ember underline-offset-4 hover:underline"
+            className="inline-flex min-h-[36px] items-center justify-center rounded-tile border-[1.5px] border-ink bg-paper px-3 py-1.5 text-sm transition-transform hover:-translate-y-0.5 hover:shadow-sketch"
           >
-            atlas@goed.utah.gov
-          </a>{" "}
-          with your company name and website. A GOEO admin will add it to the
-          map within 1 business day.
+            + Add a new company
+          </a>
+        </div>
+        <p className="mt-2 text-xs text-ink-3">
+          A GOEO admin will add it to the map within 1 business day.
         </p>
       </div>
       <Link

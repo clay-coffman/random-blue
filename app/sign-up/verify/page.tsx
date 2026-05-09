@@ -123,7 +123,18 @@ export default function SignUpVerifyPage() {
     <AuthShell
       kicker="Check your inbox"
       title={`We sent a code to ${email}.`}
-      lede="Auto-advances when all six digits are in."
+      lede={
+        <>
+          Auto-advances when all six digits are in.{" "}
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="text-ember underline-offset-4 hover:underline"
+          >
+            Wrong email?
+          </button>
+        </>
+      }
       steps={[
         { label: "Role", state: "done" },
         { label: "Account", state: "done" },
@@ -175,15 +186,7 @@ export default function SignUpVerifyPage() {
           Can&rsquo;t find it?
         </p>
         <p className="mt-1">
-          Check spam, or{" "}
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="text-ember underline-offset-4 hover:underline"
-          >
-            try a different email
-          </button>
-          .
+          Check spam, or search &ldquo;Startup State Atlas&rdquo;.
         </p>
       </div>
     </AuthShell>

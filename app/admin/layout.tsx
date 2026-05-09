@@ -1,11 +1,16 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { count, eq } from "drizzle-orm";
 import { getAuth } from "@/auth";
 import { isAdminRole, isSuperadmin } from "@/lib/auth-utils";
+import { db } from "@/lib/db";
+import { businessOwnershipSubmissions } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
+// TODO(phase-5): wire additional admin sections — wireframe also calls
+// out Edit log, Reports, Imports, Audit log, Feature flags, API health.
 const NAV_GROUPS: Array<{
   label: string;
   items: Array<{ href: string; label: string; superadminOnly?: boolean }>;
@@ -36,6 +41,14 @@ const NAV_GROUPS: Array<{
   },
 ];
 
+async function loadPendingByRoute(): Promise<Record<string, number>> {
+  const [{ pending }] = await db()
+    .select({ pending: count() })
+    .from(businessOwnershipSubmissions)
+    .where(eq(businessOwnershipSubmissions.status, "pending"));
+  return { "/admin/submissions": pending };
+}
+
 export default async function AdminLayout({
   children,
 }: {
@@ -48,6 +61,7 @@ export default async function AdminLayout({
   const isSuper = isSuperadmin(role);
 
   const user = session.user as { name: string; email: string };
+  const pendingByRoute = await loadPendingByRoute();
 
   return (
     <div className="grid min-h-[calc(100dvh-100px)] grid-cols-1 md:grid-cols-[220px_1fr]">
@@ -68,16 +82,25 @@ export default async function AdminLayout({
                 <ul className="mt-2 grid gap-1">
                   {group.items
                     .filter((it) => !it.superadminOnly || isSuper)
-                    .map((it) => (
-                      <li key={it.href}>
-                        <Link
-                          href={it.href}
-                          className="block rounded-tile px-2 py-1.5 text-sm hover:bg-ink-2"
-                        >
-                          ◇ {it.label}
-                        </Link>
-                      </li>
-                    ))}
+                    .map((it) => {
+                      const pending = pendingByRoute[it.href] ?? 0;
+                      return (
+                        <li key={it.href}>
+                          <Link
+                            href={it.href}
+                            className="flex items-center gap-2 rounded-tile px-2 py-1.5 text-sm hover:bg-ink-2"
+                          >
+                            <span className="flex-1">◇ {it.label}</span>
+                            {pending > 0 ? (
+                              <span
+                                aria-label={`${pending} pending`}
+                                className="h-1.5 w-1.5 rounded-full bg-ember"
+                              />
+                            ) : null}
+                          </Link>
+                        </li>
+                      );
+                    })}
                 </ul>
               </div>
             ))}

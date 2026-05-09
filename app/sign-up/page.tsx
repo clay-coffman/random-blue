@@ -22,14 +22,14 @@ const ROLES: Array<{
   },
   {
     id: "owner",
-    glyph: "★",
+    glyph: "⬣",
     title: "Business owner",
     desc:
       "Already running a Utah company. Wants to claim, update, and verify a profile.",
   },
   {
     id: "investor",
-    glyph: "◆",
+    glyph: "◈",
     title: "Investor / partner",
     desc:
       "Looking at the Utah ecosystem. Wants the map, briefs, deal flow.",
@@ -77,32 +77,54 @@ export default function SignUpRolePage() {
     >
       <fieldset className="grid gap-3">
         <legend className="sr-only">Pick your role</legend>
-        {ROLES.map((r) => (
-          <label
-            key={r.id}
-            className={`flex cursor-pointer items-start gap-3 rounded-tile border-[1.5px] p-4 transition ${
-              role === r.id
-                ? "border-ember bg-ember-tint shadow-sketch"
-                : "border-topo bg-paper-2 hover:-translate-y-0.5 hover:border-ink"
-            }`}
-          >
-            <input
-              type="radio"
-              name="role"
-              value={r.id}
-              checked={role === r.id}
-              onChange={() => setRole(r.id)}
-              className="mt-1"
-            />
-            <span className="flex-1">
-              <span className="flex items-center gap-2 font-serif text-xl">
-                <span aria-hidden>{r.glyph}</span>
-                {r.title}
+        {ROLES.map((r) => {
+          const selected = role === r.id;
+          return (
+            <label
+              key={r.id}
+              className={`flex cursor-pointer items-center gap-3 rounded-tile border-[1.5px] p-3 transition ${
+                selected
+                  ? "border-ember bg-ember-tint shadow-sketch"
+                  : "border-topo bg-paper-2 hover:-translate-y-0.5 hover:border-ink"
+              }`}
+            >
+              <input
+                type="radio"
+                name="role"
+                value={r.id}
+                checked={selected}
+                onChange={() => setRole(r.id)}
+                className="sr-only"
+              />
+              <span
+                aria-hidden
+                className={`grid h-[42px] w-[42px] flex-none place-items-center rounded-tile border-[1.5px] font-serif text-[22px] leading-none ${
+                  selected
+                    ? "border-ember bg-paper text-ember"
+                    : "border-ink bg-stone text-ink"
+                }`}
+              >
+                {r.glyph}
               </span>
-              <span className="mt-1 block text-sm text-ink-2">{r.desc}</span>
-            </span>
-          </label>
-        ))}
+              <span className="flex-1">
+                <span className="block font-serif text-lg leading-tight">
+                  {r.title}
+                </span>
+                <span className="mt-1 block text-sm leading-snug text-ink-2">
+                  {r.desc}
+                </span>
+              </span>
+              <span
+                aria-hidden
+                className={`h-[14px] w-[14px] flex-none rounded-full border-[1.5px] ${
+                  selected
+                    ? "border-ember bg-ember-tint shadow-[inset_0_0_0_3px_var(--color-ember)]"
+                    : "border-ink"
+                }`}
+              />
+            </label>
+          );
+        })}
       </fieldset>
       <button
         type="button"

@@ -150,22 +150,6 @@ export default function SignInPage() {
           >
             {submitting ? "Signing in…" : "Log in →"}
           </button>
-          <div className="grid gap-2">
-            <button
-              type="button"
-              disabled
-              className="inline-flex min-h-[44px] items-center justify-center rounded-tile border border-topo bg-paper-2 px-5 py-3 text-sm text-ink-3"
-            >
-              Email me a magic link · coming soon
-            </button>
-            <button
-              type="button"
-              disabled
-              className="inline-flex min-h-[44px] items-center justify-center rounded-tile border border-topo bg-paper-2 px-5 py-3 text-sm text-ink-3"
-            >
-              Continue with Google · coming soon
-            </button>
-          </div>
         </form>
       </Form>
     </AuthShell>

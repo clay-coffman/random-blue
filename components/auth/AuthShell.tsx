@@ -47,26 +47,36 @@ function Stepper({ steps }: { steps: Step[] }) {
   return (
     <ol
       aria-label="Sign-up progress"
-      className="mb-6 flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider"
+      className="mb-6 flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-ink-3"
     >
       {steps.map((s, i) => (
-        <li key={s.label} className="flex items-center gap-2">
+        <li
+          key={s.label}
+          className="flex items-center gap-2"
+          style={i < steps.length - 1 ? { flex: "1 1 0%" } : undefined}
+        >
           <span
             aria-current={s.state === "current" ? "step" : undefined}
             className={
               s.state === "current"
-                ? "rounded-pill border-[1.5px] border-ember bg-ember-tint px-2 py-0.5 text-ember"
+                ? "grid h-[22px] w-[22px] flex-none place-items-center rounded-full border-[1.5px] border-ember bg-ember font-mono text-[11px] font-semibold text-paper"
                 : s.state === "done"
-                  ? "rounded-pill border-[1.5px] border-sage bg-sage-tint px-2 py-0.5 text-sage"
-                  : "rounded-pill border border-topo px-2 py-0.5 text-ink-3"
+                  ? "grid h-[22px] w-[22px] flex-none place-items-center rounded-full border-[1.5px] border-sage bg-sage font-mono text-[11px] font-semibold text-paper"
+                  : "grid h-[22px] w-[22px] flex-none place-items-center rounded-full border-[1.5px] border-topo font-mono text-[11px] font-semibold text-ink-3"
             }
           >
-            {i + 1}. {s.label}
+            {s.state === "done" ? "✓" : i + 1}
           </span>
+          <span className="whitespace-nowrap">{s.label}</span>
           {i < steps.length - 1 ? (
-            <span aria-hidden className="text-ink-3">
-              ·
-            </span>
+            <span
+              aria-hidden
+              className="h-[1.5px] flex-1"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(90deg, var(--color-ink-3) 0 6px, transparent 6px 10px)",
+              }}
+            />
           ) : null}
         </li>
       ))}
