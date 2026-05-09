@@ -1,15 +1,6 @@
 import Link from "next/link";
-import {
-  ActivityTicker,
-  Chip,
-  PersonaTile,
-  ScribbleDivider,
-  SectionHeader,
-  Tile,
-} from "@/components/brand";
-import { recentActivity } from "@/lib/activity";
+import { SectionHeader, Tile } from "@/components/brand";
 import { getLandingStats } from "@/lib/landing-stats";
-import { personas } from "@/lib/personas";
 
 export const dynamic = "force-dynamic";
 
@@ -46,10 +37,7 @@ const audienceCards = [
 ];
 
 export default async function Home() {
-  const [activity, stats] = await Promise.all([
-    recentActivity(6),
-    getLandingStats(),
-  ]);
+  const stats = await getLandingStats();
   const fmt = (n: number) => n.toLocaleString("en-US");
   const liveStats = [
     { value: fmt(stats.companies), label: "Companies" },
@@ -60,8 +48,8 @@ export default async function Home() {
   return (
     <div>
       {/* Hero */}
-      <section className="mx-auto grid max-w-[1480px] gap-10 px-4 pb-12 pt-10 sm:px-7 sm:pt-16 md:grid-cols-[1.4fr_1fr] md:items-center">
-        <div className="flex flex-col">
+      <section className="mx-auto max-w-[1480px] px-4 pb-12 pt-10 sm:px-7 sm:pt-16">
+        <div className="flex max-w-3xl flex-col">
           <p className="mb-3 font-hand text-base text-ink-3">
             A guide. Not a library.
           </p>
@@ -87,94 +75,23 @@ export default async function Home() {
             <Link href="/map" className={`${ctaBase} ${ctaGhost}`}>
               Explore the map
             </Link>
-            <Link href="/agents" className={`${ctaBase} ${ctaGhost}`}>
-              For agents
-            </Link>
-          </div>
-
-          {/* Persona shortcut row */}
-          <div className="mt-10">
-            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">
-              ↓ Try as a sample founder
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {personas.map((p, i) => (
-                <PersonaTile
-                  key={p.id}
-                  persona={p}
-                  variant="compact"
-                  active={i === 0}
-                />
-              ))}
-            </div>
           </div>
         </div>
-
-        {/* Faux preview card (≥ md only) */}
-        <aside className="hidden md:block">
-          <Tile variant="rotated" className="max-w-md">
-            <div className="flex items-center justify-between">
-              <Chip tone="ember-tint">Raising seed</Chip>
-              <span className="font-mono text-[10px] uppercase tracking-wider text-ink-3">
-                Plan &middot; pg 1
-              </span>
-            </div>
-            <h3 className="mt-3 font-serif text-2xl leading-tight">
-              Priya, 31 &middot; SLC
-            </h3>
-            <p className="mt-1 font-hand text-sm text-ink-3">
-              B2B SaaS, 18mo in, paying customers.
-            </p>
-            <ScribbleDivider className="mt-4" />
-            <p className="mt-4 font-mono text-[10px] uppercase tracking-wider text-ember">
-              Do this now
-            </p>
-            <ul className="mt-2 flex flex-col gap-2">
-              <li className="rounded-tile border border-topo bg-paper p-3">
-                <p className="font-medium">Apply: Park City Angels</p>
-                <p className="text-xs text-ink-3">
-                  Rolling deadline &middot; check size $25k–$250k
-                </p>
-              </li>
-              <li className="rounded-tile border border-topo bg-paper p-3">
-                <p className="font-medium">Pitch: Silicon Slopes Series</p>
-                <p className="text-xs text-ink-3">
-                  Five new resources added this week
-                </p>
-              </li>
-            </ul>
-            <p className="mt-4 font-mono text-[10px] uppercase tracking-wider text-sky">
-              Do this next &middot; 3 items
-            </p>
-            <ScribbleDivider width="med" className="mt-2" />
-            <ScribbleDivider width="short" className="mt-1" />
-          </Tile>
-        </aside>
       </section>
 
-      {/* Live signal strip */}
-      <section className="border-y-[1.5px] border-ink bg-ink text-paper">
-        <div className="mx-auto flex max-w-[1480px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-4 sm:px-7">
-          <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-ember-tint">
-            <span aria-hidden className="h-2 w-2 rounded-full bg-ember" />
-            Live
-          </span>
-          <ul className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            {liveStats.map((s) => (
-              <li
-                key={s.label}
-                className="flex flex-col border-l border-paper/20 pl-4"
-              >
-                <span className="font-serif text-xl leading-none">
-                  {s.value}
-                </span>
-                <span className="mt-1 font-mono text-[10px] uppercase tracking-wider text-topo">
-                  {s.label}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <ActivityTicker className="md:ml-auto" events={activity} />
+      {/* Stats band */}
+      <section className="border-y border-topo bg-paper-2">
+        <div className="mx-auto flex max-w-[1480px] flex-wrap items-center gap-x-8 gap-y-3 px-4 py-4 sm:px-7">
+          {liveStats.map((s) => (
+            <div key={s.label} className="flex flex-col">
+              <span className="font-serif text-xl leading-none text-ink">
+                {s.value}
+              </span>
+              <span className="mt-1 font-mono text-[10px] uppercase tracking-wider text-ink-3">
+                {s.label}
+              </span>
+            </div>
+          ))}
         </div>
       </section>
 
