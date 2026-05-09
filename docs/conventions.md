@@ -49,9 +49,9 @@ conflicting code. Don't deviate without checking with the user.
 - **Branch protocol (trunk-based).** Never edit on `main`. First
   action of every agent: `git checkout -b feat/<slice>`. The local
   `.claude/settings.json` PreToolUse hook blocks Edit/Write while on
-  `main`. The `.github/workflows/protect-main.yml` workflow validates
-  PR head branches follow `feat|fix|chore|docs|refactor/...`. PRs
-  land directly on `main` (squash-merge only); there is no `dev`
+  `main`. The `feat|fix|chore|docs|refactor/...` branch convention is
+  enforced by commit-message prefix and reviewer judgment, not CI.
+  PRs land directly on `main` (squash-merge only); there is no `dev`
   integration branch.
 - **API path prefix:** `/api/v1/...`. Versioned from day one.
 - **Error response shape:**
