@@ -6,8 +6,9 @@ import { enrichWebsite, isDenylistedHost } from "@/lib/website-enrich";
 
 export async function POST(req: Request) {
   try {
-    // Per-IP rate limit before the Parallel.ai extract — each call
-    // costs real money. Public endpoint, intentionally tight.
+    // Per-IP rate limit before the website fetch + Anthropic extract
+    // — each call costs real money (see lib/website-enrich.ts). Public
+    // endpoint, intentionally tight.
     const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
     const { success } = await env().ENRICH_LIMIT.limit({ key: ip });
     if (!success) {

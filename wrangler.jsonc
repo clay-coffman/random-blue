@@ -53,7 +53,7 @@
   // 1101 — UPLOAD_LIMIT          — POST /api/v1/ownership-submissions
   // 1102 — GATE_LIMIT            — POST /api/gate (preview password gate)
   // 1103 — RECOMMEND_LIMIT       — POST /api/v1/resources/recommend (Claude)
-  // 1104 — ENRICH_LIMIT          — POST /api/v1/founder-passports/enrich (Parallel.ai)
+  // 1104 — ENRICH_LIMIT          — POST /api/v1/founder-passports/enrich (Claude)
   // 1105 — PASSPORT_LIMIT        — POST /api/v1/founder-passports
   // 1106 — INVESTOR_BRIEF_LIMIT  — POST /api/v1/companies/investor-brief (Claude)
   "unsafe": {
