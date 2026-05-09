@@ -12,6 +12,8 @@
 
 # Playwright MCP transient state
 .playwright-mcp/
+# agent-browser / ui-testing screenshots
+screenshots/
 
 # Node
 node_modules/
