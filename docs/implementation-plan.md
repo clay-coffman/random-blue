@@ -37,7 +37,7 @@ index is `0004`.
 
 Brief: `docs/agent-tasks/agent-6-agent-native.md`
 
-Not yet started. Owns:
+PR #27 OPEN (`feat/agent-layer`). Owns:
 
 - `app/api/v1/openapi.yaml` — full OpenAPI 3.1 spec for all shipped
   endpoints. Source-of-truth for external integrators.
