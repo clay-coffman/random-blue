@@ -29,7 +29,7 @@ export function NavLinks() {
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
-            className="relative whitespace-nowrap font-sans text-xs font-semibold uppercase leading-none tracking-[0.18em] text-ink no-underline transition-colors duration-200 hover:text-ember aria-[current=page]:after:absolute aria-[current=page]:after:inset-x-0 aria-[current=page]:after:-bottom-2 aria-[current=page]:after:h-0.5 aria-[current=page]:after:bg-ember aria-[current=page]:after:content-['']"
+            className="whitespace-nowrap border-b-2 border-transparent pb-2 font-sans text-xs font-semibold uppercase leading-none tracking-[0.18em] text-ink no-underline transition-colors duration-200 hover:text-ember aria-[current=page]:border-ember"
           >
             {label}
           </Link>
