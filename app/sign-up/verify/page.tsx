@@ -83,6 +83,7 @@ function VerifyForm() {
       }
       const target = next || `/onboarding/${role}`;
       router.push(target);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed.");
       setSubmitting(false);

@@ -13,11 +13,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 
+type MenuLink = {
+  href: string;
+  label: string;
+};
+
 type Props = {
   name: string;
   email: string;
   role: string;
-  planHref?: string;
+  links?: MenuLink[];
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -32,7 +37,7 @@ function formatRole(role: string): string {
   return ROLE_LABELS[role] ?? role.replace(/_/g, " ");
 }
 
-export function UserMenu({ name, email, role, planHref }: Props) {
+export function UserMenu({ name, email, role, links }: Props) {
   const [signingOut, setSigningOut] = React.useState(false);
   const [signOutError, setSignOutError] = React.useState<string | null>(null);
 
@@ -105,6 +110,19 @@ export function UserMenu({ name, email, role, planHref }: Props) {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        {links?.map((link) => (
+          <DropdownMenuItem
+            key={link.href}
+            render={
+              <Link
+                href={link.href}
+                className="px-2 py-1.5 font-sans text-sm text-ink"
+              />
+            }
+          >
+            {link.label}
+          </DropdownMenuItem>
+        ))}
         <DropdownMenuItem
           render={
             <Link
@@ -115,18 +133,6 @@ export function UserMenu({ name, email, role, planHref }: Props) {
         >
           Settings
         </DropdownMenuItem>
-        {planHref ? (
-          <DropdownMenuItem
-            render={
-              <Link
-                href={planHref}
-                className="px-2 py-1.5 font-sans text-sm text-ink"
-              />
-            }
-          >
-            My plan
-          </DropdownMenuItem>
-        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
