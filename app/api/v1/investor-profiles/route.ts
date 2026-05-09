@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { investorProfiles } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
-import { getApiSession } from "@/lib/auth-utils";
+import { authorizeSessionWrite, getApiSession } from "@/lib/auth-utils";
 import { newId } from "@/lib/ids";
 import { InvestorPreferencesSchema } from "@/lib/investor-schema";
 
@@ -13,8 +13,14 @@ export const dynamic = "force-dynamic";
 // payload is validated against the same Zod schema the form uses, so
 // the closed-enum guarantees survive curl-side bypass attempts.
 export async function POST(req: Request) {
-  const session = await getApiSession(req);
-  if (!session) return errorResponse("unauthorized", "Sign in required.", 401);
+  const auth = await authorizeSessionWrite(req);
+  if (auth.kind === "denied") {
+    if (auth.reason === "csrf") {
+      return errorResponse("forbidden", "Cross-origin request blocked.", 403);
+    }
+    return errorResponse("unauthorized", "Sign in required.", 401);
+  }
+  const session = { user: auth.user };
 
   const raw = await req.json().catch(() => null);
   const parsed = InvestorPreferencesSchema.safeParse(raw);

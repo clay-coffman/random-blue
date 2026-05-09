@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { savedSearches } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
-import { getApiSession } from "@/lib/auth-utils";
+import { authorizeWrite } from "@/lib/auth-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -53,14 +53,26 @@ async function loadOwned(userId: string, id: string) {
   return rows[0] ?? null;
 }
 
+function denyWrite(auth: Awaited<ReturnType<typeof authorizeWrite>>) {
+  if (auth.kind !== "denied") return null;
+  if (auth.reason === "csrf") {
+    return errorResponse("forbidden", "Cross-origin request blocked.", 403);
+  }
+  return errorResponse("unauthorized", "Sign in required.", 401);
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await getApiSession(req);
-  if (!session) return errorResponse("unauthorized", "Sign in required.", 401);
+  const auth = await authorizeWrite(req);
+  const denied = denyWrite(auth);
+  if (denied) return denied;
+  if (auth.kind !== "session") {
+    return errorResponse("forbidden", "Sign in required.", 403);
+  }
   const { id } = await params;
-  const existing = await loadOwned(session.user.id, id);
+  const existing = await loadOwned(auth.user.id, id);
   if (!existing) return errorResponse("not_found", "Saved search not found.", 404);
 
   const json = (await req.json().catch(() => null)) as unknown;
@@ -88,10 +100,14 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await getApiSession(req);
-  if (!session) return errorResponse("unauthorized", "Sign in required.", 401);
+  const auth = await authorizeWrite(req);
+  const denied = denyWrite(auth);
+  if (denied) return denied;
+  if (auth.kind !== "session") {
+    return errorResponse("forbidden", "Sign in required.", 403);
+  }
   const { id } = await params;
-  const existing = await loadOwned(session.user.id, id);
+  const existing = await loadOwned(auth.user.id, id);
   if (!existing) return errorResponse("not_found", "Saved search not found.", 404);
   await db().delete(savedSearches).where(eq(savedSearches.id, id));
   return new NextResponse(null, { status: 204 });

@@ -88,6 +88,17 @@ export const verification = sqliteTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+// Backing store for Better Auth's `rateLimit` config (storage: "database").
+// Schema mirrors @better-auth/core's getAuthTables() rateLimit shape:
+// `key` is the dedup identifier (path + IP), `count` is hits in the
+// current window, `lastRequest` is a unix-ms timestamp.
+export const rateLimit = sqliteTable("rate_limit", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull(),
+  lastRequest: integer("last_request").notNull(),
+});
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),

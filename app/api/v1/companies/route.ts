@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { companies } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
-import {
-  getApiSession,
-  hasMachineToken,
-  isAdminRole,
-} from "@/lib/auth-utils";
+import { authorizeWrite, isAdminRole } from "@/lib/auth-utils";
 import { newId } from "@/lib/ids";
 import { parseFilters } from "@/lib/company-filters";
 import { listCompanies } from "@/lib/companies-list";
@@ -41,9 +37,15 @@ export async function GET(req: Request) {
 
 // POST: admin-only company create. Used by /admin/companies and CLI.
 export async function POST(req: Request) {
-  const session = await getApiSession(req);
-  const machine = hasMachineToken(req);
-  if (!machine && !(session && isAdminRole(session.user.role))) {
+  const auth = await authorizeWrite(req);
+  if (auth.kind === "denied") {
+    if (auth.reason === "csrf") {
+      return errorResponse("forbidden", "Cross-origin request blocked.", 403);
+    }
+    return errorResponse("unauthorized", "Sign in required.", 401);
+  }
+  const isAdmin = auth.kind === "session" && isAdminRole(auth.user.role);
+  if (auth.kind !== "machine" && !isAdmin) {
     return errorResponse("forbidden", "Admin role required.", 403);
   }
   const body = (await req.json().catch(() => null)) as {

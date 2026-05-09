@@ -4,7 +4,7 @@ import { eq, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { savedSearches } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
-import { getApiSession } from "@/lib/auth-utils";
+import { authorizeWrite, getApiSession } from "@/lib/auth-utils";
 import { CompanyFilterParams } from "@/lib/company-filters";
 
 export const dynamic = "force-dynamic";
@@ -59,9 +59,16 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await getApiSession(req);
-  if (!session) {
+  const auth = await authorizeWrite(req);
+  if (auth.kind === "denied") {
+    if (auth.reason === "csrf") {
+      return errorResponse("forbidden", "Cross-origin request blocked.", 403);
+    }
     return errorResponse("unauthorized", "Sign in required.", 401);
+  }
+  // Saved searches belong to a user; the machine token has no user.
+  if (auth.kind !== "session") {
+    return errorResponse("forbidden", "Sign in required.", 403);
   }
   const json = (await req.json().catch(() => null)) as unknown;
   const parsed = CreateBody.safeParse(json);
@@ -78,7 +85,7 @@ export async function POST(req: Request) {
   const [row] = await db()
     .insert(savedSearches)
     .values({
-      userId: session.user.id,
+      userId: auth.user.id,
       name,
       filtersJson,
       cadence,

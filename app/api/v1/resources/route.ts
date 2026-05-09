@@ -3,7 +3,7 @@ import { or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { resources } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
-import { getApiSession, hasMachineToken, isAdminRole } from "@/lib/auth-utils";
+import { authorizeWrite, isAdminRole } from "@/lib/auth-utils";
 import { escapeLikeWildcards } from "@/lib/sql";
 
 export const dynamic = "force-dynamic";
@@ -51,9 +51,15 @@ export async function GET(req: Request) {
 // (we preserve upstream IDs as `r_<id>`); if missing, generate a
 // hash-based fallback.
 export async function POST(req: Request) {
-  const session = await getApiSession(req);
-  const machine = hasMachineToken(req);
-  if (!machine && !(session && isAdminRole(session.user.role))) {
+  const auth = await authorizeWrite(req);
+  if (auth.kind === "denied") {
+    if (auth.reason === "csrf") {
+      return errorResponse("forbidden", "Cross-origin request blocked.", 403);
+    }
+    return errorResponse("unauthorized", "Sign in required.", 401);
+  }
+  const isAdmin = auth.kind === "session" && isAdminRole(auth.user.role);
+  if (auth.kind !== "machine" && !isAdmin) {
     return errorResponse("forbidden", "Admin role required.", 403);
   }
   const body = (await req.json().catch(() => null)) as {

@@ -24,5 +24,20 @@
       "binding": "OWNERSHIP_DOCS",
       "bucket_name": "atlas-ownership-docs"
     }
-  ]
+  ],
+  // Cloudflare's native Rate Limiting binding. Fixed-window per key,
+  // evaluated in-edge with no DB writes. `key` is the IP supplied at
+  // call time (see app/api/v1/ownership-submissions/route.ts).
+  // Better Auth's auth-route limits are separate and live in D1 — see
+  // the `rateLimit` block in auth.ts.
+  "unsafe": {
+    "bindings": [
+      {
+        "name": "UPLOAD_LIMIT",
+        "type": "ratelimit",
+        "namespace_id": "1101",
+        "simple": { "limit": 10, "period": 60 }
+      }
+    ]
+  }
 }

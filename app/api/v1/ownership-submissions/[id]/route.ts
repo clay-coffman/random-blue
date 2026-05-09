@@ -3,7 +3,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { businessOwnershipSubmissions, companies } from "@/db/schema";
 import { errorResponse } from "@/lib/api-error";
-import { getApiSession, isAdminRole } from "@/lib/auth-utils";
+import {
+  authorizeSessionWrite,
+  getApiSession,
+  isAdminRole,
+} from "@/lib/auth-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +52,14 @@ export async function PATCH(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  const session = await getApiSession(req);
-  if (!session) return errorResponse("unauthorized", "Sign in required.", 401);
+  const auth = await authorizeSessionWrite(req);
+  if (auth.kind === "denied") {
+    if (auth.reason === "csrf") {
+      return errorResponse("forbidden", "Cross-origin request blocked.", 403);
+    }
+    return errorResponse("unauthorized", "Sign in required.", 401);
+  }
+  const session = { user: auth.user };
   if (!isAdminRole(session.user.role)) {
     return errorResponse("forbidden", "Admin role required.", 403);
   }
